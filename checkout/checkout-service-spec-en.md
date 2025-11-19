@@ -164,8 +164,7 @@ In this case, a PO is created **dynamically** for a specific shopping session/ca
 
 #### Dynamic PO Flow Diagram
 
-![Dynamic PO Flow(sequence)](./images/dynamic-po-flow-sequence.jpg)
-
+![Dynamic PO Flow sequence](./diagrams/Dynamic PO Flow/Dynamic PO Flow sequence.jpg)
 ---
 
 ## 3. Static PO Flow (static pages / landing-driven)
@@ -208,4 +207,4 @@ This scenario is suitable for static or recurring offers (e.g. a â€œBuy plan Xâ€
 
 #### Static PO Flow Diagram
 
-![Static PO Flow(sequence)](./images/static-po-flow-sequence.jpg)
+![Static PO Flow sequence](diagrams/Static PO Flow/Static PO Flow sequence.jpg)
