@@ -89,7 +89,7 @@ The full list of fields is defined in the OpenAPI specification. This section hi
 
 - Identification:
     - `id` — UUID of the Checkout Transaction;
-    - `transactionNumber` — human-friendly reference that can be displayed in UI or invoices.
+    - `number` — human-friendly reference that can be displayed in UI or invoices.
 - Status:
     - `status` — current transaction state (PENDING, FAILED, CANCELED, COMPLETED).
 - Related entities:
