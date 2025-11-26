@@ -85,6 +85,31 @@ The full list of fields is defined in the OpenAPI specification. This section hi
 - Additional data:
     - `extra` — free-form metadata used for integrations with external systems.
 
+#### PO validity period (`startsAt` / `endsAt`)
+
+The `startsAt` and `endsAt` fields define the time window during which a PurchaseOrder is considered valid for starting a checkout.
+
+Interpretation of different combinations:
+
+- **Both fields missing (`startsAt` and `endsAt` not set)**  
+  The PO is considered valid immediately after creation and has no time-based expiry.  
+  It never becomes “expired” automatically.
+
+- **Only `startsAt` is set**  
+  This represents a *scheduled / delayed* PO.
+    - Before `startsAt`, the PO is not active and checkout attempts will be rejected by the backend.
+    - From `startsAt` onwards, the PO is considered active **with no expiration date**.
+
+- **Only `endsAt` is set**  
+  This represents “valid from creation time, but with a deadline”.
+    - The PO is considered valid from the actual creation time until `endsAt`.
+    - After `endsAt`, the PO is treated as expired and checkout attempts will be rejected by the backend.
+
+- **Both `startsAt` and `endsAt` are set**
+    - The PO is valid only within the interval `[startsAt, endsAt]`.
+    - Before `startsAt` — the PO is not yet active.
+    - After `endsAt` — the PO is expired.
+
 **CheckoutTransaction (CTX)** — key field groups:
 
 - Identification:
@@ -100,6 +125,7 @@ The full list of fields is defined in the OpenAPI specification. This section hi
     - `paymentMethod` — code of the selected payment method / PSP.
 - Temporal fields:
     - `createdAt`, `updatedAt`, `closedAt` — timestamps describing the lifecycle of the CTX.
+
 
 ### 1.4. Money Rules
 
