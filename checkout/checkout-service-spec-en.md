@@ -41,7 +41,7 @@ The structure is defined in the `ShippingInfo` schema.
 **Tenant (Seller / Merchant)**  
 The owner of the Checkout configuration, on whose behalf Purchase Orders and Checkout Transactions are created.
 
-**Buyer (Client)**  
+**Buyer (Customer / Client)**  
 The end customer who sees the Checkout UI and goes through the payment process.  
 The Buyer may be anonymous from the Checkout service perspective.
 
