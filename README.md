@@ -1,3 +1,3 @@
-<p align="center"><img src="https://raw.githubusercontent.com/Labs64/.github/refs/heads/master/assets/labs64-io-ecosystem.png"></p>
+<p align="center"><img src="https://repository-images.githubusercontent.com/1098335619/c9655378-1ac2-4fc2-bf59-d8c93d1faacc"></p>
 
 # Labs64.IO :: Documentation
