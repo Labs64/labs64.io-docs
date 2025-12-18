@@ -219,6 +219,8 @@ pipelines:
 
 Send events to CloudWatch for real-time monitoring.
 
+#### Basic Configuration (Auto-create resources)
+
 ```yaml
 pipelines:
   - name: 'cloudwatch-prod'
@@ -233,6 +235,147 @@ pipelines:
         region: "us-east-1"
         create-log-group: "true"
         create-log-stream: "true"
+```
+
+#### With Explicit Credentials
+
+```yaml
+pipelines:
+  - name: 'cloudwatch-with-creds'
+    enabled: true
+    transformer:
+      name: 'zero'
+    sink:
+      name: 'aws_cloudwatch_sink'
+      properties:
+        log-group: "/aws/auditflow/production"
+        log-stream: "app-events"
+        region: "us-east-1"
+        access-key-id: "${AWS_ACCESS_KEY_ID}"
+        secret-access-key: "${AWS_SECRET_ACCESS_KEY}"
+        create-log-group: "true"
+        create-log-stream: "true"
+```
+
+#### Specific AWS Organization Account
+
+For sending logs to a specific AWS account in your organization:
+
+```yaml
+pipelines:
+  - name: 'cloudwatch-org-account'
+    enabled: true
+    transformer:
+      name: 'zero'
+    sink:
+      name: 'aws_cloudwatch_sink'
+      properties:
+        log-group: "/aws/auditflow/production"
+        log-stream: "app-events"
+        region: "us-east-1"
+        # Use IAM role for cross-account access
+        # Note: Configure IAM role ARN in your pod/container IAM settings
+        create-log-group: "false"  # Pre-create in target account
+        create-log-stream: "true"
+```
+
+**Setup Steps for Cross-Account Access:**
+
+1. **In the Target AWS Account** (where logs will be stored):
+   
+   Create the log group:
+   ```bash
+   aws logs create-log-group \
+     --log-group-name /aws/auditflow/production \
+     --region us-east-1
+   ```
+
+2. **Create IAM Role in Target Account**:
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Effect": "Allow",
+         "Principal": {
+           "AWS": "arn:aws:iam::SOURCE-ACCOUNT-ID:root"
+         },
+         "Action": "sts:AssumeRole"
+       }
+     ]
+   }
+   ```
+
+3. **Attach Policy to Role**:
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Effect": "Allow",
+         "Action": [
+           "logs:CreateLogStream",
+           "logs:PutLogEvents",
+           "logs:DescribeLogStreams"
+         ],
+         "Resource": [
+           "arn:aws:logs:us-east-1:TARGET-ACCOUNT-ID:log-group:/aws/auditflow/production:*"
+         ]
+       }
+     ]
+   }
+   ```
+
+4. **In Source Account** (where auditflow runs):
+   
+   Configure your pod/service to assume the cross-account role using:
+   - IAM Role for Service Accounts (IRSA) in EKS, or
+   - EC2 Instance Profile with assume role permissions
+
+#### Using AWS Organizations with IAM Identity Center
+
+If using AWS IAM Identity Center (formerly SSO):
+
+```yaml
+pipelines:
+  - name: 'cloudwatch-sso'
+    enabled: true
+    transformer:
+      name: 'zero'
+    sink:
+      name: 'aws_cloudwatch_sink'
+      properties:
+        log-group: "/aws/auditflow/production"
+        log-stream: "app-events"
+        region: "us-east-1"
+        # Let the AWS SDK use the default credential chain
+        # which includes SSO credentials
+        create-log-group: "false"
+        create-log-stream: "true"
+```
+
+**Required IAM Permissions:**
+
+Minimum permissions needed:
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents",
+        "logs:DescribeLogGroups",
+        "logs:DescribeLogStreams"
+      ],
+      "Resource": [
+        "arn:aws:logs:*:*:log-group:/aws/auditflow/*"
+      ]
+    }
+  ]
+}
 ```
 
 ### AWS CloudTrail Lake
