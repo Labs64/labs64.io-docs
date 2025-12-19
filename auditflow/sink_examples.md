@@ -9,6 +9,7 @@ Complete configuration examples for all available sinks.
 - [AWS Services](#aws-services)
 - [Google Cloud](#google-cloud)
 - [Azure](#azure)
+- [NetLicensing Integration](#netlicensing-integration)
 - [Complete Multi-Sink Setup](#complete-multi-sink-setup)
 
 ---
@@ -475,6 +476,183 @@ pipelines:
         prefix: "events/"
         compress: "true"
 ```
+
+---
+
+## NetLicensing Integration
+
+The NetLicensing sink processes checkout transaction events from Labs64 IO Ecosystem and automatically creates Licensee and License entities in NetLicensing.
+
+### Basic Configuration
+
+Process checkout transactions and create licenses automatically.
+
+```yaml
+pipelines:
+  - name: 'netlicensing-provisioning'
+    enabled: true
+    condition:
+      field: "eventType"
+      operator: "startsWith"
+      value: "checkout.transaction"
+    transformer:
+      name: 'zero'
+    sink:
+      name: 'netlicensing_sink'
+      properties:
+        api-key: "${NETLICENSING_API_KEY}"
+        product-number: "P12345678"
+        license-template-number: "LT12345678"
+```
+
+### With Custom NetLicensing Instance
+
+For self-hosted or custom NetLicensing deployments.
+
+```yaml
+pipelines:
+  - name: 'netlicensing-custom'
+    enabled: true
+    condition:
+      field: "eventType"
+      operator: "equals"
+      value: "checkout.transaction.completed"
+    transformer:
+      name: 'zero'
+    sink:
+      name: 'netlicensing_sink'
+      properties:
+        api-key: "${NETLICENSING_API_KEY}"
+        base-url: "https://custom.netlicensing.example.com/core/v2/rest/"
+        product-number: "MYPRODUCT"
+        license-template-number: "SUBSCRIPTION"
+        timeout: "60"
+        retry-count: "5"
+```
+
+### Quantity-to-Licensee Mode
+
+Create a new licensee for each unit purchased (useful for volume licenses).
+
+```yaml
+pipelines:
+  - name: 'netlicensing-volume'
+    enabled: true
+    condition:
+      field: "eventType"
+      operator: "startsWith"
+      value: "checkout.transaction"
+    transformer:
+      name: 'zero'
+    sink:
+      name: 'netlicensing_sink'
+      properties:
+        api-key: "${NETLICENSING_API_KEY}"
+        product-number: "VOLUME-PRODUCT"
+        license-template-number: "SINGLE-USER"
+        quantity-to-licensee: "true"
+        mark-for-transfer: "true"
+        save-transaction-data: "true"
+```
+
+### Multiple Products Configuration
+
+Handle different products by specifying in purchase order item extra fields.
+
+```yaml
+pipelines:
+  - name: 'netlicensing-multi-product'
+    enabled: true
+    condition:
+      field: "eventType"
+      operator: "equals"
+      value: "checkout.transaction.completed"
+    transformer:
+      name: 'zero'
+    sink:
+      name: 'netlicensing_sink'
+      properties:
+        api-key: "${NETLICENSING_API_KEY}"
+        # No default product/template - taken from item.extra
+        mark-for-transfer: "true"
+        save-transaction-data: "true"
+```
+
+**Note:** When using multi-product configuration, each purchase order item should include:
+
+```json
+{
+  "name": "Enterprise License",
+  "sku": "ENT-001",
+  "quantity": 1,
+  "price": 99900,
+  "extra": {
+    "productNumber": "P-ENTERPRISE",
+    "licenseTemplateNumber": "LT-ANNUAL"
+  }
+}
+```
+
+### Expected Checkout Event Structure
+
+The sink expects checkout transaction events with this structure:
+
+```json
+{
+  "eventType": "checkout.transaction.completed",
+  "sourceSystem": "checkout",
+  "tenantId": "T123456",
+  "extra": {
+    "transaction": {
+      "id": "txn-uuid",
+      "status": "COMPLETED",
+      "paymentMethod": "STRIPE",
+      "billingInfo": {
+        "firstName": "John",
+        "lastName": "Doe",
+        "email": "john@example.com",
+        "country": "US"
+      },
+      "purchaseOrder": {
+        "id": "po-uuid",
+        "currency": "USD",
+        "customer": {
+          "id": "cust-uuid",
+          "firstName": "John",
+          "lastName": "Doe",
+          "email": "john@example.com"
+        },
+        "items": [
+          {
+            "name": "Annual License",
+            "sku": "LIC-ANNUAL",
+            "quantity": 2,
+            "price": 9900,
+            "extra": {
+              "productNumber": "P12345678",
+              "licenseTemplateNumber": "LT12345678"
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+### Configuration Properties Reference
+
+| Property | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `api-key` | Yes | - | NetLicensing API key |
+| `base-url` | No | `https://go.netlicensing.io/core/v2/rest/` | NetLicensing API base URL |
+| `product-number` | No | - | Default product number (if not in event) |
+| `license-template-number` | No | - | Default license template (if not in event) |
+| `quantity-to-licensee` | No | `false` | Create new licensee per quantity unit |
+| `mark-for-transfer` | No | `true` | Mark licensees for transfer |
+| `save-transaction-data` | No | `true` | Store transaction data in licensee properties |
+| `timeout` | No | `30` | Request timeout in seconds |
+| `retry-count` | No | `3` | Number of retry attempts |
 
 ---
 
