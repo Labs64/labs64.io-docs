@@ -23,7 +23,6 @@ A CTX stores:
 - the BillingInfo (BI) and ShippingInfo (SI) as provided at checkout time;
 - the selected `paymentMethod`;
 - the transaction status (e.g., PENDING, FAILED, CANCELED, COMPLETED);
-- technical information for PSP integration (via `CheckoutNextAction`).
 
 CTX is read-only for clients and is exposed via `/checkout-transactions` and `/checkout-transactions/{id}`.
 
@@ -35,6 +34,18 @@ The structure is defined in the `BillingInfo` schema.
 Information required for physical delivery (address, recipient name, phone, etc.).  
 Used when the product or service involves shipping.  
 The structure is defined in the `ShippingInfo` schema.
+
+**ConsentDefinition (PO-level consent)**  
+A consent item defined on a Purchase Order. It describes what the buyer should be asked to agree to.  
+Fields: `id`, `label`, optional `url`, and `required`.
+
+**ConsentsMap (checkout-time acceptance map)**  
+A map of `{ [consentId]: boolean }` provided by the client during checkout.  
+Keys must match `PurchaseOrder.consents[].id`.  
+`true` means accepted; `false` or a missing key means not accepted.
+
+The Checkout service does not collect consents itself — the client (UI) is responsible for presenting them.
+The service validates that all PO consents with `required=true` are accepted in the `ConsentsMap`.
 
 ### 1.2. Actors
 
@@ -79,11 +90,14 @@ The full list of fields is defined in the OpenAPI specification. This section hi
     - `netAmount` — total amount of all items (excluding shipping and tax), in minor units;
     - `grossAmount` — final total (net + tax + shipping), in minor units;
     - `taxAmount` — total tax amount applied.
+- Consents:
+    - `consents[]` — list of `ConsentDefinition` items (what must be shown/accepted by the buyer).
 - Temporal fields:
     - `startsAt`, `endsAt` — (optional) validity window of the offer;
     - `createdAt`, `updatedAt` — audit timestamps.
 - Additional data:
-    - `extra` — free-form metadata used for integrations with external systems.
+    - `extra` —  optional key-value metadata (Record<string, string | number | boolean>) for integrations/client 
+                 attributes (max 50 keys; key ≤ 40 chars; string value ≤ 500 chars; values only string/number/boolean).
 
 #### PO validity period (`startsAt` / `endsAt`)
 
@@ -114,13 +128,14 @@ Interpretation of different combinations:
 
 - Identification:
     - `id` — UUID of the Checkout Transaction;
-    - `number` — human-friendly reference that can be displayed in UI or invoices.
 - Status:
     - `status` — current transaction state (PENDING, FAILED, CANCELED, COMPLETED).
 - Related entities:
     - `purchaseOrder` — snapshot of the PO at checkout time;
     - `billingInfo` — buyer’s BI;
     - `shippingInfo` — buyer’s SI.
+- Consents:
+    - `consents` — buyer acceptance map (`ConsentsMap`: `{ [consentId]: boolean }`).
 - Payment:
     - `paymentMethod` — code of the selected payment method / PSP.
 - Temporal fields:
@@ -135,7 +150,6 @@ Interpretation of different combinations:
 - Tax calculations use the `Tax` structure with:
     - `rateType` (PERCENTAGE / FIXED),
     - `rate` expressed in minor units for the tax rate.
-
 ---
 
 ## 2. Dynamic PO Flow (cart-driven)
@@ -166,12 +180,13 @@ In this case, a PO is created **dynamically** for a specific shopping session/ca
 
 4. **PO loading and buyer data input**  
    The Checkout UI calls `GET /purchase-orders/{PO.id}`, displays the order content (items, totals),  
-   and collects BI / SI and a `paymentMethod` from the buyer.
+   and collects BI / SI, buyer consents acceptance (ConsentsMap), and a `paymentMethod` from the buyer.
 
 5. **Checkout initiation (CTX creation)**  
    After the buyer clicks “Purchase” (or similar), the UI or a backend proxy calls  
    `POST /purchase-orders/{PO.id}/checkout`  
-   with a `CheckoutRequest` containing BI, SI, and `paymentMethod`.
+   with a `CheckoutRequest` containing `billingInfo`, `shippingInfo`, optional `consents` (ConsentsMap), 
+   and `paymentMethod`.
 
 6. **CTX creation and PSP communication**  
    The Checkout Backend:
@@ -189,9 +204,39 @@ In this case, a PO is created **dynamically** for a specific shopping session/ca
    The final transaction status (COMPLETED / FAILED / CANCELED) is determined and stored via PSP integration (out of scope for this document).
 
 #### Dynamic PO Flow Diagram
+```mermaid
+sequenceDiagram
+    actor Buyer
+    participant Shop as External Shop/Cart
+    participant BE as Checkout BE (API)
+    participant FE as Checkout FE (UI)
 
-![Dynamic PO Flow sequence](./diagrams/Dynamic PO Flow/Dynamic PO Flow sequence.jpg)
----
+    note over Buyer,BE: Base path: /api/v1
+
+    rect rgba(200, 200, 200, 0.08)
+        note over Buyer,FE: Cart and PO creation
+        Buyer->>Shop: Build cart and click "Checkout"
+        Shop->>BE: POST /purchase-orders (items, currency, consents?, startsAt/endsAt?, customerId?, extra?) + header: X-Tenant-Id
+        BE-->>Shop: 201 Created PurchaseOrder { id, items, currency, netAmount, grossAmount, taxAmount?, ... }
+        Shop-->>Buyer: 302 Redirect Location: /checkout/{id}
+    end
+
+    rect rgba(200, 200, 200, 0.08)
+        note over Buyer,FE: Buyer lands on Checkout UI
+        Buyer->>FE: GET /checkout/{id}
+        FE->>BE: GET /purchase-orders/{id}
+        BE-->>FE: 200 OK PurchaseOrder { items, netAmount, grossAmount, currency, consents?, ... }
+        FE-->>Buyer: Render order summary + billing/shipping + consents
+    end
+
+    rect rgba(200, 200, 200, 0.08)
+        note over Buyer,FE: Checkout initiation
+        Buyer->>FE: Fill billing/shipping + consents Click "Buy now"
+        FE->>BE: POST /purchase-orders/{id}/checkout (billingInfo?, shippingInfo?, consents?, paymentMethod) + header: X-Tenant-Id
+        BE-->>FE: 200 OK CheckoutResponse { transaction, nextAction }
+        note right of BE: PSP / payment processing may be invoked here (not detailed in this doc)
+    end
+```
 
 ## 3. Static PO Flow (static pages / landing-driven)
 
@@ -218,14 +263,16 @@ This scenario is suitable for static or recurring offers (e.g. a “Buy plan X�
    The Buyer clicks the link and lands in the Checkout UI, where the predefined order content is displayed.
 
 4. **BI/SI input and payment method selection**  
-   From this point on, the behavior is identical to the Dynamic Flow: the buyer enters BI/SI and selects a `paymentMethod`.
+   From this point on, the behavior is identical to the Dynamic Flow: the buyer enters BI/SI, provides consents 
+   acceptance (ConsentsMap), and selects a `paymentMethod`.
 
 5. **Checkout initiation**  
    The UI calls `POST /purchase-orders/{PO.id}/checkout`  
    (same as step 5 in the Dynamic Flow).
 
 6. **CTX creation and nextAction response**  
-   The Checkout Backend creates a new `CheckoutTransaction`, initiates payment with the PSP, and returns a `CheckoutResponse` with `transaction` and `nextAction`.
+   The Checkout Backend creates a new `CheckoutTransaction`, initiates payment with the PSP, 
+   and returns a `CheckoutResponse` with `transaction` and `nextAction`.
 
 7. **Finalization at the PSP**  
    The Buyer completes payment on the PSP side.  
@@ -233,4 +280,33 @@ This scenario is suitable for static or recurring offers (e.g. a “Buy plan X�
 
 #### Static PO Flow Diagram
 
-![Static PO Flow sequence](diagrams/Static PO Flow/Static PO Flow sequence.jpg)
+```mermaid
+sequenceDiagram
+    actor Buyer
+    participant Tenant as Tenant (Merchant/Admin)
+    participant BE as Checkout BE (API)
+    participant FE as Checkout FE (UI)
+
+    rect rgba(200, 200, 200, 0.08)
+        note over Buyer,FE: Static PO pre-creation
+        Tenant->>BE: POST /purchase-orders (predefined items, currency, consents?, startsAt/endsAt?, customerId?, extra?) + header: X-Tenant-Id
+        BE-->>Tenant: 201 Created PurchaseOrder { id, items, currency, netAmount, grossAmount, taxAmount?, status, ... }
+        note over Tenant: Distribute static link: /checkout/{id}
+    end
+
+    rect rgba(200, 200, 200, 0.08)
+        note over Buyer,FE: Buyer opens static link
+        Buyer->>FE: GET /checkout/{id}
+        FE->>BE: GET /purchase-orders/{id}
+        BE-->>FE: 200 OK PurchaseOrder { items, netAmount, grossAmount, currency, status, consents?, ... }
+        FE-->>Buyer: Render order summary + billing/shipping + consents
+    end
+
+    rect rgba(200, 200, 200, 0.08)
+        note over Buyer,FE: Checkout initiation
+        Buyer->>FE: Fill billing/shipping + consents Click "Buy now"
+        FE->>BE: POST /purchase-orders/{id}/checkout (billingInfo?, shippingInfo?, consents?, paymentMethod) 
+        BE-->>FE: 200 OK CheckoutResponse { transaction, nextAction }
+        note right of BE: PSP / payment processing may be invoked here (not detailed in this doc)
+    end
+```
