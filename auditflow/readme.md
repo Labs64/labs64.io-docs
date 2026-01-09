@@ -1,5 +1,31 @@
 # AuditFlow Sink Configuration Examples
 
+```mermaid
+flowchart LR
+  SC[Service Caller] <--> SVC[Service]
+  SVC --> Q[(Auditing Queue<br/>Kafka, RabbitMQ, etc.)] --> PT[Processing & Transformation] --> SD[Storage Dispatcher]
+
+  %% group node to reduce edge clutter
+  SD --> ST[Storage targets]
+
+  subgraph Storages["Storages"]
+    direction TB
+    ES[(Elastic / OpenSearch)]
+    SP[(Splunk)]
+    RDB[(Relational Database)]
+    DL[(Data Lake)]
+    BC[(Blockchain / Web3)]
+  end
+
+  ST --> ES
+  ST --> SP
+  ST --> RDB
+  ST --> DL
+  ST --> BC
+
+  SA[Search & Analysis] --> ST
+```
+
 Complete configuration examples for all available sinks.
 
 ## Table of Contents
@@ -862,29 +888,4 @@ curl -X POST "http://localhost:8082/sink/aws_s3_sink" \
       "region": "us-east-1"
     }
   }'
-```
-```mermaid
-flowchart LR
-  SC[Service Caller] <--> SVC[Service]
-  SVC --> Q[(Auditing Queue<br/>Kafka, RabbitMQ, etc.)] --> PT[Processing & Transformation] --> SD[Storage Dispatcher]
-
-  %% group node to reduce edge clutter
-  SD --> ST[Storage targets]
-
-  subgraph Storages["Storages"]
-    direction TB
-    ES[(Elastic / OpenSearch)]
-    SP[(Splunk)]
-    RDB[(Relational Database)]
-    DL[(Data Lake)]
-    BC[(Blockchain / Web3)]
-  end
-
-  ST --> ES
-  ST --> SP
-  ST --> RDB
-  ST --> DL
-  ST --> BC
-
-  SA[Search & Analysis] --> ST
 ```
