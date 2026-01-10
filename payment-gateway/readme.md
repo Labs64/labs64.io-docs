@@ -1,18 +1,23 @@
 # Payment Gateway Module
 
-Develop a payment gateway module that integrates with various Payment Service Providers (PSPs) via standardized interfaces to handle payment methods for various platforms (e.g., checkout module, individual setup, etc.).
-The module should support multiple payment methods and be configurable via an external configuration file. It must also support recurring payments and ensure that all payment transactions are traceable and auditable.
+Develop a payment gateway module that integrates with various Payment Service Providers (PSPs) via standardized interface (**PSP Adapter**) to handle payments for arbitrary platforms.
+The module should support multiple payment methods and be configurable via an external configuration file. It is assumed that the module will be extended in the future with additional PSPs.
+It must support recurring payments and ensure that all payment transactions are traceable and auditable.
 
 ---
 
 ## Technical Requirements / Stack
 
-* **Frameworks:** Spring Boot (latest), Spring Framework (latest)
+* **Frameworks:**
+  * Backend: Java 25, Spring Boot (latest), Spring Framework (latest)
+  * Frontend: Typescript
 * **Database:** PostgreSQL (latest)
+* **Caching:** Redis
 * **Messaging:** RabbitMQ (latest)
-* **Containerization:** Docker
-* **Kubernetes** (latest)
-* **Helm** (latest) - https://github.com/Labs64/labs64.io-helm-charts
+* **Containerization:** Docker / concurrent multi-container operations. Assume deployment in Kubernetes
+* **Build Tool:** Maven (latest)
+* **API Documentation:** OpenAPI 3.0 (YAML)
+* **Authorization:** in the module using JWT token verification (OIDC/OAuth2)
 
 ---
 
@@ -21,23 +26,24 @@ The module should support multiple payment methods and be configurable via an ex
 ### General Architecture
 
 * **Structure:** Module structure should follow the design of the existing [checkout](https://github.com/Labs64/labs64.io-checkout) and [auditflow](https://github.com/Labs64/labs64.io-auditflow) modules.
-* **Configuration:** Additional module configuration must be managed via an external `application.yaml` file, covering:
+* **Configuration:** Module static configuration must be managed via Spring Boot, covering:
   * Payment methods / PSP configuration
   * Currencies support
   * etc.
 * **Security:**
   * **Tokenization:** The module must **never** store raw credit card numbers. It must store PSP tokens/IDs (e.g., Stripe `customer_id`, `payment_method_id`).
-  * **Resilience:** The `/pay` endpoint must support an `Idempotency-Key` header to prevent duplicate charges during network failures.
-  * **Abstraction:** Introduce a **PSP Abstraction Layer** so new PSPs can be added or maintained easily.
-
-### Recurring Payments Engine
-
-Implement recurring payments support with persistence of payment schedules and traceability.
-
-* **Scheduler:** A background job (e.g., Spring Scheduler or Quartz) that scans for due subscriptions.
-* **Dunning Logic:** Configurable retry attempts for failed recurring payments (e.g., Retry 3 times: immediately, after 24h, after 3 days).
-* **Subscription States:** `ACTIVE`, `PAUSED`, `CANCELED`, `PAST_DUE`, `UNPAID`, `FAILED`.
-* **Resilience:** The recurring job must not crash if one subscription fails; it should mark it as failed and proceed to the next.
+  * **Resilience:** The `/pay` endpoint (see below) must support an `Idempotency-Key` header to prevent duplicate charges during network failures.
+  * **API Security:** All API endpoints must be secured via JWT token (m2m) verification.
+* **Abstraction:** Introduce a **PSP Abstraction Layer** so new PSPs can be added or maintained easily.
+* **Payment States:**
+  * `ACTIVE` -  payment is enabled and will be executed on schedule
+  * `INCOMPLETE` -  payment setup is incomplete; requires user action
+  * `PAUSED` -  payment is temporarily paused but can be resumed later
+  * `CLOSED` -  payment is closed and won't be executed anymore
+* **Transaction States:**
+  * `PENDING` - payment is initiated but not completed yet
+  * `SUCCESS` - payment completed successfully
+  * `FAILED` - payment attempt failed; will be retried based on dunning logic
 
 ### Integration & Messaging
 
@@ -46,7 +52,9 @@ Implement recurring payments support with persistence of payment schedules and t
   * Add request/response examples
   * Describe common error model for all endpoints
   * Generate API java stubs from the OpenAPI (e.g. **API-first approach**)
-* **Queueing:** Final payment transactions should be published to a **RabbitMQ** queue for further processing by the `auditflow`, `invoice`, `checkout`, etc. modules.
+* **Queueing:** Final payment transactions should be published to a **RabbitMQ** queue for further processing by other ecosystem modules.
+* **PSP UI Actions:** Handle PSP-specific user actions (redirects, pop-ups, inline payment forms, etc.) as part of Payment Gateway UI integration.
+  * PSP specific frontend dependencies should be exported from the PSP Adapter.
 
 ---
 
@@ -58,7 +66,7 @@ sequenceDiagram
 
     participant Client as Client / Checkout UI
     participant API as Payment Gateway API
-    participant CFG as Config (application.yaml)
+    participant CFG as Config
     participant DB as PostgreSQL
     participant PSP as PSP Adapter
     participant MQ as RabbitMQ
@@ -71,9 +79,9 @@ sequenceDiagram
     Client->>API: POST /payment (paymentMethodId, purchaseOrder, ...)
     API->>CFG: Load payment method + PSP config
     API->>DB: Create Payment (PENDING)
-    DB-->>API: Payment ID
+    DB-->>API: Payment Id
 
-    Client->>API: POST /payment/{id}/pay (Header: Idempotency-Key)
+    Client->>API: POST /payment/{payment.id}/pay (Header: Idempotency-Key)
     API->>DB: Check Idempotency-Key
     DB-->>API: Not processed
 
@@ -85,52 +93,21 @@ sequenceDiagram
     alt Payment requires user action
         API-->>Client: nextAction (redirect / 3DS)
     else Payment completed
-        API->>MQ: Publish payment.finalized (correlationId)
+        API->>MQ: Publish payment.finalized (transaction payload, correlationId)
         MQ-->>Subscriber: Consume event
-        API-->>Client: Payment COMPLETED
+        API-->>Client: Transaction SUCCESS
     else Payment failed
-        API-->>Client: Payment FAILED
+        API->>MQ: Publish payment.finalized (transaction payload, correlationId)
+        MQ-->>Subscriber: Consume event
+        API-->>Client: Transaction FAILED
     end
 ```
 
-## Recurring Payment Flow (Scheduler Job)
+## API Proposal
 
-```mermaid
-sequenceDiagram
-    autonumber
+This section outlines the proposed RESTful API endpoints for the Payment Gateway module.  It is not meant to be exhaustive but serves as a starting point for implementation.
 
-    participant Scheduler as Scheduler
-    participant DB as PostgreSQL
-    participant PSP as PSP Adapter
-    participant MQ as RabbitMQ
-    participant Subscriber as AuditFlow / Checkout / Invoice
-
-    Scheduler->>DB: Fetch due subscriptions (state = ACTIVE or PAST_DUE)
-    loop For each subscription
-        Scheduler->>DB: Load payment + retry state
-        Scheduler->>PSP: executeRecurringPayment() (tokenized data)
-        PSP-->>Scheduler: PSP response
-
-        alt Payment successful
-            Scheduler->>DB: Update subscription (nextBillingDate, ACTIVE)
-            Scheduler->>DB: Persist Transaction COMPLETED
-            Scheduler->>MQ: Publish payment.finalized (correlationId)
-            MQ-->>Subscriber: Consume event
-        else Payment failed
-            Scheduler->>DB: Increment retry count
-            alt Retries remaining
-                Scheduler->>DB: Mark PAST_DUE (schedule next retry)
-            else Retries exhausted
-                Scheduler->>DB: Mark FAILED or UNPAID
-                Scheduler->>MQ: Publish payment.failed (correlationId)
-            end
-        end
-    end
-
-    Scheduler-->>Scheduler: Continue job (no crash on failure)
-```
-
-## API Specification
+Every endpoint supports `correlationId` tracing via `X-Correlation-ID` header.
 
 ### 1. Retrieve Payment Methods
 
@@ -141,7 +118,7 @@ sequenceDiagram
 * `country` (string) *(optional)*: Filter payment methods by supported country code.
 
 * **Response:**
-* `ID` (string): Unique identifier for the payment method.
+* `id` (string): Unique identifier for the payment method.
 * `name` (string): Name of the payment method.
 * `description` (string): Description of the payment method.
 * `icon` (base64) *(optional)*: Data for the PSP icon image.
@@ -150,74 +127,134 @@ sequenceDiagram
 ### 2. Initiate Payment Instance
 
 **`POST /payment`**
-*Initiate a new payment instance (one-time or recurring).*
+*Initiate a new payment instance (one-time or recurring) and capture payment details. No actual payment will be performed yet!*
 
 * **Request Body:**
-* `paymentMethodId` (string): ID of the selected payment method.
+* `paymentMethodId` (string): id of the selected payment method.
 * `purchaseOrder` (object): Details from the [checkout](https://github.com/Labs64/labs64.io-checkout) module.
   * ... including 
   * `recurring` (boolean): Indicates if the payment is recurring.
-  * `frequency` (string): Frequency (e.g., "weekly", "monthly", "yearly").
 * `billingInfo` (object): Billing information.
 * `shippingInfo` (object) *(optional)*: Shipping information.
 * `extra` (object) *(optional)*: Additional metadata.
 
 * **Response:**
 * `payment` (object): The created Payment object.
+* `nextAction` (object): returns optional next action required to complete the payment details capture via specific PSP flow.
+  * `type` (string): e.g., "none", "redirect", "3ds-challenge".
+  * `details` (object): Metadata required for the next action.
 
-### 3. Cancel Payment Schedule
+### 3. Execute Payment
 
-**`POST /payment/{payment.ID}/cancel`**
-*Cancel an existing payment schedule (only for recurring payments).*
+**`POST /payment/{payment.id}/pay`**
+*Execute a payment via external PSP using stored captured payment details and creates payment transaction. For non-recurring payments, this operation closes the payment on success.*
 
-### 4. Execute Transaction
-
-**`POST /payment/{payment.ID}/pay`**
-*Execute a payment transaction (one-time or recurring) via external PSP using stored payment details.*
+*NOTE: PSP may imply delayed completion of the payment with later notification. Ensure architecture is prepared for handling this scenario by capturing the PSP notification and adjusting the transaction status in the background.*
+*Transaction status transitions to `SUCCESS` or `FAILED` are to be published in the queueing service.*
 
 * **Response:**
 * `transaction` (object): Payment transaction details.
-  * `ID` (string): Unique identifier for the transaction.
-  * `status` (string): e.g., `PENDING`, `COMPLETED`, `FAILED`.
+  * `id` (string): Unique identifier for the transaction.
+  * `status` (string): Transaction status.
   * `pspData` (object): Raw data returned from the PSP.
+
+### 4. Payment Status
+
+**`GET /payment/{payment.id}`**
+*Retrieve the status and details of an existing payment. Can be used to restore (possibly incomplete) `nextAction` processing*
+
+* **Response:**
+* `payment` (object): The created Payment object.
 * `nextAction` (object):
   * `type` (string): e.g., "none", "redirect", "3ds-challenge".
   * `details` (object): Metadata required for the next action.
+
+### 5. Close Payment
+
+**`POST /payment/{payment.id}/close`**
+*Close an existing payment. No further pay operations can be executed.*
+
+### 6. Transaction Status
+
+**`GET /transaction/{transaction.id}`**
+*Retrieve the status and details of a payment transaction.*
+
+* **Response:**
+* `transaction` (object): Payment transaction details.
+  * `id` (string): Unique identifier for the transaction.
+  * `status` (string): Transaction status.
+  * `pspData` (object): Raw data returned from the PSP.
 
 ---
 
 ## Deliverables
 
 * **OpenAPI Spec:** Fully specified YAML file for the RESTful API.
-* **Java Module:** Implementing the functionality described above.
+* **Java Module:** Implementing the functionality described above; including PayPal, Stripe and NoOp PSP adapters.
 * **Unit Tests:** Covering all major functionalities.
-* **Configuration:** Structured `application.yaml` for payment methods.
+* **Configuration:** Structured `application.yaml` for integrated payment methods.
 * **Database:** Flyway migration scripts in `resources/db/migration`.
 * **Dockerfile:** For containerizing the module.
-  * Create docker-compose for local development
-* **Documentation:** Setup, configuration, and usage guide.
-* **CI/CD:** `.github` workflows pipeline to build, test, and deploy.
+  * Create docker-compose for local development including HA config with multiple instances.
+* **Documentation:** Setup, configuration, usage guide, contributor guide.
+* **CI/CD:** `.github` workflows pipeline to build, test.
+
+---
+
+## Milestones
+
+- Total workload will be split into milestones defined as below.
+- At the beginning of each milestone, a new PR must be created targeting the main branch of the [Payment Gateway repo](https://github.com/Labs64/labs64.io-payment-gateway).
+- Daily work progress must be frequently committed (one daily commit at minimum).
+- Early & timely communication via GitHub Issues and PRs only. Expect on-the-fly comments to the commits.
+- Each milestone must be approved and merged before proceeding to the next one.
+- Scope review and adjustments may be done at the end of each milestone if necessary. Additional work beyond the defined milestones will be treated as out-of-scope and must be agreed separately.
+- Approved and merged milestones PRs are considered as completed and entitled for payment.
+- Failure to complete a milestone within the agreed timeframe may result in project termination.
+
+---
+
+* **Milestone 1:** Project Setup & Basic Architecture
+  * Setup Spring Boot project with necessary dependencies.
+  * Design OpenAPI specification with generated Java interface and create API stubs with log output.
+  * Dockerfile and basic CI/CD pipeline.
+* **Milestone 2:** PSP Abstraction Layer & NoOp Implementation
+  * Implement PSP Abstraction Layer using Strategy Pattern.
+  * Create NoOp PSP adapter for testing.
+  * Create needed database entities and Flyway migration scripts.
+  * Implement all endpoints with basic logic.
+* **Milestone 3:** Stripe Integration
+  * Implement Stripe PSP adapter.
+  * Complete payment flow for Stripe.
+  * Unit tests for Stripe integration.
+* **Milestone 4:** PayPal Integration
+  * Implement PayPal PSP adapter.
+  * Complete payment flow for PayPal.
+  * Unit tests for PayPal integration.
+
+**Release Condition:** The Pull Request to the [Payment Gateway repo](https://github.com/Labs64/labs64.io-payment-gateway) must be accepted and merged into the main branch to release the freelance payment feature.
+
 
 ---
 
 ## Acceptance Criteria
 
-* Code follows best practices (consistent with `checkout`/`auditflow` modules) and is well-documented.
-* **PSP Abstraction Layer** is implemented using the **Strategy Pattern** (e.g., `StripeService`, `PayPalService`, and `NoOpService` implement a common `PaymentProvider` interface).
-* **Async Messaging:** RabbitMQ producer is implemented for `payment.finalized` events.
-* **Traceability:** Every log entry and RabbitMQ message must contain a `correlationId` traceable across Audit, Invoice, and Checkout modules.
-* Docker container builds successfully and runs without errors.
-* All unit tests pass with >80% code coverage.
-* API endpoints function exactly as specified in the OpenAPI documentation.
-* Logging Policy: no sensitive info in the logs, such as PAN/PII, credentials, etc.
+* Code follows standard Java best practices (consistent with `checkout`/`auditflow` modules) and is well-documented.
+* **PSP Abstraction Layer** is implemented using the **Strategy Pattern** (e.g., `StripeProvider`, `PayPalProvider`, and `NoOpProvider` implement a common `PaymentProvider` interface).
 * **Integrated PSPs:**
   * Stripe (latest API) - https://docs.stripe.com/api
   * PayPal (latest API) - https://developer.paypal.com/api/rest/
   * None (NoOp for testing)
+* **Async Messaging:** RabbitMQ producer is implemented for `payment.finalized` events with transaction payload.
+* **Distributed Environments / Kubernetes safety:**
+  * All functionality can run reliably on Kubernetes
+  * Execution is idempotent to prevent duplicate processing
+  * Components are safe to run in parallel across multiple pods
+  * Coordination and state handling support distributed execution without race conditions
+* **Traceability:** Every log entry and RabbitMQ message must contain a `correlationId` traceable across ecosystem modules.
+* Docker container builds successfully and runs without errors.
+* All unit tests pass with >80% code coverage.
+* API endpoints function exactly as specified in the OpenAPI documentation.
+* Logging Policy: no sensitive information in the logs, such as PAN/PII, credentials, etc.
 * Payment methods are configurable via YAML and retrievable via API.
-* Recurring payments are correctly scheduled, persisted, and traceable.
-* **Vulnerability Scanning:** no `High` and `Critical` vulnerabilities (static code analysis, depencies, docker, etc.) with tools like OWASP ZAP for API, Trivy for Docker
-
----
-
-> **Release Condition:** The Pull Request to the [Payment Gateway repo](https://github.com/Labs64/labs64.io-payment-gateway) must be accepted and merged into the main branch to release the freelance payment feature.
+* **Vulnerability Scanning:** no `High` and `Critical` vulnerabilities (static code analysis, dependencies, docker, etc.) with GitHub Code scanning / CodeQL, Trivy for Docker
