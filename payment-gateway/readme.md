@@ -205,6 +205,11 @@ sequenceDiagram
 * Code follows best practices (consistent with `checkout`/`auditflow` modules) and is well-documented.
 * **PSP Abstraction Layer** is implemented using the **Strategy Pattern** (e.g., `StripeService`, `PayPalService`, and `NoOpService` implement a common `PaymentProvider` interface).
 * **Async Messaging:** RabbitMQ producer is implemented for `payment.finalized` events.
+* **Distributed Environments / Kubernetes safety:**
+  * All functionality can run reliably on Kubernetes
+  * Execution is idempotent to prevent duplicate processing
+  * Components are safe to run in parallel across multiple pods
+  * Coordination and state handling support distributed execution without race conditions
 * **Traceability:** Every log entry and RabbitMQ message must contain a `correlationId` traceable across Audit, Invoice, and Checkout modules.
 * Docker container builds successfully and runs without errors.
 * All unit tests pass with >80% code coverage.
