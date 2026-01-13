@@ -6,6 +6,13 @@ It must support recurring payments and ensure that all payment transactions are 
 
 ---
 
+## Prerequisites
+* Active GitHub account for source code access and collaboration
+* Own PayPal developer account for configuring, testing and integrating payment flows
+* Own Stripe developer account for configuring, testing and integrating payment flows
+
+---
+
 ## Technical Requirements / Stack
 
 * **Frameworks:**
