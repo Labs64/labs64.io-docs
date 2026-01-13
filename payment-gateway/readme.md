@@ -1,8 +1,6 @@
 # Payment Gateway Module
 
-Develop a payment gateway module that integrates with various Payment Service Providers (PSPs) via standardized interface (**PSP Adapter**) to handle payments for arbitrary platforms.
-The module should support multiple payment methods and be configurable via an external configuration file. It is assumed that the module will be extended in the future with additional PSPs.
-It must support recurring payments and ensure that all payment transactions are traceable and auditable.
+Develop a payment gateway module that integrates with multiple Payment Service Providers (PSPs) via a standardized interface (**PSP Adapter**), enabling payment processing across arbitrary platforms. The module should support multiple payment methods, configurable through an external configuration file. Payments are processed on behalf of tenants, with tenant-specific PSP configurations stored in the database and linked to tenant IDs. For this scope, PSP Adapters will be implemented for Stripe, PayPal, and a dummy “No-Op Provider,” with the module designed to allow easy addition of new PSPs in the future. It must support recurring payments and ensure that all transactions are fully traceable and auditable.
 
 ---
 
@@ -34,7 +32,7 @@ It must support recurring payments and ensure that all payment transactions are 
 
 * **Structure:** Module structure should follow the design of the existing [checkout](https://github.com/Labs64/labs64.io-checkout) and [auditflow](https://github.com/Labs64/labs64.io-auditflow) modules.
 * **Configuration:** Module static configuration must be managed via Spring Boot, covering:
-  * Payment methods / PSP configuration
+  * Payment methods / common PSP configuration
   * Currencies support
   * etc.
 * **Security:**
@@ -131,10 +129,21 @@ Every endpoint supports `correlationId` tracing via `X-Correlation-ID` header.
 * `icon` (base64) *(optional)*: Data for the PSP icon image.
 * `recurring` (boolean): Indicates if the method supports recurring payments.
 
-### 2. Initiate Payment Instance
+### 2. Configure PSP for a tenant
+
+**`POST /payment-method/{paymentMethodId}`**
+*Configure specific payment method for the tenant. The tenant is to be determined from the JWT token.*
+
+* **Request Body:**
+* `pspConfig` (object): PSP-specific configuration parameters.
+
+* **Response:**
+* * No content (204) on success.
+
+### 3. Initiate Payment Instance
 
 **`POST /payment`**
-*Initiate a new payment instance (one-time or recurring) and capture payment details. No actual payment will be performed yet!*
+*Initiate a new payment instance (one-time or recurring) and capture payment details. No actual payment will be performed yet! The payment is to be linked with a tenant. The tenant is to be determined from the JWT token.*
 
 * **Request Body:**
 * `paymentMethodId` (string): id of the selected payment method.
@@ -151,7 +160,7 @@ Every endpoint supports `correlationId` tracing via `X-Correlation-ID` header.
   * `type` (string): e.g., "none", "redirect", "3ds-challenge".
   * `details` (object): Metadata required for the next action.
 
-### 3. Execute Payment
+### 4. Execute Payment
 
 **`POST /payment/{payment.id}/pay`**
 *Execute a payment via external PSP using stored captured payment details and creates payment transaction. For non-recurring payments, this operation closes the payment on success.*
@@ -165,7 +174,7 @@ Every endpoint supports `correlationId` tracing via `X-Correlation-ID` header.
   * `status` (string): Transaction status.
   * `pspData` (object): Raw data returned from the PSP.
 
-### 4. Payment Status
+### 5. Payment Status
 
 **`GET /payment/{payment.id}`**
 *Retrieve the status and details of an existing payment. Can be used to restore (possibly incomplete) `nextAction` processing*
@@ -176,12 +185,12 @@ Every endpoint supports `correlationId` tracing via `X-Correlation-ID` header.
   * `type` (string): e.g., "none", "redirect", "3ds-challenge".
   * `details` (object): Metadata required for the next action.
 
-### 5. Close Payment
+### 6. Close Payment
 
 **`POST /payment/{payment.id}/close`**
 *Close an existing payment. No further pay operations can be executed.*
 
-### 6. Transaction Status
+### 7. Transaction Status
 
 **`GET /transaction/{transaction.id}`**
 *Retrieve the status and details of a payment transaction.*
@@ -199,7 +208,9 @@ Every endpoint supports `correlationId` tracing via `X-Correlation-ID` header.
 * **OpenAPI Spec:** Fully specified YAML file for the RESTful API.
 * **Java Module:** Implementing the functionality described above; including PayPal, Stripe and NoOp PSP adapters.
 * **Unit Tests:** Covering all major functionalities.
-* **Configuration:** Structured `application.yaml` for integrated payment methods.
+* **Configuration:** 
+  * Structured `application.yaml` for integrated payment methods.
+  * PSP-specific configuration instructions/templates/examples for a tenant.
 * **Database:** Flyway migration scripts in `resources/db/migration`.
 * **Dockerfile:** For containerizing the module.
   * Create docker-compose for local development including HA config with multiple instances.
@@ -252,6 +263,7 @@ Every endpoint supports `correlationId` tracing via `X-Correlation-ID` header.
   * Stripe (latest API) - https://docs.stripe.com/api
   * PayPal (latest API) - https://developer.paypal.com/api/rest/
   * None (NoOp for testing)
+* One-time and Recurring payment can be demoed with all integrated PSPs using sandbox accounts.
 * **Async Messaging:** RabbitMQ producer is implemented for `payment.finalized` events with transaction payload.
 * **Distributed Environments / Kubernetes safety:**
   * All functionality can run reliably on Kubernetes
