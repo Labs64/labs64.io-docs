@@ -135,7 +135,7 @@ Every endpoint supports `correlationId` tracing via `X-Correlation-ID` header.
 
 ### 2. Configure PSP for a tenant
 
-**`POST /payment-method/{paymentMethodId}`**
+**`POST /payment-methods/{paymentMethodId}`**
 *Configure specific payment method for the tenant. The tenant is to be determined from the JWT token.*
 
 * **Request Body:**
@@ -146,7 +146,7 @@ Every endpoint supports `correlationId` tracing via `X-Correlation-ID` header.
 
 ### 3. Initiate Payment Instance
 
-**`POST /payment`**
+**`POST /payments`**
 *Initiate a new payment instance (one-time or recurring) and capture payment details. No actual payment will be performed yet! The payment is to be linked with a tenant. The tenant is to be determined from the JWT token.*
 
 * **Request Body:**
@@ -166,7 +166,7 @@ Every endpoint supports `correlationId` tracing via `X-Correlation-ID` header.
 
 ### 4. Execute Payment
 
-**`POST /payment/{payment.id}/pay`**
+**`POST /payments/{payment.id}/pay`**
 *Execute a payment via external PSP using stored captured payment details and creates payment transaction. For non-recurring payments, this operation closes the payment on success.*
 
 *NOTE: PSP may imply delayed completion of the payment with later notification. Ensure architecture is prepared for handling this scenario by capturing the PSP notification and adjusting the transaction status in the background.*
@@ -180,7 +180,7 @@ Every endpoint supports `correlationId` tracing via `X-Correlation-ID` header.
 
 ### 5. Payment Status
 
-**`GET /payment/{payment.id}`**
+**`GET /payments/{payment.id}`**
 *Retrieve the status and details of an existing payment. Can be used to restore (possibly incomplete) `nextAction` processing*
 
 * **Response:**
@@ -191,12 +191,12 @@ Every endpoint supports `correlationId` tracing via `X-Correlation-ID` header.
 
 ### 6. Close Payment
 
-**`POST /payment/{payment.id}/close`**
+**`POST /payments/{payment.id}/close`**
 *Close an existing payment. No further pay operations can be executed.*
 
 ### 7. Transaction Status
 
-**`GET /transaction/{transaction.id}`**
+**`GET /transactions/{transaction.id}`**
 *Retrieve the status and details of a payment transaction.*
 
 * **Response:**
