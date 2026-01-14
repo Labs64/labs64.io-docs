@@ -15,7 +15,7 @@ Develop a payment gateway module that integrates with multiple Payment Service P
 
 * **Frameworks:**
   * Backend: Java 25, Spring Boot (latest), Spring Framework (latest)
-  * Frontend: Typescript
+  * Frontend: Typescript, Vue (latest), Vite (latest), ESLint + Prettier, Vue-Router,  Pinia, Vitest, Playwright, Bootstrap, Axios
 * **Database:** PostgreSQL (latest)
 * **Caching:** Redis
 * **Messaging:** RabbitMQ (latest)
@@ -67,45 +67,49 @@ Develop a payment gateway module that integrates with multiple Payment Service P
 
 ```mermaid
 sequenceDiagram
-    autonumber
+  autonumber
 
-    participant Client as Client / Checkout UI
-    participant API as Payment Gateway API
-    participant CFG as Config
-    participant DB as PostgreSQL
-    participant PSP as PSP Adapter
-    participant MQ as RabbitMQ
-    participant Subscriber as AuditFlow / Checkout / Invoice
+  participant Client as Client / Checkout UI
+  participant API as Payment Gateway API
+  participant CFG as Config (YAML)
+  participant DB as PostgreSQL
+  participant PSP as PSP Adapter
+  participant MQ as RabbitMQ
+  participant Subscriber as AuditFlow / Checkout / Invoice
 
-    Client->>API: GET /payment-methods
-    API->>CFG: Load payment methods (currency, recurring support)
-    API-->>Client: List of payment methods
+  Client->>API: GET /payment-methods
+  API->>CFG: Load payment methods (capabilities: currency, recurring)
+  API->>DB: Load tenant PSP configs (by tenantId from JWT)
+  API-->>Client: List of available payment methods
 
-    Client->>API: POST /payment (paymentMethodId, purchaseOrder, ...)
-    API->>CFG: Load payment method + PSP config
-    API->>DB: Create Payment (PENDING)
-    DB-->>API: Payment Id
+  Client->>API: POST /payments (paymentMethodId, purchaseOrder, ...)
+  API->>CFG: Load payment method metadata
+  API->>DB: Load tenant PSP config for paymentMethodId
+  API->>DB: Create Payment (INCOMPLETE)
+  API-->>Client: Payment + optional nextAction (setup)
 
-    Client->>API: POST /payment/{payment.id}/pay (Header: Idempotency-Key)
-    API->>DB: Check Idempotency-Key
-    DB-->>API: Not processed
+  Client->>API: POST /payments/{payment.id}/pay (Idempotency-Key)
+  API->>DB: Check Idempotency-Key (unique per tenant+payment)
+  API->>DB: Create Transaction (PENDING)
+  API->>PSP: executePayment() (tokenized data / references)
+  PSP-->>API: PSP response (status, references, nextAction?)
 
-    API->>PSP: executePayment() (tokenized payment data)
-    PSP-->>API: PSP response (status, pspData, nextAction)
-
-    API->>DB: Persist Transaction (status, PSP references only)
-
-    alt Payment requires user action
-        API-->>Client: nextAction (redirect / 3DS)
-    else Payment completed
-        API->>MQ: Publish payment.finalized (transaction payload, correlationId)
-        MQ-->>Subscriber: Consume event
-        API-->>Client: Transaction SUCCESS
-    else Payment failed
-        API->>MQ: Publish payment.finalized (transaction payload, correlationId)
-        MQ-->>Subscriber: Consume event
-        API-->>Client: Transaction FAILED
-    end
+  alt Sync completed (SUCCESS/FAILED)
+    API->>DB: Update Transaction (SUCCESS/FAILED)
+    API->>DB: Update Payment (CLOSED for one-time / ACTIVE for recurring)
+    API->>MQ: Publish payment.finalized (transaction payload, correlationId)
+    MQ-->>Subscriber: Consume event
+    API-->>Client: Transaction status
+  else Requires user action (3DS/redirect)
+    API->>DB: Update Payment (INCOMPLETE) + store nextAction
+    API-->>Client: nextAction (redirect / 3DS)
+  else Async completion (webhook later)
+    API-->>Client: 202 Accepted (Transaction PENDING)
+    PSP-->>API: Webhook/notification (later)
+    API->>DB: Update Transaction (SUCCESS/FAILED)
+    API->>MQ: Publish payment.finalized (transaction payload, correlationId)
+    MQ-->>Subscriber: Consume event
+  end
 ```
 
 ## API Proposal
@@ -131,7 +135,7 @@ Every endpoint supports `correlationId` tracing via `X-Correlation-ID` header.
 
 ### 2. Configure PSP for a tenant
 
-**`POST /payment-method/{paymentMethodId}`**
+**`POST /payment-methods/{paymentMethodId}`**
 *Configure specific payment method for the tenant. The tenant is to be determined from the JWT token.*
 
 * **Request Body:**
@@ -142,7 +146,7 @@ Every endpoint supports `correlationId` tracing via `X-Correlation-ID` header.
 
 ### 3. Initiate Payment Instance
 
-**`POST /payment`**
+**`POST /payments`**
 *Initiate a new payment instance (one-time or recurring) and capture payment details. No actual payment will be performed yet! The payment is to be linked with a tenant. The tenant is to be determined from the JWT token.*
 
 * **Request Body:**
@@ -162,7 +166,7 @@ Every endpoint supports `correlationId` tracing via `X-Correlation-ID` header.
 
 ### 4. Execute Payment
 
-**`POST /payment/{payment.id}/pay`**
+**`POST /payments/{payment.id}/pay`**
 *Execute a payment via external PSP using stored captured payment details and creates payment transaction. For non-recurring payments, this operation closes the payment on success.*
 
 *NOTE: PSP may imply delayed completion of the payment with later notification. Ensure architecture is prepared for handling this scenario by capturing the PSP notification and adjusting the transaction status in the background.*
@@ -176,7 +180,7 @@ Every endpoint supports `correlationId` tracing via `X-Correlation-ID` header.
 
 ### 5. Payment Status
 
-**`GET /payment/{payment.id}`**
+**`GET /payments/{payment.id}`**
 *Retrieve the status and details of an existing payment. Can be used to restore (possibly incomplete) `nextAction` processing*
 
 * **Response:**
@@ -187,12 +191,12 @@ Every endpoint supports `correlationId` tracing via `X-Correlation-ID` header.
 
 ### 6. Close Payment
 
-**`POST /payment/{payment.id}/close`**
+**`POST /payments/{payment.id}/close`**
 *Close an existing payment. No further pay operations can be executed.*
 
 ### 7. Transaction Status
 
-**`GET /transaction/{transaction.id}`**
+**`GET /transactions/{transaction.id}`**
 *Retrieve the status and details of a payment transaction.*
 
 * **Response:**
