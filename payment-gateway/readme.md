@@ -1,6 +1,6 @@
 # Payment Gateway Module
 
-Develop a payment gateway module that integrates with multiple Payment Service Providers (PSPs) via a standardized interface (**PSP Adapter**), enabling payment processing across arbitrary platforms. The module should support multiple payment methods, configurable through an external configuration file. Payments are processed on behalf of tenants, with tenant-specific PSP configurations stored in the database and linked to tenant IDs. For this scope, PSP Adapters will be implemented for Stripe, PayPal, and a dummy “No-Op Provider,” with the module designed to allow easy addition of new PSPs in the future. One-time payments must be fully supported end-to-end. Recurring payments are **out of scope for execution** in this freelance task, but the **data model and API must be designed to support recurring payments later**. All transactions must be fully traceable and auditable.
+Develop a [payment gateway module](https://github.com/Labs64/labs64.io-payment-gateway) that integrates with multiple Payment Service Providers (PSPs) via a standardized interface (**PSP Adapter**), enabling payment processing across arbitrary platforms. The module should support multiple payment methods, configurable through an external configuration file. Payments are processed on behalf of tenants, with tenant-specific PSP configurations stored in the database and linked to tenant IDs. For this scope, PSP Adapters will be implemented for Stripe, PayPal, and a dummy “No-Op Provider,” with the module designed to allow easy addition of new PSPs in the future. One-time payments must be fully supported end-to-end. Recurring payments are **out of scope for execution** in this freelance task, but the **data model and API must be designed to support recurring payments later**. All transactions must be fully traceable and auditable.
 
 ---
 
@@ -382,7 +382,7 @@ Every endpoint supports correlation tracing via the `X-Correlation-ID` header .
 
 ## Acceptance Criteria
 
-* Code follows standard Java best practices (consistent with `checkout`/`auditflow` modules) and is well-documented.
+* Code follows standard Java best practices (consistent with [checkout](https://github.com/Labs64/labs64.io-checkout) / [auditflow](https://github.com/Labs64/labs64.io-auditflow) modules) and is well-documented.
 * **PSP Abstraction Layer** is implemented using the **Strategy Pattern** (e.g., `StripeProvider`, `PayPalProvider`, and `NoOpProvider` implement a common `PaymentProvider` interface).
 * **Integrated PSPs:**
   * Stripe (latest API) - https://docs.stripe.com/api
