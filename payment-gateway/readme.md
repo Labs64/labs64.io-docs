@@ -237,9 +237,9 @@ Every endpoint supports `correlationId` tracing via `X-Correlation-ID` header.
 ---
 
 * **Milestone 1:** Project Setup & Basic Architecture
-  * Setup Spring Boot project with necessary dependencies.
+  * ✅ (done) - Setup Spring Boot project with necessary dependencies.
+  * ✅ (done) - Dockerfile and basic CI/CD pipeline.
   * Design OpenAPI specification with generated Java interface and create API stubs with log output.
-  * Dockerfile and basic CI/CD pipeline.
 * **Milestone 2:** PSP Abstraction Layer & NoOp Implementation
   * Implement PSP Abstraction Layer using Strategy Pattern.
   * Create NoOp PSP adapter for testing.
