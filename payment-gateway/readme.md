@@ -1,6 +1,6 @@
 # Payment Gateway Module
 
-Develop a payment gateway module that integrates with multiple Payment Service Providers (PSPs) via a standardized interface (**PSP Adapter**), enabling payment processing across arbitrary platforms. The module should support multiple payment methods, configurable through an external configuration file. Payments are processed on behalf of tenants, with tenant-specific PSP configurations stored in the database and linked to tenant IDs. For this scope, PSP Adapters will be implemented for Stripe, PayPal, and a dummy “No-Op Provider,” with the module designed to allow easy addition of new PSPs in the future. One-time payments must be fully supported end-to-end. Recurring payments are **out of scope for execution** in this freelance task, but the **data model and API must be designed to support recurring payments later**. All transactions must be fully traceable and auditable.
+Develop a payment gateway module that integrates with multiple Payment Service Providers (PSPs) via a standardized interface (**PSP Adapter**), enabling payment processing across arbitrary platforms. The module should support multiple payment methods, configurable through an external configuration file. Payments are processed on behalf of tenants, with tenant-specific PSP configurations stored in the database and linked to tenant IDs. For this scope, PSP Adapters will be implemented for Stripe, PayPal, and a dummy “No-Op Provider,” with the module designed to allow easy addition of new PSPs in the future. It must support recurring payments and ensure that all transactions are fully traceable and auditable.
 
 ---
 
@@ -8,178 +8,6 @@ Develop a payment gateway module that integrates with multiple Payment Service P
 * Active [GitHub account](https://docs.github.com/en/get-started/onboarding/getting-started-with-your-github-account) for source code access and collaboration
 * Own [PayPal developer account](https://developer.paypal.com/) for configuring, testing and integrating payment flows
 * Own [Stripe developer account](https://docs.stripe.com/development) for configuring, testing and integrating payment flows
-
----
-
-## Clarifications (Freelancer Q&A)
-
-This section captures the agreed clarifications and conventions that should be followed during implementation.
-
-### JWT token structure (claim names)
-
-* The tenant identifier claim name is **`tenantId`**.
-* Recommended payload example (user token):
-
-```json
-{
-  "aud": ["checkout", "payment-gateway"],
-  "sub": "user-123",
-  "tenantId": "tenant-abs",
-  "scope": "po:write payment:write",
-  "roles": [],
-  "iat": 1707470000,
-  "exp": 1707473600,
-  "jti": "2f1c1b6a-2c1e-4f2c-9b6b-9e51cdb1c4a0"
-}
-```
-
-### Tenant handling (no Tenant entity in Payment Gateway)
-
-Payment Gateway must **NOT** create or own a Tenant entity.
-
-* Do **not** auto-create tenants on first request.
-* Do **not** manage tenant lifecycle in Payment Gateway (create/update/delete/metadata).
-
-`tenantId` (from JWT) is used only as a **scoping key**:
-
-* All tenant-scoped endpoints require `tenantId` (from JWT).
-* Database records must include `tenantId`.
-* Tenant-specific PSP configuration must be stored **per `tenantId`**.
-* Caching / locking keys must include `tenantId`.
-
-### Correlation ID propagation
-
-Implementation note:
-- In RabbitMQ, propagate the correlation id via message headers (e.g., `X-Correlation-ID`) and/or payload field `correlationId`.
-
-* The `X-Correlation-ID` header must be supported on **every** request.
-* The same correlation id must be:
-  - included in logs
-  - propagated to downstream HTTP calls
-  - included in RabbitMQ messages (headers and/or payload)
-
-### Local development accounts (Stripe / PayPal)
-
-* For local development, each developer is expected to use **their own** Stripe and PayPal developer accounts.
-* This avoids shared credentials and environment conflicts.
-
-### External configuration file (YAML) conventions
-
-The following structure is acceptable for Milestone 1 (example):
-
-```yaml
-payment-gateway:
-  payment-methods:
-    - id: "stripe"
-      name: "Stripe"
-      description: "Credit/Debit Card via Stripe"
-      recurring: true
-      supported-currencies:
-        - USD
-        - EUR
-        - GBP
-      supported-countries:
-        - US
-        - GB
-        - DE
-```
-
-Required conventions:
-* `id` must be unique and stable (internal identifier).
-* `supported-currencies` must use ISO-4217 currency codes (e.g., `USD`, `EUR`).
-* `supported-countries` must use ISO-3166-1 alpha-2 codes (e.g., `US`, `DE`).
-
-Recommended addition (low effort, high value): add `enabled`:
-
-```yaml
-payment-gateway:
-  payment-methods:
-    - id: "stripe"
-      enabled: true
-      name: "Stripe"
-      description: "Credit/Debit Card via Stripe"
-      recurring: true
-      supported-currencies: ["USD", "EUR", "GBP"]
-      supported-countries: ["US", "GB", "DE"]
-```
-
-### Milestone 1 OpenAPI expectations
-
-* Milestone 1 assumes a **fully specified OpenAPI** definition:
-  - all endpoints
-  - request/response models
-  - error models
-  - examples
-* Additional fields may be added as needed, but must be reflected in the OpenAPI spec.
-* OpenAPI should support **both server and client generation**.
-
-### Tenant-specific PSP configuration location
-
-* YAML contains **common/shared** PSP configuration and capabilities.
-* Database stores **tenant-specific** configuration (scoped by `tenantId`).
-
-### RabbitMQ in local Docker Compose
-
-* RabbitMQ is available in Kubernetes for staging/production.
-* For local development, Docker Compose must include a **local RabbitMQ** instance.
-
-### Recurring payments scope (this task)
-
-* One-time and recurring payments share the same core states.
-* In the future recurring flow, each successful renewal creates a **new Transaction** linked to the same Payment.
-
-* Recurring payment **execution** (scheduling, renewal engine) is out of scope.
-* **Data model support** for recurring payments is in scope.
-* `payment.finalized` must be published for every successful renewal in the future recurring flow; only confirmed PSP transactions qualify and the PSP webhook status is the source of truth.
-* Idempotency must be implemented to avoid duplicate events.
-
-### `payment.finalized` event (payload format)
-
-Additional conventions (keep it simple):
-* Monetary values (e.g., `payment.amount`) are integers in **minor units** (e.g., cents).
-* Consumers must ignore unknown fields (payload evolution is **additive**).
-* RabbitMQ routing key / topic name should be `payment.finalized` (exchange/queue names remain configurable).
-
-* Payload format must be **JSON**.
-* It must include **all payment and transaction data** needed by downstream systems (invoicing/reporting).
-
-Minimal example:
-
-```json
-{
-  "event": {
-    "id": "01J0QW5JZ6R1J7K8YV9E3N2M1P",
-    "type": "payment.finalized",
-    "version": 1,
-    "occurredAt": "2026-02-10T12:34:56Z"
-  },
-  "tenantId": "tenant-abs",
-  "correlationId": "RSVCZ9NYY9GZNMPXI",
-  "payment": {
-    "id": "pay_123",
-    "status": "COMPLETED",
-    "amount": 1299,
-    "currency": "USD"
-  },
-  "transaction": {
-    "id": "trx_456",
-    "status": "SUCCESS"
-  },
-  "paymentMethod": {
-    "id": "stripe"
-  },
-  "pspReferences": {
-    "provider": "stripe",
-    "chargeId": "ch_...",
-    "paymentIntentId": "pi_..."
-  }
-}
-```
-
-### Retry behavior
-
-* Manual and automatic retries are required.
-* Automatic retries must be configurable per PSP/payment method.
 
 ---
 
@@ -194,7 +22,7 @@ Minimal example:
 * **Containerization:** Docker / concurrent multi-container operations. Assume deployment in Kubernetes
 * **Build Tool:** Maven (latest)
 * **API Documentation:** OpenAPI 3.0 (YAML)
-* **Authorization:** JWT token verification (OIDC/OAuth2). Tokens are issued by a separate Auth service.
+* **Authorization:** in the module using JWT token verification (OIDC/OAuth2)
 
 ---
 
@@ -211,7 +39,6 @@ Minimal example:
   * **Tokenization:** The module must **never** store raw credit card numbers. It must store PSP tokens/IDs (e.g., Stripe `customer_id`, `payment_method_id`).
   * **Resilience:** The `/pay` endpoint (see below) must support an `Idempotency-Key` header to prevent duplicate charges during network failures.
   * **API Security:** All API endpoints must be secured via JWT token (m2m) verification.
-  * **Multi-tenancy:** `tenantId` must be taken from the JWT (`tenantId` claim) and used to scope all tenant data (see Clarifications).
 * **Abstraction:** Introduce a **PSP Abstraction Layer** so new PSPs can be added or maintained easily.
 * **Payment States:**
   * `ACTIVE` -  payment is enabled and will be executed on schedule
@@ -229,7 +56,7 @@ Minimal example:
   * Document all endpoints in OpenAPI YAML
   * Add request/response examples
   * Describe common error model for all endpoints
-  * Generate API stubs from the OpenAPI for both **server and client** generation (API-first approach)
+  * Generate API java stubs from the OpenAPI (e.g. **API-first approach**)
 * **Queueing:** Final payment transactions should be published to a **RabbitMQ** queue for further processing by other ecosystem modules.
 * **PSP UI Actions:** Handle PSP-specific user actions (redirects, pop-ups, inline payment forms, etc.) as part of Payment Gateway UI integration.
   * PSP specific frontend dependencies should be exported from the PSP Adapter.
@@ -289,7 +116,7 @@ sequenceDiagram
 
 This section outlines the proposed RESTful API endpoints for the Payment Gateway module.  It is not meant to be exhaustive but serves as a starting point for implementation.
 
-Every endpoint supports correlation tracing via the `X-Correlation-ID` header (see Clarifications).
+Every endpoint supports `correlationId` tracing via `X-Correlation-ID` header.
 
 ### 1. Retrieve Payment Methods
 
@@ -390,7 +217,7 @@ Every endpoint supports correlation tracing via the `X-Correlation-ID` header (s
   * PSP-specific configuration instructions/templates/examples for a tenant.
 * **Database:** Flyway migration scripts in `resources/db/migration`.
 * **Dockerfile:** For containerizing the module.
-  * Create docker-compose for local development (single instance) including PostgreSQL, Redis, and RabbitMQ.
+  * Create docker-compose for local development including HA config with multiple instances.
 * **Documentation:** Setup, configuration, usage guide, contributor guide.
 * **CI/CD:** `.github` workflows pipeline to build, test.
 
@@ -440,7 +267,7 @@ Every endpoint supports correlation tracing via the `X-Correlation-ID` header (s
   * Stripe (latest API) - https://docs.stripe.com/api
   * PayPal (latest API) - https://developer.paypal.com/api/rest/
   * None (NoOp for testing)
-* One-time payments can be demoed with all integrated PSPs using sandbox accounts (personal developer accounts). Recurring payment execution is out of scope for this task.
+* One-time and Recurring payment can be demoed with all integrated PSPs using sandbox accounts.
 * **Async Messaging:** RabbitMQ producer is implemented for `payment.finalized` events with transaction payload.
 * **Distributed Environments / Kubernetes safety:**
   * All functionality can run reliably on Kubernetes
