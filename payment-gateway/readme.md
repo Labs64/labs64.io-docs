@@ -35,6 +35,7 @@ Develop a [payment gateway module](https://github.com/Labs64/labs64.io-payment-g
 * **Configuration:** Module static configuration must be managed via Spring Boot, covering:
   * Payment methods / common PSP configuration
   * Currencies support
+  * Retry behavior
   * etc.
 * **Security:**
   * **Tokenization:** The module must **never** store raw credit card numbers. It must store PSP tokens/IDs (e.g., Stripe `customer_id`, `payment_method_id`).
@@ -51,10 +52,24 @@ Develop a [payment gateway module](https://github.com/Labs64/labs64.io-payment-g
   * `PENDING` - payment is initiated but not completed yet
   * `SUCCESS` - payment completed successfully
   * `FAILED` - payment attempt failed; will be retried based on dunning logic
+* **Money Rules** (consistent with [checkout](https://github.com/Labs64/labs64.io-checkout)):
+  * All monetary amounts are stored in **minor units** (e.g., cents for USD/EUR).
+  * Currency codes must use **ISO-4217** (3 uppercase letters).
+  * Calculated fields are read-only and computed server-side.
 
 #### Authentication & tenant scoping
 
 * **JWT claim names:** the tenant identifier claim name is **`tenantId`**.
+* **JWT scopes** (space-separated, OAuth2-style):
+
+| Scope | Description |
+|---|---|
+| `payment-method:read` | Read available payment methods |
+| `payment-method:admin` | Configure tenant PSP settings |
+| `payment:read` | Read payment details and list payments |
+| `payment:write` | Create payments and execute pay |
+| `transaction:read` | Read transaction details |
+
 * Recommended JWT payload example (user token):
 
 ```json
@@ -62,7 +77,7 @@ Develop a [payment gateway module](https://github.com/Labs64/labs64.io-payment-g
   "aud": ["checkout", "payment-gateway"],
   "sub": "user-123",
   "tenantId": "tenant-abs",
-  "scope": "po:write payment:write",
+  "scope": "payment-method:read payment:write payment:read transaction:read",
   "roles": [],
   "iat": 1707470000,
   "exp": 1707473600,
@@ -107,6 +122,27 @@ payment-gateway:
       recurring: true
       supported-currencies: ["USD", "EUR", "GBP"]
       supported-countries: ["US", "GB", "DE"]
+    - id: "paypal"
+      enabled: true
+      name: "PayPal"
+      description: "PayPal Checkout"
+      recurring: false
+      supported-currencies: ["USD", "EUR"]
+      supported-countries: ["US", "DE"]
+    - id: "noop"
+      enabled: true
+      name: "No-Op (Test)"
+      description: "Test payment provider - always succeeds"
+      recurring: false
+      supported-currencies: ["USD", "EUR"]
+      supported-countries: ["US", "DE"]
+  retry:
+    max-retries: 3
+    retry-interval-seconds: 60
+    backoff-multiplier: 2.0
+  redis:
+    idempotency-key-ttl-seconds: 86400    # 24h
+    distributed-lock-ttl-seconds: 30
 ```
 
 Conventions:
@@ -126,7 +162,28 @@ Conventions:
 #### Retry behavior
 
 * Manual and automatic retries are required.
-* Automatic retries must be configurable per PSP/payment method.
+* Manual retry: `POST /payments/{paymentId}/retry` endpoint.
+* Automatic retries must be configurable per PSP/payment method (see YAML `retry` section above).
+* Retry configuration: `maxRetries`, `retryIntervalSeconds`, `backoffMultiplier`.
+
+#### Redis usage
+
+Redis is used for:
+* **Idempotency keys:** Store processed `Idempotency-Key` values per `tenantId + paymentId` to prevent duplicate charges. TTL configurable via `redis.idempotency-key-ttl-seconds`.
+* **Distributed locks:** Coordinate concurrent `/pay` requests across multiple pods. TTL configurable via `redis.distributed-lock-ttl-seconds`.
+* **Payment method config cache:** Cache resolved payment method configurations (YAML + tenant DB config merge) with short TTL to reduce DB lookups.
+
+
+### PSP Abstraction Layer
+
+The PSP Abstraction Layer uses the **Strategy Pattern** to enable easy addition of new payment providers.
+
+Adding a new PSP should require at best:
+1. Implement `PaymentProvider`.
+2. Annotate with `@Component`.
+3. Add YAML configuration entry.
+
+No changes to existing code should be required.
 
 
 ### Integration & Messaging
@@ -134,19 +191,23 @@ Conventions:
 * **API:** Implement a RESTful API (via OpenAPI specification) to manage payment gateway methods.
   * Document all endpoints in OpenAPI YAML
   * Add request/response examples
-  * Describe common error model for all endpoints
+  * Describe common error model for all endpoints (consistent with [checkout](https://github.com/Labs64/labs64.io-checkout) and [auditflow](https://github.com/Labs64/labs64.io-auditflow) `ErrorResponse` schema)
   * Generate API stubs from the OpenAPI for both **server and client** generation (API-first approach)
 * **Queueing:** Final payment transactions should be published to a **RabbitMQ** queue for further processing by other ecosystem modules.
 
 * **Correlation ID:** The `X-Correlation-ID` header must be supported on **every** request.
   * The same correlation id must be included in logs, propagated to downstream HTTP calls, and included in RabbitMQ messages (headers and/or payload).
+  * For webhook callbacks (which arrive without `X-Correlation-ID`), the gateway must restore the `correlationId` from the original payment record stored in the database.
 
-* **Events:** Publish `payment.finalized` events to RabbitMQ (routing key / topic name: `payment.finalized`).
-  * Payload format must be **JSON**.
-  * Monetary values are integers in **minor units** (e.g., cents).
-  * Consumers must ignore unknown fields (payload evolution is **additive**).
+* **Events:** Publish domain events to RabbitMQ. Payload format must be **JSON**. Monetary values are integers in **minor units** (e.g., cents). Consumers must ignore unknown fields (payload evolution is **additive**).
 
-Minimal example:
+| Event | Routing Key | Trigger |
+|---|---|---|
+| `payment.finalized` | `payment.finalized` | Transaction reaches terminal state (`SUCCESS` or `FAILED`) |
+| `payment.created` | `payment.created` | New payment instance created |
+| `payment.closed` | `payment.closed` | Payment closed (manually or after successful one-time payment) |
+
+`payment.finalized` event example:
 
 ```json
 {
@@ -160,13 +221,17 @@ Minimal example:
   "correlationId": "RSVCZ9NYY9GZNMPXI",
   "payment": {
     "id": "pay_123",
-    "status": "COMPLETED",
+    "status": "CLOSED",
+    "type": "ONE_TIME",
     "amount": 1299,
-    "currency": "USD"
+    "currency": "USD",
+    "description": "Order #12345"
   },
   "transaction": {
     "id": "trx_456",
-    "status": "SUCCESS"
+    "status": "SUCCESS",
+    "failureCode": null,
+    "failureMessage": null
   },
   "paymentMethod": {
     "id": "stripe"
@@ -203,7 +268,7 @@ sequenceDiagram
   API->>DB: Load tenant PSP configs (by tenantId from JWT)
   API-->>Client: List of available payment methods
 
-  Client->>API: POST /payments (paymentMethodId, purchaseOrder, ...)
+  Client->>API: POST /payments (paymentMethodId, purchaseOrderRef, billingInfo, ...)
   API->>CFG: Load payment method metadata
   API->>DB: Load tenant PSP config for paymentMethodId
   API->>DB: Create Payment (INCOMPLETE)
@@ -235,17 +300,51 @@ sequenceDiagram
 
 ## API Proposal
 
-This section outlines the proposed RESTful API endpoints for the Payment Gateway module.  It is not meant to be exhaustive but serves as a starting point for implementation.
+This section outlines the proposed RESTful API endpoints for the Payment Gateway module.
 
-Every endpoint supports correlation tracing via the `X-Correlation-ID` header .
+Every endpoint supports correlation tracing via the `X-Correlation-ID` header. All endpoints return errors using the standard `ErrorResponse` schema (see below).
+
+**Base path:** `/api/v1`
+
+### Common Error Model
+
+Consistent with [checkout](https://github.com/Labs64/labs64.io-checkout) and [auditflow](https://github.com/Labs64/labs64.io-auditflow) modules:
+
+```json
+{
+  "code": "NOT_FOUND",
+  "message": "Payment with ID '550e8400-...' was not found.",
+  "timestamp": "2026-02-10T12:34:56Z",
+  "traceId": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+}
+```
+
+**Error codes:**
+
+| Code | HTTP Status | Description |
+|---|---|---|
+| `NOT_FOUND` | 404 | Requested resource not found |
+| `VALIDATION_ERROR` | 400 | Request payload failed validation |
+| `CONFLICT` | 409 | Duplicate idempotency key or state conflict |
+| `INTERNAL_ERROR` | 500 | Unexpected server error |
+| `PSP_ERROR` | 502 | Upstream PSP communication failure |
+| `MISSING_TENANT_ID` | 400 | Missing `tenantId` in JWT |
+| `UNAUTHORIZED` | 401 | Invalid or missing JWT |
+| `FORBIDDEN` | 403 | Insufficient scopes |
+| `IDEMPOTENCY_CONFLICT` | 409 | Idempotency-Key reused with different request body |
+| `PAYMENT_NOT_PAYABLE` | 409 | Payment is in a state that does not allow `/pay` (e.g., already CLOSED) |
 
 ### 1. Retrieve Payment Methods
 
 **`GET /payment-methods`**
+*Returns the list of available payment methods for the tenant, filtered by YAML config and tenant PSP configuration.*
 
+* **Scopes required:** `payment-method:read`
 * **Query Parameters:**
-* `currency` (string) *(optional)*: Filter payment methods by supported currency code.
-* `country` (string) *(optional)*: Filter payment methods by supported country code.
+  * `currency` (string) *(optional)*: Filter by supported currency code (ISO-4217).
+  * `country` (string) *(optional)*: Filter by supported country code (ISO-3166-1 alpha-2).
+
+* **Response `200 OK`:**
 
 * **Response:**
 * `id` (string): Unique identifier for the payment method.
@@ -254,26 +353,53 @@ Every endpoint supports correlation tracing via the `X-Correlation-ID` header .
 * `icon` (base64) *(optional)*: Data for the PSP icon image.
 * `recurring` (boolean): Indicates if the method supports recurring payments.
 
-### 2. Configure PSP for a tenant
+### 2. Configure PSP for a Tenant
 
-**`POST /payment-methods/{paymentMethodId}`**
-*Configure specific payment method for the tenant. The tenant is to be determined from the JWT token.*
+**`PUT /payment-methods/{paymentMethodId}/config`**
+*Configure or update PSP-specific settings for the tenant. The tenant is determined from the JWT token.*
+
+* **Scopes required:** `payment-method:admin`
 
 * **Request Body:**
 * `pspConfig` (object): PSP-specific configuration parameters.
 
 * **Response:**
-* * No content (204) on success.
+  * `204 No Content` on success.
+  * `400` if `paymentMethodId` is not a valid/known payment method.
+
+**`GET /payment-methods/{paymentMethodId}/config`**
+*Retrieve the current PSP configuration for the tenant. Sensitive fields (API keys) must be masked in the response.*
+
+* **Scopes required:** `payment-method:admin`
+
+* **Response `200 OK`:**
+
+```json
+{
+  "paymentMethodId": "stripe",
+  "tenantId": "tenant-abs",
+  "enabled": true,
+  "config": {
+    "apiKey": "sk_test_...****",
+    "webhookSecret": "whsec_...****",
+    "merchantId": "acct_..."
+  },
+  "createdAt": "2026-01-15T10:00:00Z",
+  "updatedAt": "2026-02-01T14:30:00Z"
+}
+```
 
 ### 3. Initiate Payment Instance
 
 **`POST /payments`**
-*Initiate a new payment instance (one-time or recurring) and capture payment details. No actual payment will be performed yet! The payment is to be linked with a tenant. The tenant is to be determined from the JWT token.*
+*Initiate a new payment instance (one-time or recurring) and capture payment details. No actual charge is performed yet. The tenant is determined from the JWT token.*
+
+* **Scopes required:** `payment:write`
 
 * **Request Body:**
 * `paymentMethodId` (string): id of the selected payment method.
 * `purchaseOrder` (object): Details from the [checkout](https://github.com/Labs64/labs64.io-checkout) module.
-  * ... including 
+  * ... including
   * `recurring` (boolean): Indicates if the payment is recurring.
 * `billingInfo` (object): Billing information.
 * `shippingInfo` (object) *(optional)*: Shipping information.
@@ -288,7 +414,15 @@ Every endpoint supports correlation tracing via the `X-Correlation-ID` header .
 ### 4. Execute Payment
 
 **`POST /payments/{payment.id}/pay`**
-*Execute a payment via external PSP using stored captured payment details and creates payment transaction. For non-recurring payments, this operation closes the payment on success.*
+*Execute a payment via the external PSP using stored captured payment details and create a payment transaction. For non-recurring payments, this operation closes the payment on success.*
+
+* **Scopes required:** `payment:write`
+* **Headers:**
+  * `Idempotency-Key` (string, **required**): Unique key per `tenantId + paymentId` combination.
+
+*NOTE: PSP may require delayed completion with later webhook notification. The architecture must handle this by returning `202 Accepted` and updating the transaction status asynchronously upon webhook receipt.*
+
+* **Response `200 OK`** (synchronous completion):
 
 *NOTE: PSP may imply delayed completion of the payment with later notification. Ensure architecture is prepared for handling this scenario by capturing the PSP notification and adjusting the transaction status in the background.*
 *Transaction status transitions to `SUCCESS` or `FAILED` are to be published in the queueing service.*
@@ -330,7 +464,7 @@ Every endpoint supports correlation tracing via the `X-Correlation-ID` header .
 
 ## Deliverables
 
-* **OpenAPI Spec:** Fully specified YAML file for the RESTful API.
+* **OpenAPI Spec:** Fully specified YAML file for the RESTful API, including all endpoints, schemas, error model, and examples.
 * **Java Module:** Implementing the functionality described above; including PayPal, Stripe and NoOp PSP adapters.
 * **Unit Tests:** Covering all major functionalities.
 * **Configuration:** 
@@ -389,7 +523,8 @@ Every endpoint supports correlation tracing via the `X-Correlation-ID` header .
   * PayPal (latest API) - https://developer.paypal.com/api/rest/
   * None (NoOp for testing)
 * One-time payments can be demoed with all integrated PSPs using sandbox accounts (personal developer accounts). Recurring payment execution is out of scope for this task.
-* **Async Messaging:** RabbitMQ producer is implemented for `payment.finalized` events with transaction payload.
+* **Async Messaging:** RabbitMQ producer is implemented for `payment.finalized`, `payment.created`, and `payment.closed` events with transaction payload.
+* **Webhook handling:** PSP webhooks are received via `POST /webhooks/{provider}`, verified using PSP-specific signatures, and used to settle async transactions.
 * **Distributed Environments / Kubernetes safety:**
   * All functionality can run reliably on Kubernetes
   * Execution is idempotent to prevent duplicate processing
@@ -399,6 +534,7 @@ Every endpoint supports correlation tracing via the `X-Correlation-ID` header .
 * Docker container builds successfully and runs without errors.
 * All unit tests pass with >80% code coverage.
 * API endpoints function exactly as specified in the OpenAPI documentation.
+* **Error model** follows the standard `ErrorResponse` schema consistent with checkout and auditflow modules.
 * Logging Policy: no sensitive information in the logs, such as PAN/PII, credentials, etc.
 * Payment methods are configurable via YAML and retrievable via API.
 * **Vulnerability Scanning:** no `High` and `Critical` vulnerabilities (static code analysis, dependencies, docker, etc.) with GitHub Code scanning / CodeQL, Trivy for Docker
