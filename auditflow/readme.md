@@ -2,11 +2,15 @@
 
 ```mermaid
 flowchart LR
-  SC[Service Caller] <--> SVC[Service]
-  SVC --> Q[(Auditing Queue<br/>Kafka, RabbitMQ, etc.)] --> PT[Processing & Transformation] --> SD[Storage Dispatcher]
+  SC[Service Caller] <--> SVC[Audited Service]
 
-  %% group node to reduce edge clutter
-  SD --> ST[Storage targets]
+  %% Ingest: services publish via REST; the backend is the sole broker producer/consumer.
+  SVC -->|"publish audit event (REST)"| BE[AuditFlow Backend]
+  BE <-->|"publish / consume"| Q[(Message Broker<br/>RabbitMQ, Kafka, etc.)]
+
+  %% Delivery: the backend drives each pipeline — Transformer then Sink.
+  %% Transformers and Sinks never read the broker directly.
+  BE -->|"per pipeline"| TR[Transformer] --> SK[Sink] --> ST[Storage targets]
 
   subgraph Storages["Storages"]
     direction TB
@@ -25,6 +29,8 @@ flowchart LR
 
   SA[Search & Analysis] --> ST
 ```
+
+> **Flow:** `Broker → AuditFlow Backend → Transformer → Sink`. The backend service is the only component that publishes to and consumes from the broker; for each configured pipeline it calls the Transformer and then the Sink over HTTP. Transformers and Sinks do **not** consume from the broker directly.
 
 Complete configuration examples for all available sinks.
 
