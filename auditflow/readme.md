@@ -10,7 +10,9 @@ flowchart LR
 
   %% Delivery: the backend drives each pipeline — Transformer then Sink.
   %% Transformers and Sinks never read the broker directly.
-  BE -->|"per pipeline"| TR[Transformer] --> SK[Sink] --> ST[Storage targets]
+  BE <-->|"1. transform"| TR[Transformer]
+  BE -->|"2. sink"| SK[Sink]
+  SK -->|"3. persist"| ST[Storage targets]
 
   subgraph Storages["Storages"]
     direction TB

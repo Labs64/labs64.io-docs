@@ -275,7 +275,7 @@ sequenceDiagram
   API-->>Client: Payment + optional nextAction (setup)
 
   Client->>API: POST /payments/{payment.id}/pay (Idempotency-Key)
-  API->>DB: Check Idempotency-Key (unique per tenant+payment)
+  API->>Redis: Check Idempotency-Key (unique per tenant+payment)
   API->>DB: Create Transaction (PENDING)
   API->>PSP: executePayment() (tokenized data / references)
   PSP-->>API: PSP response (status, references, nextAction?)
