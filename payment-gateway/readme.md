@@ -265,7 +265,7 @@ sequenceDiagram
 
   Client->>API: GET /payment-methods
   API->>CFG: Load payment methods (capabilities: currency, recurring)
-  API->>DB: Load tenant PSP configs (by tenantId from JWT)
+  API->>DB: Load tenant PSP configs (by tenantId from X-Auth-Tenant, trusted gateway header)
   API-->>Client: List of available payment methods
 
   Client->>API: POST /payments (paymentMethodId, purchaseOrderRef, billingInfo, ...)
