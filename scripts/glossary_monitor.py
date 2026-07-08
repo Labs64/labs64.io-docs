@@ -70,8 +70,16 @@ AUTO_PATH     = SCRIPT_DIR / ".glossary-auto.md"
 GLOSSARY_PATH = SCRIPT_DIR.parent / "GLOSSARY.md"
 STATE_PATH    = SCRIPT_DIR / ".glossary-state.json"
 
-OPENROUTER_MODEL    = "nvidia/nemotron-3-ultra-550b-a55b:free"
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+# Fallback chain passed to OpenRouter's native multi-model routing.
+# OpenRouter tries each model in order automatically; we only handle retries
+# for transient failures (rate limits, upstream overload) at the call level.
+OPENROUTER_MODELS = [
+    "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "openai/gpt-oss-120b:free",
+    "openai/gpt-oss-20b:free",
+]
+_RETRY_DELAYS = [1, 2, 4, 8]  # seconds between successive retries
 
 MAX_PROMPT_CHARS = 180_000
 
@@ -425,6 +433,10 @@ SYSTEM_PROMPT = """\
 You are a technical writer maintaining the AI-generated section of a project glossary \
 for the Labs64.IO platform. A separate manually curated section exists — your job is to \
 keep only the AI-generated section accurate and complete based on documentation changes.
+
+Critical output rule: your entire response must be a single markdown table — nothing else. \
+No preamble, no reasoning, no analysis, no summary, no code fences. \
+Start your response with the header row (| Term | …) and end with the last data row.\
 """
 
 USER_PROMPT_TMPL = """\
@@ -459,6 +471,9 @@ Update the AI-generated entries where the changed files justify it:
 Constraints:
 - Only include terms used in human-readable prose — not source-code symbols (field names,
   class names, method names, API path parameters).
+  If a source-code identifier clearly represents a meaningful domain concept, promote it to
+  the natural-language term instead of using the identifier as the glossary entry.
+  Example: a class named `CorrelationIdFilter` should become "Correlation ID", not the class name.
 - Skip trivial terms (common English words, generic framework names like Spring Boot or Vue).
 - Return a 4-column markdown table: header row + data rows.
   Columns: **Term** | **Context** | **Definition** | **Source**
@@ -472,9 +487,20 @@ Constraints:
   Multiple sources are comma-separated (one per context entry).
 - Definitions: concise prose — no bullet points, no inline code snippets.
 
-Return ONLY the updated AI-generated table (header + rows). No commentary, no fences.
+Return ONLY the markdown table (header row + data rows). No commentary, no fences, no thinking.
+Your response must start with | and every line must start with |.
 If no changes are warranted, return the current AI-generated section unchanged.
 """
+
+
+def _extract_table(content: str) -> Optional[str]:
+    """Return pipe-only lines from *content*, or None if there are none.
+
+    Reasoning models (e.g. Nemotron) emit chain-of-thought before the table.
+    Filtering to lines that start with | strips that preamble safely.
+    """
+    lines = [l for l in content.splitlines() if l.startswith("|")]
+    return ("\n".join(lines) + "\n") if lines else None
 
 
 def call_llm(
@@ -483,7 +509,12 @@ def call_llm(
     changed_docs: dict[str, str],
     removed_paths: list[str],
 ) -> str:
-    """Call the LLM and return the updated auto section table."""
+    """Call the LLM via OpenRouter and return the updated auto section table.
+
+    Model failover is delegated to OpenRouter's native multi-model routing
+    (extra_body models + route=fallback).  This function only retries on
+    transient failures (rate limits, upstream overload) where waiting helps.
+    """
     client = OpenAI(
         base_url=OPENROUTER_BASE_URL,
         api_key=os.environ["OPENROUTER_API_KEY"],
@@ -497,35 +528,72 @@ def call_llm(
             + "\n\n"
         )
 
-    response = client.chat.completions.create(
-        model=OPENROUTER_MODEL,
-        max_tokens=8192,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {
-                "role": "user",
-                "content": USER_PROMPT_TMPL.format(
-                    manual_section=manual_text.strip(),
-                    auto_section=auto_text.strip(),
-                    changed_docs=build_docs_block(changed_docs),
-                    removed_section=removed_section,
-                ),
-            },
-        ],
-        extra_headers={
-            "HTTP-Referer": "https://github.com/Labs64/labs64.io-docs",
-            "X-Title": "Labs64 Glossary Monitor",
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {
+            "role": "user",
+            "content": USER_PROMPT_TMPL.format(
+                manual_section=manual_text.strip(),
+                auto_section=auto_text.strip(),
+                changed_docs=build_docs_block(changed_docs),
+                removed_section=removed_section,
+            ),
         },
-    )
-    if not response.choices or response.choices[0].message.content is None:
-        # OpenRouter returns an empty choices list (or null content) when the model
-        # hits a rate limit, is overloaded, or applies a content filter.
-        finish = response.choices[0].finish_reason if response.choices else "no choices"
-        raise RuntimeError(
-            f"LLM returned no content (finish_reason={finish!r}). "
-            f"Full response: {response.model_dump_json()}"
+    ]
+
+    last_error: str = ""
+
+    for attempt in range(len(_RETRY_DELAYS) + 1):
+        response = client.chat.completions.create(
+            model=OPENROUTER_MODELS[0],          # primary; fallbacks via extra_body
+            max_tokens=8192,
+            messages=messages,
+            extra_headers={
+                "HTTP-Referer": "https://github.com/Labs64/labs64.io-docs",
+                "X-Title": "Labs64 Glossary Monitor",
+            },
+            extra_body={
+                "models": OPENROUTER_MODELS,     # OpenRouter fallback chain
+                "route": "fallback",
+            },
         )
-    return response.choices[0].message.content.strip()
+
+        # OpenRouter surfaces errors (rate limits, upstream failures, etc.)
+        # as a null choices list rather than an HTTP error code.
+        if not response.choices or response.choices[0].message.content is None:
+            finish = (
+                response.choices[0].finish_reason if response.choices else "no choices"
+            )
+            last_error = f"finish_reason={finish!r}  {response.model_dump_json()}"
+            if attempt < len(_RETRY_DELAYS):
+                delay = _RETRY_DELAYS[attempt]
+                print(
+                    f"  retry {attempt + 1}: {delay} s  (error: {last_error})",
+                    file=sys.stderr,
+                )
+                time.sleep(delay)
+                continue
+            break
+
+        table = _extract_table(response.choices[0].message.content)
+        if table is None:
+            last_error = (
+                "response contained no markdown table rows:\n"
+                + response.choices[0].message.content
+            )
+            if attempt < len(_RETRY_DELAYS):
+                delay = _RETRY_DELAYS[attempt]
+                print(
+                    f"  retry {attempt + 1}: {delay} s  (error: no table rows in response)",
+                    file=sys.stderr,
+                )
+                time.sleep(delay)
+                continue
+            break
+
+        return table
+
+    raise RuntimeError(f"All retries exhausted. Last error:\n{last_error}")
 
 
 # ---------------------------------------------------------------------------
@@ -613,7 +681,7 @@ def main() -> None:
 
     print(
         f"\n{len(all_changed)} changed file(s), {len(all_removed)} removed — "
-        f"calling {OPENROUTER_MODEL} via OpenRouter…"
+        f"calling OpenRouter (models: {', '.join(OPENROUTER_MODELS)})…"
     )
 
     # 4. Read sources
