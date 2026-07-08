@@ -1,0 +1,169 @@
+name: Glossary Monitor
+
+# Runs every Monday at 09:00 UTC and can be triggered manually.
+# On each run it scans all labs64.io-* repositories for documentation,
+# uses an LLM via OpenRouter to propose glossary updates, and opens a PR
+# only when the glossary content actually changes.
+
+# -----------------------------------------------------------------------
+# ARCHITECTURE NOTE — why everything goes through PRs, never direct push
+# -----------------------------------------------------------------------
+# The default branch is assumed to be protected (required PR reviews,
+# status checks, etc.). Direct `git push` to it would either be blocked
+# or silently bypass those rules depending on the token used.
+# All commits from this workflow — glossary updates AND the encrypted
+# state file — are therefore proposed via peter-evans/create-pull-request,
+# which targets a separate branch and opens/updates a PR.
+# Do not replace these steps with a bare `git commit && git push`.
+# -----------------------------------------------------------------------
+
+# -----------------------------------------------------------------------
+# ARCHITECTURE NOTE — when to advance the state baseline (state_changed)
+# -----------------------------------------------------------------------
+# The state file records the HEAD SHA of each repo after a run so the
+# next run skips commits already evaluated.
+#
+# It only needs to be updated when the LLM was actually invoked — i.e.
+# when changed or removed doc files were found. Re-examining commits that
+# contain no doc files costs only a few GitHub API calls (cheap), so
+# there is no benefit to recording those commits in state.
+#
+# This collapses state_changed to the same condition as "did we call
+# the LLM", which equals "were there any changed or removed doc files".
+# If no doc files changed, state is left untouched and those commits are
+# re-scanned next run at negligible cost. Do not widen state_changed to
+# fire on every run — it would open noisy PRs with no meaningful payload.
+# -----------------------------------------------------------------------
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'   # Every Monday 09:00 UTC
+  workflow_dispatch:        # Manual trigger from the Actions tab
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-glossary:
+    name: Scan repos and update GLOSSARY.md
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout labs64.io-docs
+        uses: actions/checkout@v4
+
+      # The state file contains private repository names and HEAD SHAs.
+      # It is stored encrypted in the repo (scripts/.glossary-state.json.enc)
+      # so the plaintext never appears in the public git history.
+      # Decrypt with STATE_ENCRYPTION_KEY (a repository secret: any strong
+      # passphrase, e.g. `openssl rand -hex 32`).
+      - name: Decrypt state file
+        env:
+          STATE_ENCRYPTION_KEY: ${{ secrets.STATE_ENCRYPTION_KEY }}
+        run: |
+          if [ -f scripts/.glossary-state.json.enc ]; then
+            openssl enc -aes-256-cbc -d -pbkdf2 \
+              -pass env:STATE_ENCRYPTION_KEY \
+              -in  scripts/.glossary-state.json.enc \
+              -out scripts/.glossary-state.json
+          fi
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: scripts/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Run glossary monitor
+        id: monitor
+        env:
+          # GH_TOKEN must have read access to all labs64.io-* repos (public + private).
+          # Use a classic PAT or a fine-grained token with "Contents: Read" on all target repos.
+          # Store it as a repository secret named GH_TOKEN.
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: python scripts/glossary_monitor.py
+
+      # Re-encrypt the updated state so it is ready for either PR step below.
+      # The .enc file is safe to store publicly — without STATE_ENCRYPTION_KEY
+      # it reveals nothing about private repo names or commit SHAs.
+      - name: Encrypt state file
+        if: steps.monitor.outputs.state_changed == 'true'
+        env:
+          STATE_ENCRYPTION_KEY: ${{ secrets.STATE_ENCRYPTION_KEY }}
+        run: |
+          openssl enc -aes-256-cbc -pbkdf2 \
+            -pass env:STATE_ENCRYPTION_KEY \
+            -in  scripts/.glossary-state.json \
+            -out scripts/.glossary-state.json.enc
+
+      # When the glossary changed, the state travels in the same PR so both
+      # land on the default branch together when the PR is merged.
+      - name: Open glossary PR
+        if: steps.monitor.outputs.glossary_changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          branch: glossary/auto-update
+          base: ${{ github.event.repository.default_branch }}
+          title: "docs: glossary update from weekly repository scan"
+          body: |
+            This PR was opened automatically by the **Glossary Monitor** workflow.
+
+            ### What changed
+            The job scanned all `labs64.io-*` repositories and used an LLM via OpenRouter to:
+            - Add terms present in documentation but missing from the glossary
+            - Improve definitions that were incomplete or outdated
+            - Expand the *Context* column for terms that appear in additional modules
+
+            ### Review checklist
+            - [ ] New terms are accurate and belong in a human-readable glossary
+            - [ ] Definitions are concise and free of code symbols
+            - [ ] Context column lists the correct module(s)
+            - [ ] Alphabetical order is preserved
+
+            > Generated by [`scripts/glossary_monitor.py`](../blob/master/scripts/glossary_monitor.py)
+          commit-message: "docs: auto-update GLOSSARY.md via glossary-monitor"
+          labels: |
+            documentation
+            automated
+          # Re-use the same branch so repeated runs update the existing PR
+          # instead of opening a new one each time.
+          delete-branch: false
+          add-paths: |
+            GLOSSARY.md
+            scripts/.glossary-auto.md
+            scripts/.glossary-state.json.enc
+
+      # When docs were scanned but the glossary needed no changes, open a
+      # minimal PR to advance the state baseline so the next run does not
+      # re-examine the same commits. Reuses the same branch across weeks so
+      # a lingering unmerged PR is updated in place rather than duplicated.
+      - name: Open state-only PR
+        if: >-
+          steps.monitor.outputs.state_changed == 'true' &&
+          steps.monitor.outputs.glossary_changed != 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          branch: glossary/state-update
+          base: ${{ github.event.repository.default_branch }}
+          title: "chore: advance glossary monitor state baseline"
+          body: |
+            The **Glossary Monitor** ran this week and scanned new commits across
+            `labs64.io-*` repositories, but found no glossary changes to propose.
+
+            This PR advances the encrypted state baseline so the next weekly run
+            does not re-examine the same commits. Safe to merge without review.
+          commit-message: "chore: update glossary monitor state [skip ci]"
+          labels: |
+            automated
+          delete-branch: false
+          add-paths: |
+            scripts/.glossary-state.json.enc
