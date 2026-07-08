@@ -272,9 +272,71 @@ def merge_glossary(manual_text: str, auto_text: str) -> str:
     return TABLE_HEADER + "\n" + "\n".join(sorted_rows) + "\n"
 
 
-def write_glossary(manual_text: str, auto_text: str) -> None:
+def _reachable(url: str, token: Optional[str]) -> bool:
+    """Return True if the resource behind *url* exists.
+
+    GitHub blob URLs (https://github.com/Labs64/<repo>/blob/<branch>/<path>)
+    are checked via the Contents API so private repos work with the token and
+    anchors (#section) are stripped before the request (HTTP can't validate them).
+    All other URLs fall back to a plain HEAD request.
+    """
+    base = url.split("#")[0]   # anchors can't be validated over HTTP
+    gh = re.match(
+        r"https://github\.com/Labs64/([^/]+)/blob/([^/]+)/(.+)", base
+    )
+    if gh:
+        repo, branch, path = gh.groups()
+        api_url = (
+            f"{GITHUB_API}/repos/{GITHUB_ORG}/{repo}/contents/{path}"
+            f"?ref={branch}"
+        )
+        headers: dict[str, str] = {
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        try:
+            resp = requests.get(api_url, headers=headers, timeout=15)
+            return resp.status_code == 200
+        except Exception:
+            return False
+    # Repo-root URLs and anything else: plain HEAD
+    try:
+        resp = requests.head(base, timeout=15, allow_redirects=True)
+        return resp.status_code < 400
+    except Exception:
+        return False
+
+
+def check_and_strip_links(table: str, token: Optional[str]) -> str:
+    """Verify every [text](url) in *table* is reachable.
+
+    Unreachable links are replaced with plain text so a bad LLM-generated path
+    never lands in GLOSSARY.md.  Each failure is reported to stderr.
+    Unique URLs are deduplicated before checking to minimise API calls.
+    """
+    urls = dict.fromkeys(re.findall(r"\[[^\]]+\]\(([^)]+)\)", table))
+    bad: set[str] = set()
+    for url in urls:
+        if not _reachable(url, token):
+            print(f"  WARNING: unreachable link stripped — {url}", file=sys.stderr)
+            bad.add(url)
+
+    if not bad:
+        return table
+
+    def _strip(m: re.Match) -> str:  # type: ignore[type-arg]
+        return m.group(1) if m.group(2) in bad else m.group(0)
+
+    return re.sub(r"\[([^\]]+)\]\(([^)]+)\)", _strip, table)
+
+
+def write_glossary(manual_text: str, auto_text: str, token: Optional[str] = None) -> None:
     """Regenerate GLOSSARY.md from both sources."""
     table = merge_glossary(manual_text, auto_text)
+    print("Checking link reachability…")
+    table = check_and_strip_links(table, token)
     GLOSSARY_PATH.write_text(
         GLOSSARY_GENERATED_COMMENT + "\n\n# Glossary\n\n" + table,
         encoding="utf-8",
@@ -717,7 +779,7 @@ def main() -> None:
             + proposed_auto + "\n",
             encoding="utf-8",
         )
-        write_glossary(manual_text, proposed_auto)
+        write_glossary(manual_text, proposed_auto, token)
         print("GLOSSARY.md regenerated.")
     else:
         print("LLM found no glossary changes needed.")
