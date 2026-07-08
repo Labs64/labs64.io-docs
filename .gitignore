@@ -2,3 +2,8 @@
 .idea/
 .vscode/
 .DS_Store
+
+# --- Glossary monitor ---
+# Plaintext state contains private repo names and SHAs — never commit it.
+# Only the encrypted form (.enc) belongs in the repo.
+scripts/.glossary-state.json
