@@ -26,11 +26,11 @@ Status and version are the single source of truth published on the website ([`_d
 
 | Module | Status | Version | Docs | Known gaps |
 |---|---|---|---|---|
-| [AuditFlow](./auditflow/README.md) | beta | 0.0.3 | [sink configuration reference](./auditflow/README.md), [AWS CloudWatch setup](./auditflow/aws-cloudwatch-setup.md) | v1 API contract not yet frozen |
-| [Auth Gateway](./auth-gateway/README.md) | beta | 0.0.2 | pending — page not yet published in this repo | — |
-| [Checkout](./checkout/checkout-service-spec-en.md) | alpha | (none) | [service specification](./checkout/checkout-service-spec-en.md) | No tagged release yet; known cross-tenant read gap under review |
-| [Payment Gateway](./payment-gateway/README.md) | alpha | (none) | [module reference](./payment-gateway/README.md) | **PSP webhook signature verification incomplete — do not connect to live funds**; no tagged release yet; no frontend |
-| [Customer Portal](./customer-portal/README.md) | alpha | (none) | pending — page not yet published in this repo | Frontend only, backend not implemented; no tagged release yet |
+| [AuditFlow](./auditflow/README.md) | beta | 0.0.3 | [module reference](./auditflow/README.md), [sink configuration reference](./auditflow/sink-configuration.md), [AWS CloudWatch setup](./auditflow/aws-cloudwatch-setup.md) | v1 API contract not yet frozen |
+| [Auth Gateway](./auth-gateway/README.md) | beta | 0.0.2 | [module reference](./auth-gateway/README.md) | none |
+| [Checkout](./checkout/README.md) | alpha | (none) | [module reference](./checkout/README.md) | No tagged release yet; known cross-tenant read gap under review |
+| [Payment Gateway](./payment-gateway/README.md) | alpha | (none) | [module reference](./payment-gateway/README.md), [original module specification](./payment-gateway/module-specification.md) | **PSP webhook signature verification incomplete — do not connect to live funds**; no tagged release yet; no frontend |
+| [Customer Portal](./customer-portal/README.md) | alpha | (none) | [module reference](./customer-portal/README.md) | Frontend only, backend not implemented; no tagged release yet |
 | Invoicing | planned | — | not started | No repository yet |
 | AI & MCP Gateway | exploring | — | not started | Design stage only; not scheduled |
 
