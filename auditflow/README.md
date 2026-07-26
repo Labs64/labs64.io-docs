@@ -33,11 +33,11 @@ To run AuditFlow — standalone or as part of the ecosystem — start at **[labs
 
 Chart values: [`charts/auditflow/values.yaml`](https://github.com/Labs64/labs64.io-helm-charts/blob/master/charts/auditflow/values.yaml) in `labs64.io-helm-charts`.
 
-Key settings (see the repo's own `AGENTS.md` for the complete list):
+Key settings (see the repo's own `AGENTS.md` for the complete list). These are Helm value paths, and they live under `applicationYaml` — a bare `--set tenants.source.mode=…` hits an unrelated chart-provisioning block (`tenants.platform.*` / `tenants.additional`, which ships the tenant ConfigMaps themselves) and silently does nothing:
 
-- `tenants.source.mode` — `local-dir` (default; per-tenant `tenants/<tenantId>.yaml` files) or `gitops-configmap` (ConfigMaps labelled `auditflow.io/tenant`).
-- `tenants.ratelimit.backend` — `in-memory` (default, single replica) or `redis` (multi-replica).
-- `secretRef.resolver` — `env` (default, `AUDITFLOW_TENANT_<ID>_<KEY>`) or `k8s-secret`, for resolving `${secretRef:<key>}` sink credentials.
+- `applicationYaml.tenants.source.mode` — the chart ships `gitops-configmap` (ConfigMaps labelled `auditflow.io/tenant`); if you unset it entirely, the application's own built-in default is `local-dir` (per-tenant `tenants/<tenantId>.yaml` files polled from a mounted directory).
+- `applicationYaml.tenants.ratelimit.backend` — the chart ships `redis` (correct once you run more than one replica); the application's own default is `in-memory` (single replica only).
+- `applicationYaml.secretRef.resolver` — the chart ships `k8s-secret` (reads the tenant's own Secret `auditflow-tenant-<tenantId>-creds`); the application's own default is `env` (`AUDITFLOW_TENANT_<ID>_<KEY>`), for resolving `${secretRef:<key>}` sink credentials.
 - `RABBITMQ_USERNAME` / `RABBITMQ_PASSWORD` — required, no defaults.
 
 Additional configuration references kept in this repo:

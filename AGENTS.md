@@ -13,7 +13,10 @@ Public documentation for the Labs64.IO ecosystem. Organized by module with Markd
 | `checkout/` | Checkout module documentation |
 | `payment-gateway/` | Payment Gateway documentation |
 | `auditflow/` | AuditFlow documentation |
-| `architecture/` | Architecture documentation |
+| `auth-gateway/` | Auth Gateway documentation |
+| `customer-portal/` | Customer Portal documentation |
+| `architecture.md` | Architecture documentation |
+| `getting-started.md` | Getting-started guide |
 
 ## Critical guardrails
 
