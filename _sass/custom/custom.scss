@@ -1,0 +1,54 @@
+// Mermaid diagrams: click to open a fullscreen view (mirrors GitHub's mermaid rendering).
+// Wiring lives in _includes/head_custom.html.
+
+code.language-mermaid svg {
+  cursor: zoom-in;
+}
+
+.mermaid-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background: rgba(0, 0, 0, 0.75);
+  cursor: zoom-out;
+
+  &.open {
+    display: flex;
+  }
+}
+
+.mermaid-lightbox-inner {
+  max-width: 95vw;
+  max-height: 95vh;
+  overflow: auto;
+  padding: 24px;
+  background: #fff;
+  border-radius: 8px;
+  cursor: default;
+  box-sizing: border-box;
+
+  svg {
+    // The lightbox clone's width/height are computed in JS from the diagram's
+    // viewBox and set as explicit pixel attributes there (fit-to-viewport,
+    // preserving aspect ratio) — this rule only has to stop it displaying as
+    // inline and picking up unwanted whitespace below itself.
+    display: block;
+  }
+}
+
+.mermaid-lightbox-close {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  padding: 0;
+  color: #fff;
+  font-size: 32px;
+  line-height: 1;
+  background: none;
+  border: none;
+  cursor: pointer;
+}

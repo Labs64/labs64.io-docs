@@ -1,0 +1,81 @@
+<script>
+  /* Mermaid diagrams: click to open a fullscreen view (mirrors GitHub's mermaid rendering).
+     Styling lives in _sass/custom/custom.scss. Runs independently of mermaid's own
+     rendering timing: it wires the click on the stable code.language-mermaid element
+     and only looks up the <svg> mermaid renders into it at click time.
+     NOTE: this theme's layout collapses HTML onto very few lines, so avoid `//`
+     line comments anywhere in this script — they would swallow the rest of the line. */
+  (function () {
+    function ready(fn) {
+      if (document.readyState !== "loading") fn();
+      else document.addEventListener("DOMContentLoaded", fn);
+    }
+
+    ready(function () {
+      var diagrams = document.querySelectorAll("code.language-mermaid");
+      if (!diagrams.length) return;
+
+      var lightbox = document.createElement("div");
+      lightbox.className = "mermaid-lightbox";
+      lightbox.innerHTML =
+        '<button type="button" class="mermaid-lightbox-close" aria-label="Close">&times;</button>' +
+        '<div class="mermaid-lightbox-inner"></div>';
+      document.body.appendChild(lightbox);
+      var inner = lightbox.querySelector(".mermaid-lightbox-inner");
+
+      function openLightbox(svg) {
+        var clone = svg.cloneNode(true);
+        clone.removeAttribute("width");
+        clone.removeAttribute("height");
+        clone.style.removeProperty("max-width");
+
+        /* A bare inline <svg> with only a viewBox (no width/height) does not
+           reliably get browser-computed intrinsic sizing the way <img> does —
+           in testing it collapsed to a near-zero box instead. So the fit is
+           computed by hand from the viewBox, using the same "as large as
+           possible without overflowing either dimension" rule object-fit:
+           contain would give, and applied as explicit pixel width/height. */
+        var viewBox = (svg.getAttribute("viewBox") || "").split(/\s+/);
+        var ratio = viewBox.length === 4 ? viewBox[2] / viewBox[3] : null;
+        if (ratio) {
+          var maxW = window.innerWidth * 0.88;
+          var maxH = window.innerHeight * 0.82;
+          var w = maxW;
+          var h = w / ratio;
+          if (h > maxH) {
+            h = maxH;
+            w = h * ratio;
+          }
+          clone.setAttribute("width", w);
+          clone.setAttribute("height", h);
+        }
+
+        inner.innerHTML = "";
+        inner.appendChild(clone);
+        lightbox.classList.add("open");
+      }
+
+      function closeLightbox() {
+        lightbox.classList.remove("open");
+        inner.innerHTML = "";
+      }
+
+      lightbox.addEventListener("click", function (e) {
+        if (e.target === lightbox || e.target.closest(".mermaid-lightbox-close")) {
+          closeLightbox();
+        }
+      });
+
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") closeLightbox();
+      });
+
+      diagrams.forEach(function (code) {
+        code.addEventListener("click", function () {
+          var svg = code.querySelector("svg");
+          if (svg) openLightbox(svg);
+        });
+      });
+    });
+  })();
+</script>

@@ -1,0 +1,20 @@
+services:
+  labs64io-docs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: labs64.io-docs
+    environment:
+      - JEKYLL_ENV=development
+      - BUNDLE_PATH=/usr/local/bundle
+    volumes:
+      - .:/srv/jekyll:cached
+      - bundle_cache:/usr/local/bundle
+    ports:
+      - "4000:4000"
+      - "35729:35729"
+    command: >
+      bash -c "bundle check || bundle install && bundle exec jekyll serve --host 0.0.0.0 --livereload --watch --verbose --config _config.yml"
+
+volumes:
+  bundle_cache:

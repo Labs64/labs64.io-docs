@@ -2,39 +2,41 @@
 
 # Labs64.IO :: Documentation
 
-[![📖 Documentation](https://img.shields.io/badge/📖-Documentation-AB6543.svg)](https://github.com/Labs64/labs64.io-docs)
+[![📖 Documentation](https://img.shields.io/badge/📖-Documentation-AB6543.svg)](https://labs64.io/docs/)
 
-## What this repo is
+The documentation source for the Labs64.IO Ecosystem — everything needed to run, configure, and integrate the modules. Published at **[labs64.io/docs/](https://labs64.io/docs/)**.
 
-This repository is the **public reference documentation** for the Labs64.IO ecosystem: module-by-module technical detail, integration guides, and the architecture reference. It is not the onboarding path.
-
-**The website owns the onboarding journey.** If you want to run the ecosystem, start at **[labs64.io/get-started/](https://labs64.io/get-started/)** — it has the three supported ways to run it (one module, the whole ecosystem, or your own cluster) and the exact steps for each. This repo does not duplicate that path, so the two surfaces don't compete or drift out of sync with each other.
-
-Two audiences, two homes:
+## What's here
 
 | You want to... | Go to |
 |---|---|
-| Run the ecosystem (or one module) | [labs64.io/get-started/](https://labs64.io/get-started/) |
-| Understand the architecture at a glance | [labs64.io/architecture/](https://labs64.io/architecture/) |
-| Build and change the code | [`getting-started.md`](./getting-started.md) in this repo |
-| Go deeper on how modules fit together | [`architecture.md`](./architecture.md) in this repo |
-| Look up a module's integration/operational detail | the module table below |
+| Run the ecosystem, or one module | [`getting-started.md`](./getting-started.md) |
+| Configure or integrate a module | the module table below |
+| Understand how it fits together | [`architecture.md`](./architecture.md) |
+| Build and change the code | [`contributing.md`](./contributing.md) |
 
 ## Modules
 
-Status and version are the single source of truth published on the website ([`_data/modules.yml`](https://github.com/Labs64/labs64.io-website/blob/master/_data/modules.yml)). No module has reached a 1.0 / GA tier yet.
+| Module | What it does | Documentation |
+|---|---|---|
+| **AuditFlow** | Routes audit events to OpenSearch, S3, Splunk, and other destinations | [module reference](./auditflow/README.md) · [quickstart](./auditflow/quickstart.md) · [sink configuration](./auditflow/sink-configuration.md) · [operations](./auditflow/operations.md) |
+| **Auth Gateway** | Authenticates and authorizes every request at the edge | [module reference](./auth-gateway/README.md) |
+| **Checkout** | Cart-to-paid-order workflow with a whitelabel UI | [module reference](./checkout/README.md) |
+| **Payment Gateway** | One payment API across multiple PSPs | [module reference](./payment-gateway/README.md) |
+| **Customer Portal** | The customer-facing frontend | [module reference](./customer-portal/README.md) |
 
-| Module | Status | Version | Docs | Known gaps |
-|---|---|---|---|---|
-| [AuditFlow](./auditflow/README.md) | beta | 0.0.3 | [module reference](./auditflow/README.md), [sink configuration reference](./auditflow/sink-configuration.md), [AWS CloudWatch setup](./auditflow/aws-cloudwatch-setup.md) | v1 API contract not yet frozen |
-| [Auth Gateway](./auth-gateway/README.md) | beta | 0.0.2 | [module reference](./auth-gateway/README.md) | none |
-| [Checkout](./checkout/README.md) | alpha | (none) | [module reference](./checkout/README.md) | No tagged release yet; known cross-tenant read gap under review |
-| [Payment Gateway](./payment-gateway/README.md) | alpha | (none) | [module reference](./payment-gateway/README.md), [original module specification](./payment-gateway/module-specification.md) | **PSP webhook signature verification incomplete — do not connect to live funds**; no tagged release yet; no frontend |
-| [Customer Portal](./customer-portal/README.md) | alpha | (none) | [module reference](./customer-portal/README.md) | Frontend only, backend not implemented; no tagged release yet |
-| Invoicing | planned | — | not started | No repository yet |
-| AI & MCP Gateway | exploring | — | not started | Design stage only; not scheduled |
+Module status and versions are published on the website, sourced from [`_data/modules.yml`](https://github.com/Labs64/labs64.io-website/blob/master/_data/modules.yml).
 
-## Where to go next
+## Working on these docs
 
-- **[`getting-started.md`](./getting-started.md)** — set up the workspace, build a module, run its tests, and follow the OpenAPI-first change workflow. For contributors, not adopters.
-- **[`architecture.md`](./architecture.md)** — the module map, request path, database-per-service model, tenancy, and observability, consolidated from each repo's `AGENTS.md`. A reference companion to [labs64.io/architecture/](https://labs64.io/architecture/), which has the diagram.
+Docker-first — see [`AGENTS.md`](./AGENTS.md) for conventions.
+
+```bash
+just serve    # dev server at http://localhost:4000/docs/
+just build    # one-off production build
+just doctor   # Jekyll diagnostics
+```
+
+## License
+
+Licensed under the [Apache License 2.0](./LICENSE).

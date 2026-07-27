@@ -1,0 +1,68 @@
+title: Labs64.IO Documentation
+description: >-
+  Public reference documentation for the Labs64.IO Ecosystem: module-by-module
+  technical detail, integration guides, and the architecture reference.
+theme: just-the-docs
+
+plugins:
+  - jekyll-sitemap
+  - jekyll-relative-links
+
+# Cross-links are written as relative *.md paths so they resolve on GitHub too;
+# this rewrites them to built URLs at publish time.
+relative_links:
+  enabled: true
+  collections: true
+
+url: "https://labs64.io"
+baseurl: "/docs"
+
+# Brand
+logo: "/assets/images/labs64-logo.png"
+color_scheme: labs64
+
+# Enable or disable the site search
+search_enabled: true
+search_tokenizer_separator: /[\s/]+/
+
+# Heading anchor links appear on hover over h1-h6 tags in page content
+heading_anchors: true
+
+# Mermaid diagram support (loaded from jsdelivr CDN, no vendoring)
+# Use ```mermaid fenced code blocks in any page.
+mermaid:
+  version: "11.16.0"
+
+# "Edit this page on GitHub" link in the page footer
+gh_edit_link: true
+gh_edit_link_text: "Edit this page on GitHub."
+gh_edit_repository: "https://github.com/Labs64/labs64.io-docs"
+gh_edit_branch: "master"
+gh_edit_view_mode: "tree"
+
+# Aux links for the upper right navigation
+aux_links:
+  "Labs64.IO":
+    - "https://labs64.io"
+  "Labs64.IO GitHub":
+    - "https://github.com/Labs64/labs64.io-workspace"
+
+exclude:
+  - README.md
+  - AGENTS.md
+  - CLAUDE.md
+  - LICENSE
+  - Dockerfile
+  - docker-compose.yml
+  - .dockerignore
+  - justfile
+
+# Give every page the just-the-docs layout by default, so content pages
+# don't each need `layout: default` in their front matter. index.md still
+# overrides this with its own `layout: home`.
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "default"
