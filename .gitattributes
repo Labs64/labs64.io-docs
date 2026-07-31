@@ -1,0 +1,21 @@
+# Normalize line endings to LF for all text files, regardless of platform
+# (including Windows checkouts). Git auto-detects text vs. binary; detected
+# text files are stored with LF and always checked out with LF.
+* text=auto eol=lf
+
+# Explicit binary types (never touched by line-ending normalization)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.pdf binary
+*.zip binary
+*.tar binary
+*.gz binary
+*.jar binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
