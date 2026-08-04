@@ -1,7 +1,7 @@
 ---
 title: Auth Gateway
-parent: Modules
-nav_order: 5
+parent: Core Platform
+nav_order: 1
 ---
 
 # Auth Gateway

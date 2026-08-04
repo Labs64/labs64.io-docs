@@ -1,12 +1,15 @@
 ---
-title: Development
-nav_order: 5
+title: Community & Contributing
+nav_order: 7
 has_children: true
 has_toc: false
 ---
 
-# Development
+# Community & Contributing
 
-This section covers how to contribute to the Labs64.IO ecosystem.
+Labs64.IO is built in public across focused repositories. Use this section to find the contributor workflow and understand where source code and operational assets live.
 
-Because Labs64.IO is a polyglot microservices platform consisting of multiple independent repositories, the central orchestration point for all development is the **Workspace**.
+| You want to… | Go to |
+|---|---|
+| Contribute a change | [Contributing Guide](./contributing.md) |
+| Find the workspace and source repositories | [Workspace and source repositories](./workspace-repositories.md) |

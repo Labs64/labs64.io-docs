@@ -1,7 +1,7 @@
 ---
 title: AuditFlow
-parent: Modules
-nav_order: 10
+parent: Core Platform
+nav_order: 2
 ---
 
 # AuditFlow
@@ -14,7 +14,7 @@ AuditFlow is a central router for audit events. It allows you to publish events 
 | Capability | Description |
 |------------|-------------|
 | **Tenant Isolation** | Every pipeline belongs to exactly one tenant. Events route only through their respective tenant's pipelines. |
-| **Pluggable Sinks** | Out-of-the-box support for OpenSearch, S3, Splunk, and more. |
+| **Pluggable Sinks** | Send events to the destinations configured for a tenant. |
 | **Pluggable Transformers** | Modify or enrich event payloads in-flight before they reach a sink. |
 | **Stateless Routing** | Relies entirely on external persistence; it operates purely as an event processor. |
 
@@ -92,6 +92,21 @@ pipelines:
         properties:
           index: "audit-logs"
 ```
+
+### Transformers and sinks
+
+Build every pipeline from a small set of explicit stages. The configured set depends on the deployment; validate a plugin's supported interface in the service repository before enabling it.
+
+| Category | Purpose | Typical use |
+|---|---|---|
+| **Transformers: privacy** | Remove, mask, or pseudonymize fields | Keep personal data out of a downstream audit index |
+| **Transformers: enrichment** | Add context derived from known event fields | Attach source or classification metadata |
+| **Transformers: normalization** | Reshape event data into a common form | Make events easier to query consistently |
+| **Sinks: search** | Write records for investigation and querying | OpenSearch |
+| **Sinks: object storage** | Store durable archive copies | S3-compatible storage |
+| **Sinks: observability / SIEM** | Send events to security or operations tooling | Splunk and equivalent configured adapters |
+
+Order matters: apply privacy transformations before a sink that should never receive the original field. Keep sink credentials in deployment secrets, not in pipeline files.
 
 ## REST APIs
 

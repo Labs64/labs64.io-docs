@@ -1,0 +1,7 @@
+# Labs64.IO Get Started
+
+Choose one of three paths: run a single service locally to validate a focused capability; run the full ecosystem locally in k3d to validate cross-service behavior; or deploy selected Helm charts to a Kubernetes cluster for a shared environment.
+
+Local service example: clone a service repository and use its just up workflow. Full ecosystem example: clone Labs64/labs64.io-workspace, run just doctor, just clone, and just up. Cluster environments require ingress, service-owned persistence, RabbitMQ where event flows are used, secret management, observability, and reviewed authorization policy.
+
+Read /docs/getting-started/ and its child pages for the complete commands and go-live checks.

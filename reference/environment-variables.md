@@ -1,7 +1,6 @@
 ---
 title: Environment Variables
-parent: Reference
-nav_order: 6
+nav_exclude: true
 ---
 
 # Environment Variables

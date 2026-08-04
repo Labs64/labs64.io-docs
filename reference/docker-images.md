@@ -1,10 +1,10 @@
 ---
-title: Docker Images
+title: Docker Images Index
 parent: Reference
 nav_order: 4
 ---
 
-# Docker Images
+# Docker Images Index
 
 All Labs64.IO Docker images are published to our official container registry. They adhere to the following principles:
 - **Non-root user execution:** All images run as `l64user` (uid/gid 1064), except for `nginx`-based frontend images which may use uid 101.

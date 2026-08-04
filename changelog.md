@@ -1,6 +1,6 @@
 ---
-title: Changelog
-nav_order: 10
+title: Changelog & Release Notes
+nav_order: 6
 has_children: false
 has_toc: false
 description: "Track Labs64.IO ecosystem additions, updates, and fixes."

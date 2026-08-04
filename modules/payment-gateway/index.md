@@ -1,7 +1,7 @@
 ---
 title: Payment Gateway
-parent: Modules
-nav_order: 30
+parent: Commerce & Billing
+nav_order: 2
 ---
 
 # Payment Gateway

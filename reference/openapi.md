@@ -1,10 +1,10 @@
 ---
-title: OpenAPI
+title: API Reference (OpenAPI)
 parent: Reference
 nav_order: 1
 ---
 
-# OpenAPI Specifications
+# API Reference (OpenAPI)
 
 Every Labs64.IO module strictly follows an **OpenAPI-first** approach. The OpenAPI spec is the absolute source of truth; both server stubs and client libraries are generated directly from it.
 

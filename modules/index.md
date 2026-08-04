@@ -1,20 +1,19 @@
 ---
-title: Modules
+title: Services & Modules
+permalink: /services/
 nav_order: 3
 has_children: true
 has_toc: false
 ---
 
-# Modules
+# Services & Modules
 
-Labs64.IO is built on independent, polyglot modules. Each module exposes an OpenAPI contract and handles a specific domain of digital commerce.
+Labs64.IO is composed of focused services. Adopt the capability you need today, then grow through shared identity, events, routing, and operating practices.
 
-| Module | What it does |
-|--------|--------------|
-| **[AuditFlow](./auditflow/)** | Route audit events from any service to destinations like OpenSearch, S3, or Splunk. |
-| **[Auth Gateway](./auth-gateway/)** | Authenticate and authorize every request once, at the edge. |
-| **[Checkout](./checkout/)** | Take a buyer from cart to paid order with a whitelabel UI. |
-| **[Payment Gateway](./payment-gateway/)** | Accept payments through multiple providers behind a single API. |
-| **[Customer Portal](./customer-portal/)** | Self-service frontend for your customers. |
+| Product area | Use it for | Services |
+|---|---|---|
+| [Core Platform](./core-platform.md) | Identity, policy, audit, and AI-tool access | Auth Gateway · AuditFlow · MCP Gateway |
+| [Commerce & Billing](./commerce-billing.md) | Licensing, payments, checkout, and invoicing | NetLicensing · Payment Gateway · Checkout · Invoicing |
+| [Extensions](./extensions.md) | Customer experiences, communication, and insight | Notifications · Reporting · Customer Portal · GuideChimp |
 
-Select a module from the sidebar to view its comprehensive documentation.
+Every service page places its role in the wider ecosystem and tells you whether its documented capability is currently available or planned.

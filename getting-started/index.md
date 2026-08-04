@@ -1,119 +1,38 @@
 ---
-title: Getting Started
+title: Get Started
 nav_order: 2
 has_children: true
 has_toc: false
 ---
 
-# Getting Started
+# Get Started
 
-This guide walks you through the complete process of standing up the Labs64.IO Ecosystem from zero to a running deployment. We provide two main paths for evaluation: Docker Compose for a quick single-module spin-up, and local Kubernetes (k3d) for evaluating the complete ecosystem.
+Start with the smallest environment that answers your question. You can evaluate a service by itself, exercise the whole ecosystem locally, or move directly to a Kubernetes cluster.
 
-## 1. Introduction
+## Pick a path
 
-Labs64.IO provides flexibility. You don't have to run the entire platform. If you only need AuditFlow today, you can run only AuditFlow. The shared gateway makes it easy to add modules later without changing your edge architecture.
+| Your goal | Recommended path | What you get |
+|---|---|---|
+| Validate one capability fast | [Run one module locally](./run-one-module-locally.md) | A focused local service environment |
+| See services work together | [Run the full ecosystem locally](./run-the-full-ecosystem-locally.md) | Gateway, modules, and supporting services in k3d |
+| Prepare an environment for a team | [Deploy to your Kubernetes cluster](./deploy-to-kubernetes.md) | Helm-based installation model and go-live checklist |
 
-## 2. Prerequisites
+If you are not sure which one applies, use the [deployment path guide](./choose-a-deployment-path.md).
 
-Ensure you have the following installed on your machine:
-- **Docker** (Required for all options)
-- **just** (Command runner, required for local tooling)
-- **k3d & Helm** (Required only for the Kubernetes deployment)
-- **Java 25 & Maven** (Required only for the single-module build)
+## What to expect
 
-## 3. Choose Your Deployment Option
+Labs64.IO is modular: you do not have to adopt the whole platform on day one. A shared edge and consistent contracts make it possible to add services deliberately as your needs grow.
 
 ```mermaid
 flowchart TD
-  Q{"What is your goal?"}
-  Q -->|"Evaluate a single module"| D["Docker Compose"]
-  Q -->|"Evaluate the ecosystem"| K["Local Kubernetes (k3d)"]
-  Q -->|"Deploy to production"| H["Helm on AWS / BYO K8s"]
-  
-  style D fill:#f9f,stroke:#333,stroke-width:2px
-  style K fill:#bbf,stroke:#333,stroke-width:2px
-  style H fill:#dfd,stroke:#333,stroke-width:2px
+  Q{"What do you need to prove?"}
+  Q -->|"One service"| D["Run one module locally"]
+  Q -->|"A cross-service flow"| K["Run the full ecosystem locally"]
+  Q -->|"A shared team environment"| H["Deploy to Kubernetes"]
 ```
 
-## 4. Docker Quick Start (Single Module)
+## Before you begin
 
-The fastest way to verify the ecosystem mechanics is to run AuditFlow in isolation using Docker Compose.
+Install Docker for every path. The local ecosystem path also uses `just`, k3d, and Helm. A service repository may require its own language runtime when you build it from source; its quick start tells you exactly what is needed.
 
-1. Clone the module:
-   ```bash
-   git clone https://github.com/Labs64/labs64.io-auditflow.git
-   cd labs64.io-auditflow
-   ```
-2. Start the module:
-   ```bash
-   just up
-   ```
-
-*The first run will take time to resolve Maven dependencies and build the container image. Subsequent runs are near-instant.*
-
-## 5. Kubernetes / Helm Deployment (Full Ecosystem)
-
-To see the modules working together behind the Auth Gateway, deploy the entire stack to a local k3d cluster.
-
-1. Clone the workspace:
-   ```bash
-   git clone https://github.com/Labs64/labs64.io-workspace.git labs64.io
-   cd labs64.io
-   ```
-2. Verify tooling and clone all modules:
-   ```bash
-   just doctor
-   just clone
-   ```
-3. Build and deploy:
-   ```bash
-   just up
-   ```
-
-## 6. Configure Modules
-
-By default, the `just up` command uses the standard configuration defined in `values-local.yaml`. You can modify module behavior by adjusting these values or using the `obs` (observability) overlays.
-
-For deep dives into configuration properties, refer to the **[Configuration](./configuration.html)** guide.
-
-## 7. Verify Installation
-
-### Verify Docker Compose (AuditFlow)
-Publish a test event and check the response:
-```bash
-curl -sS -i -X POST http://localhost:8080/audit/publish \
-  -H 'Content-Type: application/json' \
-  -d '{"eventType":"demo.event","sourceSystem":"demo","extra":{"hello":"world"}}'
-```
-*Expected: `HTTP/1.1 200` with an `X-Audit-Event-Id` header.*
-
-### Verify Kubernetes
-Check that the Auth Gateway is routing correctly:
-1. Open your browser to `http://gateway.localhost`
-2. Run `kubectl get pods` to ensure all deployable modules (`auditflow`, `auth-gateway`, `checkout`, `payment-gateway`, `customer-portal`) are in the `Running` state.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant U as User
-    participant G as Gateway (localhost:80)
-    participant M as Module Pods
-    
-    U->>G: curl http://gateway.localhost/api/...
-    G->>G: Authenticate Request
-    G->>M: Forward to specific module
-    M-->>U: HTTP 200 Response
-```
-
-## 8. Explore APIs
-
-Every module publishes an OpenAPI specification. In the Kubernetes deployment, these are aggregated at the edge:
-- **API Docs:** `http://gateway.localhost/docs`
-
-You can use the aggregated Swagger UI to execute requests directly against the live modules.
-
-## 9. Next Steps
-
-- Review **[Deployment Options](./deployment.html)** to plan your production rollout.
-- Explore individual **[Modules](../modules/)** to understand capabilities and advanced configurations.
-- Hit an issue? Check the **[Troubleshooting](./troubleshooting.html)** guide.
+> **Fastest first step:** [run a module locally](./run-one-module-locally.md). It gives you a real endpoint and a contained environment without asking you to operate the entire stack.

@@ -1,7 +1,6 @@
 ---
-title: Deployment
-parent: Getting Started
-nav_order: 3
+title: Deployment Notes
+nav_exclude: true
 ---
 
 # Deployment

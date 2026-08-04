@@ -1,0 +1,34 @@
+# Labs64.IO Documentation
+
+Labs64.IO is a modular digital commerce platform with independently deployable services, a shared authenticated edge, tenant-aware policy, OpenAPI contracts, and event-driven audit routing.
+
+## Documentation index
+
+- Overview: /docs/
+  - What is Labs64.IO?: /docs/introduction/what-is-labs64-io.html
+  - Core Concepts: /docs/introduction/core-concepts.html
+  - Architecture Overview: /docs/introduction/architecture.html
+- Get Started: /docs/getting-started/
+  - Choose a Deployment Path: /docs/getting-started/choose-a-deployment-path/
+  - Run One Module Locally: /docs/getting-started/run-one-module-locally/
+  - Run the Full Ecosystem Locally: /docs/getting-started/run-the-full-ecosystem-locally/
+  - Deploy to Your Kubernetes Cluster: /docs/getting-started/deploy-to-kubernetes/
+- Services & Modules: /docs/services/
+  - Core Platform: Auth Gateway, AuditFlow, MCP Gateway (planned)
+  - Commerce & Billing: NetLicensing (planned), Payment Gateway, Checkout, Invoicing (planned)
+  - Extensions: Notifications (planned), Reporting (planned), Customer Portal, GuideChimp (planned)
+- Operate & Manage: /docs/operate-manage/
+  - Deployment, Helm, gateway routing, persistence, scaling, observability, security, troubleshooting
+- Reference: /docs/reference/
+  - OpenAPI, events, configuration, images, Helm, glossary
+- Community & Contributing: /docs/development/
+
+Planned service pages document an intended design and are not callable API contracts until a release publishes them.
+
+Machine-readable section bundles:
+- /docs/overview-full.txt
+- /docs/get-started-full.txt
+- /docs/services-modules-full.txt
+- /docs/operate-manage-full.txt
+- /docs/reference-full.txt
+- /docs/community-contributing-full.txt

@@ -1,7 +1,6 @@
 ---
-title: Troubleshooting
-parent: Getting Started
-nav_order: 4
+title: Local Troubleshooting Notes
+nav_exclude: true
 ---
 
 # Troubleshooting

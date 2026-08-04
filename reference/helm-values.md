@@ -1,10 +1,10 @@
 ---
-title: Helm Values
+title: Helm Charts Reference
 parent: Reference
 nav_order: 5
 ---
 
-# Helm Values
+# Helm Charts Reference
 
 All Labs64.IO modules are deployed using Helm. While each module exposes its own `values.yaml`, they all share a standard set of root keys for consistency.
 
@@ -21,4 +21,4 @@ All Labs64.IO modules are deployed using Helm. While each module exposes its own
 | `envFrom` | Secrets or ConfigMaps to load as environment variables. | list |
 | `observability.enabled` | Toggle OTEL auto-instrumentation. | boolean |
 
-For module-specific Helm configurations, check the **Configuration** section within the specific module documentation (e.g., [Checkout Configuration](../modules/checkout/)).
+For module-specific Helm configurations, check the **Configuration** section within the specific module documentation (e.g., [Checkout Configuration](../modules/checkout/index.md)).

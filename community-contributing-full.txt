@@ -1,0 +1,3 @@
+# Labs64.IO Community & Contributing
+
+The Labs64.IO Workspace coordinates local development and ecosystem workflows. Service repositories own service-specific source and changes. Helm charts contain Kubernetes packaging; Labs64.IO Commons contains shared libraries; this repository contains public documentation. Start at /docs/development/ for contributor and repository links.

@@ -1,7 +1,6 @@
 ---
-title: Configuration
-parent: Getting Started
-nav_order: 2
+title: Configuration Overview
+nav_exclude: true
 ---
 
 # Configuration Overview
@@ -34,4 +33,4 @@ For production environments:
 2. Enable `observability.enabled` to ensure traces and metrics are collected.
 3. Manage your configuration using GitOps (e.g., ArgoCD) to maintain an audit trail of configuration changes.
 
-For specific configuration options for a particular module, refer to the **Configuration** section within that module's documentation page (e.g., [AuditFlow Configuration](../modules/auditflow/)).
+For specific configuration options for a particular module, refer to the **Configuration** section within that module's documentation page (e.g., [AuditFlow Configuration](../modules/auditflow/index.md)).

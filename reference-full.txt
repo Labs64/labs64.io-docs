@@ -1,0 +1,3 @@
+# Labs64.IO Reference
+
+Reference pages cover OpenAPI contracts, event envelope and known event types, shared configuration and environment variables, Docker images, Helm value conventions, and a glossary. APIs are OpenAPI-first. Events use an envelope with eventId, timestamp, eventType, tenantId, sourceSystem, and payload. See /docs/reference/ for authoritative links.

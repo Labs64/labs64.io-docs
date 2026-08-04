@@ -1,0 +1,9 @@
+# Labs64.IO Services & Modules
+
+Core Platform: Auth Gateway authenticates requests and enforces policy; AuditFlow routes tenant-aware audit events to configured sinks; MCP Gateway is planned for governed AI-tool access.
+
+Commerce & Billing: Payment Gateway normalizes payment-provider interactions; Checkout manages buyer-facing order and payment flows; NetLicensing and Invoicing are planned for entitlement and billing documents.
+
+Extensions: Customer Portal provides customer self-service; Notifications, Reporting, and GuideChimp are planned.
+
+Planned services describe their intended design only and must not be treated as available APIs. Complete pages are linked from /docs/services/.

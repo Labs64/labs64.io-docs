@@ -1,7 +1,7 @@
 ---
 title: Checkout
-parent: Modules
-nav_order: 20
+parent: Commerce & Billing
+nav_order: 3
 ---
 
 # Checkout

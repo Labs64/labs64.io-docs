@@ -1,10 +1,10 @@
 ---
-title: Architecture
-parent: Introduction
-nav_order: 2
+title: Architecture Overview
+parent: Overview
+nav_order: 3
 ---
 
-# Architecture
+# Architecture Overview
 
 This page outlines the core architectural principles and flows of the Labs64.IO ecosystem. The platform is designed as a set of independent, polyglot microservices deployed behind a unified gateway, adhering to API-first contracts.
 
@@ -157,4 +157,4 @@ flowchart TB
     end
 ```
 
-See **[Getting Started](../getting-started/)** for deployment instructions.
+See **[Get Started](../getting-started/index.md)** for deployment instructions and **[Operate & Manage](../operate-manage/index.md)** for the production operating model.

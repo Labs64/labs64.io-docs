@@ -1,7 +1,7 @@
 ---
 title: Customer Portal
-parent: Modules
-nav_order: 40
+parent: Extensions
+nav_order: 3
 ---
 
 # Customer Portal

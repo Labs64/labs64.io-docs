@@ -1,0 +1,5 @@
+# Labs64.IO Operate & Manage
+
+Operate selected services through Helm in Kubernetes. Use database-per-service ownership, externalized secrets, a gateway and policy layer, network restrictions, and observability for metrics, logs, and traces. Scale stateless services with replicas, event processors with queue capacity, and stateful dependencies independently.
+
+Before go-live, test TLS, backups and restores, restrictive network policies, identity issuer configuration, policy allow/deny cases, webhook authenticity, and alert ownership. See /docs/operate-manage/ for guidance on deployment tiers, Helm, routing, persistence, multi-tenancy, observability, security, and troubleshooting.

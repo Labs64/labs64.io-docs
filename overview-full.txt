@@ -1,0 +1,7 @@
+# Labs64.IO Overview
+
+Labs64.IO is a modular platform for digital commerce products. Teams use focused services for identity, authorization, payments, checkout, auditability, and customer experiences. Services integrate through documented APIs and events; they do not share databases.
+
+Core concepts: service, gateway, tenant, policy decision, event, sink, and contract. Incoming traffic crosses the Auth Gateway and policy layer; services own their persistence; event-producing services can send tenant-aware records through RabbitMQ to AuditFlow and configured sinks.
+
+Read the complete human documentation at /docs/, /docs/what-is-labs64-io/, /docs/core-concepts/, and /docs/architecture/.
