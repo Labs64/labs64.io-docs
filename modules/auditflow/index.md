@@ -116,9 +116,11 @@ window. Pair `clickhouse_sink` with the `audit_clickhouse` transformer: the tran
 the canonical event into one row whose keys are the table's column names, and the sink is pure
 transport. Pairing the sink with `zero` instead will fail every delivery.
 
-Create the table before enabling the pipeline; the sink never runs DDL.
+Create the database and table before enabling the pipeline; the sink never runs DDL.
 
 ```sql
+CREATE DATABASE IF NOT EXISTS audit;
+
 CREATE TABLE IF NOT EXISTS audit.audit_events
 (
     timestamp        DateTime64(3, 'UTC'),
