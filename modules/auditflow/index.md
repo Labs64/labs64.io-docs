@@ -97,8 +97,8 @@ Either way, a promoted key needs a matching column in the sink schema — for Cl
 `ALTER TABLE ... ADD COLUMN` — or the value is **silently dropped at insert**, because
 `clickhouse_sink` inserts with `input_format_skip_unknown_fields=1`. The config-only path is not
 schema-agnostic: it still requires the column to exist before the key is promoted. The full
-vocabulary, both promotion paths and the precedence rules are documented on the `Extra` schema in
-the AuditFlow OpenAPI contract.
+vocabulary and both promotion paths are documented on the `Extra` schema in the AuditFlow OpenAPI
+contract.
 
 ## Configuration
 
