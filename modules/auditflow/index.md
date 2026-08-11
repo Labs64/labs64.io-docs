@@ -67,6 +67,39 @@ curl -sS -i -X POST http://localhost:8080/audit/publish \
   -d '{"eventType":"demo.event","sourceSystem":"demo","extra":{"hello":"world"}}'
 ```
 
+## Event fields
+
+`AuditEvent` requires only `eventType` and `sourceSystem`. Everything your domain needs goes in
+`extra`, an open map — no key in it is required, and none is guaranteed. Every deployment defines
+its own field set, and keys AuditFlow does not recognise are delivered unchanged in the sink's
+metadata map, so an event never loses data by using your own names.
+
+A small convention sits on top: the generic audit-semantics keys `userId`, `actionName`,
+`actionStatus`, `actionMessage`, `sessionId`, `durationMs` and `responseStatus`, which the bundled
+transformers **promote** out of the map into dedicated fields and columns. Promotion is what turns a
+key into a queryable report dimension. All of them are optional, and an absent key produces an
+omitted field, never a placeholder.
+
+To promote your own keys, either build a transformer module on a bundled one:
+
+```python
+from audit_clickhouse import make_transform
+transform = make_transform({"orderRef": "order_ref"}, module_id=__name__)
+```
+
+or configure it with no code at all, on the transformer container:
+
+```yaml
+AUDITFLOW_PROMOTED_KEYS: '{"orderRef": "order_ref"}'
+```
+
+Either way, a promoted key needs a matching column in the sink schema — for ClickHouse, an
+`ALTER TABLE ... ADD COLUMN` — or the value is **silently dropped at insert**, because
+`clickhouse_sink` inserts with `input_format_skip_unknown_fields=1`. The config-only path is not
+schema-agnostic: it still requires the column to exist before the key is promoted. The full
+vocabulary, both promotion paths and the precedence rules are documented on the `Extra` schema in
+the AuditFlow OpenAPI contract.
+
 ## Configuration
 
 Configuration is provided via environment variables or Helm values.
@@ -136,6 +169,9 @@ CREATE TABLE IF NOT EXISTS audit.audit_events
     action_status    LowCardinality(String),
     action_message   String,
     user_id          String,
+    session_id       String,
+    duration_ms      Nullable(UInt32),
+    response_status  Nullable(UInt16),
 
     geo_lat          Nullable(Float64),
     geo_lon          Nullable(Float64),
@@ -144,16 +180,32 @@ CREATE TABLE IF NOT EXISTS audit.audit_events
     geo_region       LowCardinality(String),
     geo_city         LowCardinality(String),
 
-    extra            Map(LowCardinality(String), String)
+    extra            Map(LowCardinality(String), String),
+
+    INDEX idx_ingest_time timestamp TYPE minmax GRANULARITY 4
 )
-ENGINE = MergeTree
-PARTITION BY toYYYYMM(timestamp)
-ORDER BY (tenant_id, event_type, timestamp)
-TTL toDateTime(timestamp) + INTERVAL 365 DAY;
+ENGINE = ReplacingMergeTree(timestamp)
+PARTITION BY toYYYYMM(event_time)
+ORDER BY (tenant_id, event_type, event_time, event_id)
+TTL toDateTime(event_time) + INTERVAL 1095 DAY;
 ```
+
+`timestamp` is server *receipt* time — AuditFlow assigns it, a client cannot override it.
+`event_time` is the *business* time the action happened at the source (the transformer falls back
+to `timestamp` when a publisher omits it), and it is the analytics axis: `PARTITION BY`, `ORDER BY`
+and `TTL` all key on `event_time`, not `timestamp`. Partitioning or grouping on `timestamp` instead
+silently breaks any backfill or replay, because a late-arriving event then lands in the wrong
+partition and the wrong retention window relative to when it actually happened.
 
 `ORDER BY` leads with `tenant_id` because every dashboard query is tenant-scoped first. Tune
 `PARTITION BY` and `TTL` to your retention policy — the values above are illustrative.
+
+The table is a `ReplacingMergeTree` keyed on `event_id`, not a plain `MergeTree`: AuditFlow is
+at-least-once, so a DLQ replay after the ~24h idempotency window can re-deliver an event, and
+`ReplacingMergeTree` collapses the two copies on merge (the later `timestamp` wins as the version
+column). That collapse only happens at merge time, so a query issued between deliveries can still
+see both rows — use `SELECT ... FINAL` (or an aggregating rollup) for any query where
+double-counting would matter, such as revenue.
 
 ```yaml
 pipelines:
@@ -198,10 +250,12 @@ that can only flush a batch *earlier*, and neither is the binding constraint her
 ~473 bytes against a 10 MiB default, and ClickHouse only honours the query-number limit when
 `async_insert_deduplicate` is enabled.
 
-**Duplicates.** DLQ replay can re-deliver an event, and `MergeTree` will store it twice.
-AuditFlow's `eventId` deduplication (~24h) absorbs the common case. For stricter guarantees use
-`ReplacingMergeTree ORDER BY (tenant_id, event_type, timestamp, event_id)`, noting that it
-deduplicates only within a partition and only after merge, so queries must then use `FINAL`.
+**Duplicates.** DLQ replay can re-deliver an event. AuditFlow's `eventId` deduplication (~24h)
+absorbs the common case, and the table schema above absorbs the rest: it is a `ReplacingMergeTree`
+keyed on `event_id`, not a plain `MergeTree`, so a re-delivered row is collapsed on merge rather
+than counted twice. Deduplication happens only within a partition and only after merge, so a query
+run between deliveries can still see both rows — use `FINAL` for anything where a duplicate would
+matter, such as revenue.
 
 ## REST APIs
 
