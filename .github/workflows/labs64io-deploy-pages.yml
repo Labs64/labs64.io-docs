@@ -1,4 +1,4 @@
-name: Deploy docs to GitHub Pages
+name: Labs64.IO - Docs - Deploy Pages
 
 on:
   push:
