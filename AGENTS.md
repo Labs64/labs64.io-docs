@@ -10,15 +10,11 @@ The **ultimate documentation reference** for users who want to run, use, and con
 
 | Path | Purpose |
 |------|---------|
-| `checkout/` | Checkout module documentation |
-| `payment-gateway/` | Payment Gateway documentation |
-| `auditflow/` | AuditFlow documentation |
-| `auth-gateway/` | Auth Gateway documentation |
-| `customer-portal/` | Customer Portal documentation |
-| `architecture.md` | Architecture documentation |
-| `getting-started.md` | Adopter guide — run one module, the whole ecosystem, or your own cluster; then configure a module |
-| `contributing.md` | Contributor guide — build/test a module, OpenAPI-first workflow |
-| `index.md` | Jekyll home page (distinct from `README.md`, which is GitHub-only and excluded from the build) |
+| `modules/<id>/index.md` | Per-module documentation, one page per module (e.g. `modules/checkout/`, `modules/payment-gateway/`, `modules/auditflow/`, `modules/auth-gateway/`, `modules/customer-portal/`) |
+| `introduction/architecture.md` | Architecture documentation |
+| `getting-started/` | Adopter guide — run one module, the whole ecosystem, or your own cluster; then configure a module |
+| `development/contributing.md` | Contributor guide — build/test a module, OpenAPI-first workflow |
+| `introduction/index.md` | Jekyll home page (`permalink: /`; distinct from `README.md`, which is GitHub-only and excluded from the build) |
 | `_config.yml`, `Gemfile` | Site/theme configuration |
 | `_sass/color_schemes/labs64.scss` | Labs64 brand color overrides |
 | `Dockerfile`, `docker-compose.yml`, `justfile` | Local preview, same Docker-first workflow as `labs64.io-website` — `just serve`, then http://localhost:4000/docs/ |
@@ -26,12 +22,12 @@ The **ultimate documentation reference** for users who want to run, use, and con
 ## Critical guardrails
 
 1. **Each repo has its own git history** — do not cross-commit between repositories.
-2. **This repo owns technical reference and onboarding — not marketing.** It is the ultimate documentation reference for users who want to run, use, and configure Labs64.IO Ecosystem modules (`getting-started.md`) as well as the technical/contributor reference (`contributing.md`, module pages, `architecture.md`). `labs64.io-website` owns marketing and positioning only — its `/get-started/` page is a teaser that should link here, not a competing source of onboarding steps. If you find onboarding content duplicated on the website, flag it — don't extend the duplication.
+2. **This repo owns technical reference and onboarding — not marketing.** It is the ultimate documentation reference for users who want to run, use, and configure Labs64.IO Ecosystem modules (`getting-started/`) as well as the technical/contributor reference (`development/contributing.md`, module pages, `introduction/architecture.md`). `labs64.io-website` owns marketing and positioning only — its `/get-started/` page is a teaser that should link here, not a competing source of onboarding steps. If you find onboarding content duplicated on the website, flag it — don't extend the duplication.
 3. **Don't restate module status or version in page content.** The single source of truth is `labs64.io-website/_data/modules.yml`, published on the website. Pages here describe how to *use* a module; maturity labels drift and belong in one place only.
 4. **Write for someone adopting the module, in the present tense.** Describe what a module does and how to configure it — not what is unfinished, planned, or under review. Two exceptions that must always stay, stated plainly and without apology:
    - **Anything with a security or financial consequence** (for example: an endpoint whose authenticity isn't verified, a default that is unsafe in production). Put it in a "Before you go live" checklist as a deployment responsibility — never delete it to make a page read as more finished.
    - **Capabilities that do not exist.** Never document an API, endpoint, or component a user cannot actually call; scope the page to what ships instead.
-5. **Module directory names must match the module `id` in `labs64.io-website/_data/modules.yml`** (`checkout/`, `payment-gateway/`, `auditflow/`, `auth-gateway/`, `customer-portal/`). Before adding docs for a new module, confirm it's already registered there — if it isn't, that's a `labs64.io-website` change (see its `ecosystem-website-sync` skill), not just a docs addition.
+5. **Module directory names under `modules/` must match the module `id` in `labs64.io-website/_data/modules.yml`** (`modules/checkout/`, `modules/payment-gateway/`, `modules/auditflow/`, `modules/auth-gateway/`, `modules/customer-portal/`). Before adding docs for a new module, confirm it's already registered there — if it isn't, that's a `labs64.io-website` change (see its `ecosystem-website-sync` skill), not just a docs addition.
 6. **This site is served at `labs64.io/docs`** (`baseurl: "/docs"` in `_config.yml`), not a standalone domain. Use Jekyll's `relative_url` / root-relative links for internal navigation — don't hardcode absolute `https://labs64.io/...` URLs for pages inside this repo.
 7. **Documentation should be accurate and up-to-date** with the codebase.
 
@@ -39,7 +35,7 @@ The **ultimate documentation reference** for users who want to run, use, and con
 
 - Documentation is written in Markdown, organized by module directory.
 - Keep documentation consistent with the actual codebase behavior.
-- **Each module page is `<module>/README.md` with `permalink: /<module>/`.** The filename keeps it rendering when browsing the repo on GitHub; the permalink is what makes `labs64.io/docs/<module>/` serve the page instead of a directory listing. A new module page needs both.
+- **Each module page is `modules/<module>/index.md`.** Naming it `index.md` keeps it rendering when browsing the repo on GitHub and makes it serve at `labs64.io/docs/modules/<module>/` without an explicit `permalink:` — Jekyll's default page URL for a directory's `index.md` already omits the filename.
 - **Cross-link with relative `.md` paths** (`./quickstart.md`, `../getting-started.md`). `jekyll-relative-links` rewrites them to built URLs at publish time, so the same link works both on GitHub and on the site. Hand-written `.html` links work on the site but break on GitHub.
 - Module pages follow a consistent shape so readers learn it once: what it does → key capabilities → start here → API contract → configure → extend → operate → next steps.
 
