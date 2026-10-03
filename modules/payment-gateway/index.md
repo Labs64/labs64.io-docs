@@ -27,7 +27,7 @@ sequenceDiagram
     participant CO as Checkout
     participant PG as Payment Gateway
     participant PSP as External Provider (Stripe)
-    participant MQ as RabbitMQ
+    participant AF as AuditFlow
 
     CO->>PG: POST /payments/charge
     PG->>PSP: Call Provider API
@@ -35,7 +35,7 @@ sequenceDiagram
     PG-->>CO: Response
     
     PSP->>PG: Async Webhook (Payment Captured)
-    PG--)MQ: Publish "payment.transaction.succeeded"
+    PG--)AF: Payment lifecycle event (HTTP, as a service principal)
 ```
 
 ## Quick Start

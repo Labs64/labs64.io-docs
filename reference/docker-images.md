@@ -15,9 +15,9 @@ All Labs64.IO Docker images are published to our official container registry. Th
 | Module | Registry Repository | Base Image |
 |--------|---------------------|------------|
 | **AuditFlow (API)** | `labs64io/auditflow-api` | `eclipse-temurin:25-jre` |
-| **AuditFlow (Transformers)** | `labs64io/auditflow-transformer` | `python:3.13-slim` |
-| **AuditFlow (Sinks)** | `labs64io/auditflow-sink` | `python:3.13-slim` |
+| **AuditFlow (Transformers)** | `labs64io/auditflow-transformer` | `python:3.14-alpine` |
+| **AuditFlow (Sinks)** | `labs64io/auditflow-sink` | `python:3.14-alpine` |
 | **Checkout** | `labs64io/checkout` | `eclipse-temurin:25-jre` |
 | **Payment Gateway** | `labs64io/payment-gateway` | `eclipse-temurin:25-jre` |
-| **Auth Gateway** | `labs64io/authproxy` | `traefik:v3` |
+| **Auth Gateway** | `labs64io/authproxy` | `python:3.14-slim` |
 | **Customer Portal** | `labs64io/customer-portal` | `nginx:alpine` |

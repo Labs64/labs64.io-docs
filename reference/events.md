@@ -6,20 +6,21 @@ nav_order: 2
 
 # Event Catalogue
 
-Labs64.IO uses RabbitMQ for asynchronous event propagation. Modules publish domain events, and other modules (primarily AuditFlow) consume them.
+Modules deliver audit events to [AuditFlow](../modules/auditflow/index.md) over its HTTP API, authenticated as a service principal (`service:<module>`). AuditFlow buffers them on its own RabbitMQ broker and routes them per tenant. Only AuditFlow depends on a message broker.
 
 ## Standard Event Envelope
 
-All events adhere to a standard JSON envelope format:
+All events are AuditFlow audit events with a common envelope:
 
 ```json
 {
   "eventId": "uuid-string",
-  "timestamp": "ISO-8601-string",
+  "eventTime": "ISO-8601-string",
   "eventType": "domain.entity.action",
-  "tenantId": "string-or-null",
   "sourceSystem": "string",
-  "payload": { ... }
+  "tenantId": "string",
+  "correlationId": "string-or-null",
+  "extra": { ... }
 }
 ```
 
@@ -27,12 +28,11 @@ All events adhere to a standard JSON envelope format:
 
 | Event Type | Producer | Description |
 |------------|----------|-------------|
-| `checkout.order.created` | Checkout | Fired when a new purchase order is initiated. |
-| `payment.transaction.succeeded` | Payment Gateway | Fired when a PSP confirms a successful charge. |
-| `payment.transaction.failed` | Payment Gateway | Fired when a PSP rejects a charge. |
-| `payment.refund.processed` | Payment Gateway | Fired when a refund is completed. |
+| `payment.created` | Payment Gateway | A payment was created. |
+| `payment.finalized` | Payment Gateway | A payment transaction reached a final result. |
+| `payment.closed` | Payment Gateway | A payment was closed. |
 
-*Note: For the exact schema of the `payload` object, refer to the producing module's specific documentation.*
+Payment events carry the payment (and, for `payment.finalized` and `payment.closed`, the transaction) in `extra`, together with an `eventVersion`. Refer to the producing module's documentation for the exact `extra` schema. Delivery is best effort: a failed delivery is logged by the producer and does not fail the payment request.
 
 ## Consumer expectations
 

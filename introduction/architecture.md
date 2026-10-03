@@ -45,31 +45,33 @@ On success, the Auth Gateway injects a trusted header contract that all upstream
 
 ## Event-Driven Architecture
 
-While modules use synchronous REST calls for direct actions (e.g., initiating a payment), asynchronous state changes and audits are propagated via RabbitMQ to AuditFlow.
+While modules use synchronous REST calls for direct actions (e.g., initiating a payment), audit events are sent to AuditFlow over its HTTP API by an authenticated service principal. AuditFlow buffers them on its own RabbitMQ broker and routes them per tenant.
 
 ```mermaid
 flowchart LR
     subgraph Producers
-        CO[Checkout]
         PG[Payment Gateway]
     end
     
-    MQ[(RabbitMQ Exchange)]
+    subgraph AuditFlow
+        API[AuditFlow API]
+        MQ[(RabbitMQ)]
+        AF[Delivery workers]
+    end
     
-    subgraph Consumers
-        AF[AuditFlow]
+    subgraph Sinks
         SINK1[(Sink: OpenSearch)]
         SINK2[(Sink: S3)]
     end
 
-    CO -->|"Order Created Event"| MQ
-    PG -->|"Payment Succeeded Event"| MQ
+    PG -->|"Payment events (HTTP)"| API
+    API --> MQ
     MQ -->|"Consumes"| AF
     AF -->|"Routes"| SINK1
     AF -->|"Routes"| SINK2
 ```
 
-Modules do not read each other's databases. They communicate either across the gateway or by subscribing to/publishing events.
+Modules do not read each other's databases. They communicate across the gateway, and publish audit events to AuditFlow.
 
 ## Multi-Tenancy
 

@@ -15,11 +15,10 @@ The Checkout module provides a whitelabel, drop-in workflow for converting carts
 |------------|-------------|
 | **Order State Machine** | Manages states from `CREATED` to `PAID`, `FAILED`, or `REFUNDED`. |
 | **Payment Orchestration** | Communicates with the Payment Gateway to initiate transactions. |
-| **Event Emission** | Publishes state changes to RabbitMQ for AuditFlow and other modules. |
 
 ## Architecture
 
-Checkout sits behind the Auth Gateway and accepts REST calls to initiate an order. It then synchronously calls the Payment Gateway and asynchronously fires events.
+Checkout sits behind the Auth Gateway and accepts REST calls to initiate an order. It then synchronously calls the Payment Gateway. Checkout needs no message broker.
 
 ```mermaid
 sequenceDiagram
@@ -27,14 +26,12 @@ sequenceDiagram
     participant C as Client
     participant CO as Checkout
     participant PG as Payment Gateway
-    participant MQ as RabbitMQ
 
     C->>CO: POST /orders
     CO->>CO: Create Order (Status: PENDING)
     CO->>PG: POST /payments/charge
     PG-->>CO: Payment Success
     CO->>CO: Update Order (Status: PAID)
-    CO--)MQ: Publish "checkout.order.paid" event
     CO-->>C: Order Confirmation
 ```
 

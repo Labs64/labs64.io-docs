@@ -22,7 +22,7 @@ Whether you are evaluating one service, integrating a product team, or operating
 
 ## The ecosystem at a glance
 
-Every request enters through the Auth Gateway. Modules communicate with each other exclusively through REST calls across the gateway or asynchronously via events on RabbitMQ. No module connects directly to another module's database.
+Every request enters through the Auth Gateway. Modules communicate with each other exclusively through REST calls across the gateway; audit events are delivered to AuditFlow over its HTTP API. No module connects directly to another module's database.
 
 ```mermaid
 flowchart TB
@@ -33,9 +33,7 @@ flowchart TB
   AG --> AF[AuditFlow]
 
   CO -->|"REST: initiate payment"| PG
-  CO -->|"Event"| MQ[(RabbitMQ)]
-  PG -->|"Event"| MQ
-  MQ --> AF
+  PG -->|"Audit events (HTTP)"| AF
   AF -->|"Route per tenant"| SINKS[("Your sinks:<br/>OpenSearch, S3, Splunk")]
 ```
 
