@@ -139,6 +139,7 @@ Build every pipeline from a small set of explicit stages. The configured set dep
 | **Sinks: object storage** | Store durable archive copies | S3-compatible storage |
 | **Sinks: observability / SIEM** | Send events to security or operations tooling | Splunk and equivalent configured adapters |
 | **Sinks: analytics** | Store events for aggregation and dashboards | ClickHouse |
+| **Sinks: relational database** | Keep events in a table next to application data | PostgreSQL, the event stored as JSON in one column |
 
 Order matters: apply privacy transformations before a sink that should never receive the original field. Keep sink credentials in deployment secrets, not in pipeline files.
 
