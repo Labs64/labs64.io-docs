@@ -16,7 +16,7 @@ Used by developers and evaluators. The entire ecosystem is deployed to a lightwe
 
 ### 2. AWS QA / Staging / Production
 The recommended path for production workloads.
-- **Tooling:** EKS, RDS (PostgreSQL), Amazon MQ (RabbitMQ), ArgoCD.
+- **Tooling:** EKS, RDS (PostgreSQL), Amazon MQ (RabbitMQ), Terraform and the `labs64io-ecosystem` umbrella Helm chart.
 - **Use Case:** High availability, secure, and scalable deployments.
 
 ### 3. Bring Your Own Infrastructure (BYO)
