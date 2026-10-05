@@ -24,18 +24,18 @@ rabbit   = RabbitMQ | AuditFlow buffer {queue}
 sinks    = Audit sinks | OpenSearch, S3, SIEM … {external}
 
 edges:
-client -> traefik : HTTPS
-traefik -> authgw : ForwardAuth
-authgw -> pdp : authorize
-authgw ..> idp : keys
+client.right -> traefik.left : HTTPS
+traefik.left -> authgw.left : ForwardAuth
+authgw.bottom -> pdp.top : authorize
+authgw.left ..> idp.left : keys
 traefik -> ui
 traefik -> co
 traefik -> pg
 traefik -> af
-pg -> postgres
-co -> postgres
-pg -> redis
-af -> rabbit
-pg ..> af : audit events
-af -> sinks : deliver
+co.right -> postgres.left
+pg.right -> postgres.left
+pg.right -> redis.bottom
+pg.bottom ..> af.top : audit events
+af.right -> rabbit.left
+af.right -> sinks.left : deliver
 gap: 100
