@@ -17,17 +17,17 @@ The **ultimate documentation reference** for users who want to run, use, and con
 | `introduction/index.md` | Jekyll home page (`permalink: /`; distinct from `README.md`, which is GitHub-only and excluded from the build) |
 | `_config.yml`, `Gemfile` | Site/theme configuration |
 | `_sass/color_schemes/labs64.scss` | Labs64 brand color overrides |
-| `Dockerfile`, `docker-compose.yml`, `justfile` | Local preview, same Docker-first workflow as `labs64.io-website` — `just serve`, then http://localhost:4000/docs/ |
+| `Dockerfile`, `docker-compose.yml`, `justfile` | Local preview, same Docker-first workflow as `labs64.io` — `just serve`, then http://localhost:4000/docs/ |
 
 ## Critical guardrails
 
 1. **Each repo has its own git history** — do not cross-commit between repositories.
-2. **This repo owns technical reference and onboarding — not marketing.** It is the ultimate documentation reference for users who want to run, use, and configure Labs64.IO Ecosystem modules (`getting-started/`) as well as the technical/contributor reference (`development/contributing.md`, module pages, `introduction/architecture.md`). `labs64.io-website` owns marketing and positioning only — its `/get-started/` page is a teaser that should link here, not a competing source of onboarding steps. If you find onboarding content duplicated on the website, flag it — don't extend the duplication.
-3. **Don't restate module status or version in page content.** The single source of truth is `labs64.io-website/_data/modules.yml`, published on the website. Pages here describe how to *use* a module; maturity labels drift and belong in one place only.
+2. **This repo owns technical reference and onboarding — not marketing.** It is the ultimate documentation reference for users who want to run, use, and configure Labs64.IO Ecosystem modules (`getting-started/`) as well as the technical/contributor reference (`development/contributing.md`, module pages, `introduction/architecture.md`). `labs64.io` owns marketing and positioning only — its `/get-started/` page is a teaser that should link here, not a competing source of onboarding steps. If you find onboarding content duplicated on the website, flag it — don't extend the duplication.
+3. **Don't restate module status or version in page content.** The single source of truth is `labs64.io/_data/modules.yml`, published on the website. Pages here describe how to *use* a module; maturity labels drift and belong in one place only.
 4. **Write for someone adopting the module, in the present tense.** Describe what a module does and how to configure it — not what is unfinished, planned, or under review. Two exceptions that must always stay, stated plainly and without apology:
    - **Anything with a security or financial consequence** (for example: an endpoint whose authenticity isn't verified, a default that is unsafe in production). Put it in a "Before you go live" checklist as a deployment responsibility — never delete it to make a page read as more finished.
    - **Capabilities that do not exist.** Never document an API, endpoint, or component a user cannot actually call; scope the page to what ships instead.
-5. **Module directory names under `modules/` must match the module `id` in `labs64.io-website/_data/modules.yml`** (`modules/checkout/`, `modules/payment-gateway/`, `modules/auditflow/`, `modules/auth-gateway/`, `modules/customer-portal/`). Before adding docs for a new module, confirm it's already registered there — if it isn't, that's a `labs64.io-website` change (see its `ecosystem-website-sync` skill), not just a docs addition.
+5. **Module directory names under `modules/` must match the module `id` in `labs64.io/_data/modules.yml`** (`modules/checkout/`, `modules/payment-gateway/`, `modules/auditflow/`, `modules/auth-gateway/`, `modules/customer-portal/`). Before adding docs for a new module, confirm it's already registered there — if it isn't, that's a `labs64.io` change (see its `ecosystem-website-sync` skill), not just a docs addition.
 6. **This site is served at `labs64.io/docs`** (`baseurl: "/docs"` in `_config.yml`), not a standalone domain. Use Jekyll's `relative_url` / root-relative links for internal navigation — don't hardcode absolute `https://labs64.io/...` URLs for pages inside this repo.
 7. **Documentation should be accurate and up-to-date** with the codebase.
 
@@ -60,7 +60,7 @@ If any of this changes (repo renamed, CloudFront reconfigured, Pages source flip
 
 ## Local development and verification
 
-Docker-first, same workflow as `labs64.io-website` — never invoke `bundle` directly on this machine.
+Docker-first, same workflow as `labs64.io` — never invoke `bundle` directly on this machine.
 
 ```bash
 just serve    # start the dev server at http://localhost:4000/docs/
