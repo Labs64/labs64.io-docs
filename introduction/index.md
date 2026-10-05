@@ -22,7 +22,7 @@ Whether you are evaluating one service, integrating a product team, or operating
 
 ## The ecosystem at a glance
 
-Every request enters through the Auth Gateway. Modules communicate with each other exclusively through REST calls across the gateway; audit events are delivered to AuditFlow over its HTTP API. No module connects directly to another module's database.
+Every external request enters through the Auth Gateway. Inside the cluster, services call each other's REST APIs directly as service principals, and audit events are delivered to AuditFlow over its HTTP API. No service reads another service's database.
 
 ```mermaid
 flowchart TB
@@ -32,7 +32,6 @@ flowchart TB
   AG --> PG[Payment Gateway]
   AG --> AF[AuditFlow]
 
-  CO -->|"REST: initiate payment"| PG
   PG -->|"Audit events (HTTP)"| AF
   AF -->|"Route per tenant"| SINKS[("Your sinks:<br/>OpenSearch, S3, Splunk")]
 ```

@@ -6,22 +6,20 @@ nav_order: 1
 
 # API Reference (OpenAPI)
 
-Every Labs64.IO module strictly follows an **OpenAPI-first** approach. The OpenAPI spec is the absolute source of truth; both server stubs and client libraries are generated directly from it.
+Every Labs64.IO service is OpenAPI-first: the contract is the source of truth, server interfaces and models are generated from it, and its `x-labs64.auth` blocks generate the authorization policy and gateway routing (see [Shared libraries](../development/shared-libraries.md#authorization-from-the-openapi-contract)).
 
-## Accessing the APIs
+## Browse the APIs
 
-When deploying the ecosystem locally via Kubernetes, all module APIs are aggregated and accessible via Swagger UI at the gateway:
+With the `api-docs` chart installed, the gateway serves an aggregated Swagger UI at `/swagger-ui` (locally `http://gateway.localhost/swagger-ui`). Each service also serves its own document at `/<module>/v3/api-docs`.
 
-- **Aggregated Docs:** `http://gateway.localhost/docs`
+## Contracts
 
-## Spec Locations
+| Service | Contract in the repository | Gateway prefix |
+|---|---|---|
+| [AuditFlow](../modules/auditflow/index.md) | `labs64.io-auditflow`: `auditflow-api/src/main/resources/openapi/openapi-audit-v1.yaml` | `/auditflow/api/v1` |
+| [Payment Gateway](../modules/payment-gateway/index.md) | `labs64.io-payment-gateway`: `payment-gateway-api/src/main/resources/openapi/openapi-payment-gateway-v1.yaml` | `/payment-gateway/api/v1` |
+| [Checkout](../modules/checkout/index.md) | `labs64.io-checkout`: `checkout-be/src/main/resources/openapi/openapi-checkout-v1.yaml` | `/checkout/api/v1` |
 
-For deep integration or client generation, you can find the raw OpenAPI YAML files within each module's repository:
+The Auth Gateway and Customer Portal have no business API.
 
-| Module | Spec Location in Repository |
-|--------|-----------------------------|
-| **AuditFlow** | `auditflow-api/src/main/resources/openapi/openapi-audit-v1.yaml` |
-| **Auth Gateway** | N/A (Proxies upstream APIs) |
-| **Checkout** | `checkout-be/src/main/resources/openapi/` |
-| **Payment Gateway**| `payment-gateway-be/src/main/resources/openapi/` |
-| **Customer Portal**| N/A (Frontend application) |
+Java models are published for two contracts: `io.labs64:auditflow-api` (models and a client) and `io.labs64:payment-gateway-api` (models), both compatible with Java 17.

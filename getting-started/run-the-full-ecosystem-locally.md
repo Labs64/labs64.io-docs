@@ -11,14 +11,15 @@ Run the workspace in a local k3d cluster when you need to exercise routing, iden
 ## 1. Prepare the workspace
 
 ```bash
-git clone https://github.com/Labs64/labs64.io-workspace.git labs64.io
-cd labs64.io
-just doctor
-just clone
-just up
+mkdir labs64io && cd labs64io
+git clone https://github.com/Labs64/labs64.io-workspace.git
+cd labs64.io-workspace
+just doctor      # checks Docker, k3d, Helm, Helmfile, kubectl and just
+just clone       # clones the ecosystem repositories next to the workspace
+just up          # creates the k3d cluster, builds the images and deploys the stack
 ```
 
-The workspace prepares the repositories and deploys the local Helm-based environment.
+The workspace clones every repository as a sibling of `labs64.io-workspace`, so keep it in a folder of its own. The [workspace DevContainer](../development/contributing.md#set-up-the-workspace) bundles every tool `just doctor` checks.
 
 ## 2. Confirm the platform is healthy
 
@@ -26,7 +27,7 @@ The workspace prepares the repositories and deploys the local Helm-based environ
 kubectl get pods
 ```
 
-Open `http://gateway.localhost` and use the aggregated API documentation at `http://gateway.localhost/docs` when it is available in your local environment.
+Open `http://gateway.localhost` and the aggregated API documentation at `http://gateway.localhost/swagger-ui`.
 
 ```mermaid
 sequenceDiagram

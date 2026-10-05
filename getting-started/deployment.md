@@ -14,13 +14,12 @@ Used by developers and evaluators. The entire ecosystem is deployed to a lightwe
 - **Tooling:** `k3d`, `helmfile`, `just`
 - **Use Case:** Validating API contracts, debugging module interactions.
 
-### 2. AWS QA / Staging / Production
-The recommended path for production workloads.
-- **Tooling:** EKS, RDS (PostgreSQL), Amazon MQ (RabbitMQ), Terraform and the `labs64io-ecosystem` umbrella Helm chart.
+### 2. Managed cloud services
+Run the ecosystem on a managed Kubernetes service with managed data stores, for example EKS with RDS (PostgreSQL), ElastiCache (Valkey) and Amazon MQ (RabbitMQ), installed with the `labs64io-ecosystem` umbrella Helm chart.
 - **Use Case:** High availability, secure, and scalable deployments.
 
 ### 3. Bring Your Own Infrastructure (BYO)
-Labs64.IO is agnostic to the underlying cloud provider. As long as you provide a Kubernetes cluster, a PostgreSQL-compatible database, and a RabbitMQ broker, the Helm charts will function correctly.
+Labs64.IO is agnostic to the underlying cloud provider. As long as you provide a Kubernetes cluster, PostgreSQL, Redis (or Valkey), a RabbitMQ broker and an OIDC provider, the Helm charts work unchanged; see [Kubernetes & Helm setup](../operate-manage/kubernetes-helm-setup.md).
 
 ## Helm Chart Repository
 

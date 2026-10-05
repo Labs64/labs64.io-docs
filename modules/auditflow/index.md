@@ -2,302 +2,211 @@
 title: AuditFlow
 parent: Core Platform
 nav_order: 2
+has_children: true
 ---
 
 # AuditFlow
 
-## Overview
-AuditFlow is a central router for audit events. It allows you to publish events once from any service and route them to multiple destinations (sinks) based on configurable, tenant-isolated pipelines. AuditFlow is stateless—it does not store events itself, but ensures they reach the configured persistent stores.
+AuditFlow captures audit events from your services and delivers them, with sensitive fields removed at the door, to wherever they need to live: a search index, cold storage, a SIEM, or several of these at once. A service publishes an event with one REST call; routing is YAML configuration per tenant. AuditFlow handles buffering, redaction, deduplication, retries and fan-out.
 
-## Capabilities
+AuditFlow is a router, not a system of record. It has no database of its own: the [sinks](./sinks-and-transformers.md) you configure (OpenSearch, ClickHouse, S3, Splunk, …) own persistence, retention and query.
 
-| Capability | Description |
-|------------|-------------|
-| **Tenant Isolation** | Every pipeline belongs to exactly one tenant. Events route only through their respective tenant's pipelines. |
-| **Pluggable Sinks** | Send events to the destinations configured for a tenant. |
-| **Pluggable Transformers** | Modify or enrich event payloads in-flight before they reach a sink. |
-| **Stateless Routing** | Relies entirely on external persistence; it operates purely as an event processor. |
+## When it fits
 
-## Architecture
+- You need a reliable answer to "who did what, when, and from where" across many services, and each service solves it differently today.
+- Events must reach more than one destination: a search index for operations, an archive for compliance, an alert channel for security.
+- Sensitive fields such as user IDs, e-mail addresses or session tokens must never reach log storage.
+- Losing an audit event is a compliance failure, not a gap in a graph.
 
-AuditFlow consumes events from RabbitMQ (or via direct API), passes them through a tenant's pipeline (which may include transformers), and sends them to sinks.
+AuditFlow complements OpenTelemetry rather than replacing it:
+
+| | Observability (OpenTelemetry) | AuditFlow |
+|---|---|---|
+| Question answered | *Is my system healthy?* | *Who did what, when, with what outcome?* |
+| Consumer | SREs and platform engineers | Compliance, security, legal, auditors |
+| Data | High volume, sampled, short retention | Every event matters, lossless, long retention |
+
+It is not the right tool for distributed tracing, metrics or infrastructure logs, or for intercepting raw HTTP traffic at a proxy: your services decide what to publish.
+
+## Usage scenarios
+
+| Scenario | How AuditFlow handles it |
+|---|---|
+| **Compliance audit trail** (GDPR, SOC 2, ISO 27001, HIPAA) | Redact personal data at ingest, then fan out to OpenSearch for search and S3 for immutable archival. |
+| **Security alerting and SIEM** | A conditional pipeline sends only `security.*` events to Splunk or a webhook; routine events go to cheaper storage. Retries ride out a SIEM outage. |
+| **Multi-tenant SaaS audit logs** | Each tenant owns its pipelines, quota and sink credentials; events never cross tenants. |
+| **Central audit hub** | Every service publishes to one endpoint; routing logic lives in one place instead of in each service. |
+
+## Key capabilities
+
+| Capability | What you get |
+|---|---|
+| **Pipelines as configuration** | Routing, transformation and destinations are per-tenant YAML, picked up live without a restart. |
+| **Condition routing** | Field-level rules on any event field, nested `all`/`any` groups, 19 operators. |
+| **Fan-out** | One event, many independent pipelines; a failing destination never delays or duplicates the others. |
+| **Ingest-time redaction** | Mask, keyed-hash or drop fields before the event reaches the broker. |
+| **Confirmed publish** | `/audit/publish` answers `200` only after the broker has durably stored the event. |
+| **Retries and dead-lettering** | Per-pipeline retries over hours, then a tenant-scoped dead-letter queue you can inspect, replay or purge. |
+| **Idempotency** | Duplicate `eventId`s are suppressed, so publishers can retry safely. |
+| **Tenant isolation** | Per-tenant pipelines, rate limit, in-flight cap, secrets and DLQ. |
+| **Batching** | Publish up to 100 events per call; sinks can write a batch in one request. |
+| **Tamper evidence** | The S3 sink can write a signed, hash-chained digest per object. |
+| **15 built-in sinks** | Plus your own Python sink or transformer, loaded at runtime. |
+
+## How it works
 
 ```mermaid
 flowchart LR
-    subgraph Input
-        API[HTTP POST]
-        MQ[(RabbitMQ)]
-    end
-    
-    subgraph AuditFlow Pipeline
-        R[Router]
-        T1[Transformer: Anonymize]
-        T2[Transformer: Enrich]
-    end
-    
-    subgraph Sinks
-        S1[(OpenSearch)]
-        S2[(S3 Bucket)]
-    end
-    
-    API --> R
-    MQ --> R
-    
-    R -->|"Match Tenant A"| T1
-    T1 --> S1
-    
-    R -->|"Match Tenant B"| T2
-    T2 --> S2
+    P["Your service"] -->|"POST /audit/publish"| BE["AuditFlow backend<br/>validate · redact · tenant gate"]
+    BE -->|"confirmed publish"| MQ[("RabbitMQ")]
+    MQ --> R["Router<br/>one delivery per matching pipeline"]
+    R --> T["Transformer<br/>(Python)"]
+    T --> S["Sink<br/>(Python)"]
+    S --> D1[("OpenSearch")]
+    S --> D2[("S3 archive")]
+    S --> D3["SIEM / webhook"]
+    R -. "exhausted / poison" .-> DLQ[("Tenant DLQ")]
 ```
 
-## Quick Start
+AuditFlow runs as three services:
 
-Run AuditFlow independently using Docker Compose:
+| Service | Stack | Role |
+|---|---|---|
+| `auditflow-be` | Java, Spring Boot | REST API, redaction, tenant gate, routing and delivery |
+| `auditflow-transformer` | Python, FastAPI | Runs transformer modules (`POST /transform/{name}`) |
+| `auditflow-sink` | Python, FastAPI | Runs sink modules (`POST /sink/{name}`) |
+
+1. The backend validates the event, assigns the server `timestamp`, applies redaction and checks the tenant (provisioned, enabled, within quota).
+2. It publishes the event to RabbitMQ and waits for the broker's confirm before answering.
+3. The router evaluates every enabled pipeline of the event's tenant and creates one delivery per match.
+4. Each delivery runs its transformer and sink. Failures are retried with growing delays; exhausted or malformed deliveries go to the tenant's DLQ.
+
+## Start here
+
+Run AuditFlow on its own with Docker Compose (Docker, Compose v2 and [`just`](https://github.com/casey/just) required):
 
 ```bash
 git clone https://github.com/Labs64/labs64.io-auditflow.git
 cd labs64.io-auditflow
-just up
+just up          # backend, transformer, sink, RabbitMQ, Valkey, Cerbos, ClickHouse
 ```
 
-Test it by publishing an event:
+Publish an event and watch it arrive:
+
 ```bash
 curl -sS -i -X POST http://localhost:8080/audit/publish \
   -H 'Content-Type: application/json' \
-  -d '{"eventType":"demo.event","sourceSystem":"demo","extra":{"hello":"world"}}'
+  -d '{"eventType":"user.login","sourceSystem":"auth-service","tenantId":"demo",
+       "extra":{"userId":"alice","ip":"203.0.113.7"}}'
+
+just log sink    # look for the delivered event
+just ch-events   # the same event, stored in ClickHouse
 ```
 
-## Event fields
+| URL | Purpose |
+|---|---|
+| `http://localhost:8080/swagger-ui.html` | Interactive REST API |
+| `http://localhost:8081/docs`, `http://localhost:8082/docs` | Transformer and sink APIs, module registry |
+| `http://localhost:15673` | RabbitMQ management UI |
 
-`AuditEvent` requires only `eventType` and `sourceSystem`. Everything your domain needs goes in
-`extra`, an open map — no key in it is required, and none is guaranteed. Every deployment defines
-its own field set, and keys AuditFlow does not recognise are delivered unchanged in the sink's
-metadata map, so an event never loses data by using your own names.
+`just up obs` adds the observability stack (OpenTelemetry Collector, Tempo, Loki, Prometheus, Grafana at `http://localhost:3000` with a pre-provisioned AuditFlow dashboard). To run AuditFlow with the rest of the ecosystem, see [Run the full ecosystem locally](../../getting-started/run-the-full-ecosystem-locally.md).
 
-A small convention sits on top: the generic audit-semantics keys `userId`, `actionName`,
-`actionStatus`, `actionMessage`, `sessionId`, `durationMs` and `responseStatus`, which the bundled
-transformers **promote** out of the map into dedicated fields and columns. Promotion is what turns a
-key into a queryable report dimension. All of them are optional, and an absent key produces an
-omitted field, never a placeholder.
+## API contract
 
-To promote your own keys, either build a transformer module on a bundled one:
+The contract is `auditflow-api/src/main/resources/openapi/openapi-audit-v1.yaml` in the [AuditFlow repository](https://github.com/Labs64/labs64.io-auditflow). Through the gateway the paths are prefixed with `/auditflow/api/v1`.
 
-```python
-from audit_clickhouse import make_transform
-transform = make_transform({"orderRef": "order_ref"}, module_id=__name__)
-```
-
-or configure it with no code at all, on the transformer container:
-
-```yaml
-AUDITFLOW_PROMOTED_KEYS: '{"orderRef": "order_ref"}'
-```
-
-Either way, a promoted key needs a matching column in the sink schema — for ClickHouse, an
-`ALTER TABLE ... ADD COLUMN` — or the value is **silently dropped at insert**, because
-`clickhouse_sink` inserts with `input_format_skip_unknown_fields=1`. The config-only path is not
-schema-agnostic: it still requires the column to exist before the key is promoted. The full
-vocabulary and both promotion paths are documented on the `Extra` schema in the AuditFlow OpenAPI
-contract.
-
-## Configuration
-
-Configuration is provided via environment variables or Helm values.
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `SPRING_RABBITMQ_HOST` | RabbitMQ broker host. | `localhost` |
-| `SPRING_RABBITMQ_USERNAME` | RabbitMQ user. | `guest` |
-| `SPRING_RABBITMQ_PASSWORD` | RabbitMQ password. | `guest` |
-| `AUDITFLOW_PIPELINE_PATH` | Path to the directory containing tenant pipelines. | `/etc/auditflow/tenants` |
-
-### Pipeline Configuration Example
-
-Tenants configure their pipelines via YAML files (e.g., `tenants/tenant1.yaml`):
-
-```yaml
-tenantId: "tenant1"
-pipelines:
-  - name: "Store in OpenSearch"
-    condition: "eventType == 'demo.event'"
-    sinks:
-      - type: "opensearch"
-        properties:
-          index: "audit-logs"
-```
-
-### Transformers and sinks
-
-Build every pipeline from a small set of explicit stages. The configured set depends on the deployment; validate a plugin's supported interface in the service repository before enabling it.
-
-| Category | Purpose | Typical use |
+| Operation | Method and path | Scope |
 |---|---|---|
-| **Transformers: privacy** | Remove, mask, or pseudonymize fields | Keep personal data out of a downstream audit index |
-| **Transformers: enrichment** | Add context derived from known event fields | Attach source or classification metadata |
-| **Transformers: normalization** | Reshape event data into a common form | Make events easier to query consistently |
-| **Sinks: search** | Write records for investigation and querying | OpenSearch |
-| **Sinks: object storage** | Store durable archive copies | S3-compatible storage |
-| **Sinks: observability / SIEM** | Send events to security or operations tooling | Splunk and equivalent configured adapters |
-| **Sinks: analytics** | Store events for aggregation and dashboards | ClickHouse |
-| **Sinks: relational database** | Keep events in a table next to application data | PostgreSQL, the event stored as JSON in one column |
+| Publish one event | `POST /audit/publish` | `audit-event:write` |
+| Publish up to 100 events | `POST /audit/publish/batch` | `audit-event:write` |
 
-Order matters: apply privacy transformations before a sink that should never receive the original field. Keep sink credentials in deployment secrets, not in pipeline files.
+| Status | Meaning |
+|---|---|
+| `200` | The broker stored the event; it will be routed. |
+| `400` | The event is invalid. |
+| `403` | `TENANT_NOT_PROVISIONED` or `TENANT_DISABLED`. |
+| `429` | `TENANT_RATE_LIMITED`; retry after `Retry-After`, keeping the same `eventId`. |
+| `503` | The broker could not confirm; retry with the same `eventId`. |
 
-#### ClickHouse
+A batch answers with one `ACCEPTED`/`REJECTED` result per event, so one bad event never blocks the others.
 
-The ClickHouse sink targets analytics workloads — aggregations by tenant, event type and time
-window. Pair `clickhouse_sink` with the `audit_clickhouse` transformer: the transformer flattens
-the canonical event into one row whose keys are the table's column names, and the sink is pure
-transport. Pairing the sink with `zero` instead will fail every delivery.
+**Compatibility.** v1 is additive-only: new paths, fields and enum values may appear, nothing is removed or narrowed. CI rejects any change that would break a v1 client.
 
-Create the database and table before enabling the pipeline; the sink never runs DDL.
+### The event
 
-```sql
-CREATE DATABASE IF NOT EXISTS audit;
+`AuditEvent` requires only `eventType` and `sourceSystem`. `tenantId` selects the tenant's pipelines (through the gateway it comes from your token, not the body); events without a tenant belong to the reserved `_platform` tenant. `eventId` makes retries safe. `timestamp` is assigned by the server; the business time of the action goes in `eventTime`.
 
-CREATE TABLE IF NOT EXISTS audit.audit_events
-(
-    timestamp        DateTime64(3, 'UTC'),
-    event_time       DateTime64(3, 'UTC'),
-    event_id         UUID,
-    correlation_id   String,
+Everything else your domain needs goes in `extra`, an open map:
 
-    event_type       LowCardinality(String),
-    source_system    LowCardinality(String),
-    tenant_id        LowCardinality(String),
+- **No key is required**, and keys AuditFlow does not know are delivered unchanged.
+- **Absent stays absent**: a missing key is omitted, never filled with a placeholder such as `"unknown"`.
+- **Convention keys** `userId`, `actionName`, `actionStatus`, `actionMessage`, `sessionId`, `durationMs` and `responseStatus` are promoted by the bundled transformers into dedicated fields and columns. You can promote your own keys too; see [Sinks and transformers](./sinks-and-transformers.md#promote-your-own-extra-keys).
 
-    action_name      LowCardinality(String),
-    action_status    LowCardinality(String),
-    action_message   String,
-    user_id          String,
-    session_id       String,
-    duration_ms      Nullable(UInt32),
-    response_status  Nullable(UInt16),
+## Configure
 
-    geo_lat          Nullable(Float64),
-    geo_lon          Nullable(Float64),
-    geo_country_code LowCardinality(String),
-    geo_country      LowCardinality(String),
-    geo_region       LowCardinality(String),
-    geo_city         LowCardinality(String),
+| Topic | Where |
+|---|---|
+| Tenants, pipelines, conditions, retries, batching, quotas | [Pipelines and tenants](./pipelines.md) |
+| Redaction of sensitive fields | [Pipelines and tenants: redaction](./pipelines.md#redaction) |
+| Sink and transformer catalogue, ClickHouse | [Sinks and transformers](./sinks-and-transformers.md) |
+| Kubernetes values | The `auditflow` chart in [labs64.io-helm-charts](https://github.com/Labs64/labs64.io-helm-charts/tree/master/charts/auditflow) |
 
-    extra            Map(LowCardinality(String), String),
+## Extend
 
-    INDEX idx_ingest_time timestamp TYPE minmax GRANULARITY 4
-)
-ENGINE = ReplacingMergeTree(timestamp)
-PARTITION BY toYYYYMM(event_time)
-ORDER BY (tenant_id, event_type, event_time, event_id)
-TTL toDateTime(event_time) + INTERVAL 1095 DAY;
-```
+Sinks and transformers are plain Python modules loaded at runtime. Mount your own into `sinks_bootstrap/` or `transformers_bootstrap/` (a volume or ConfigMap on Kubernetes) and reference it by file name in a pipeline. No backend change and no image rebuild. See [Sinks and transformers: write your own](./sinks-and-transformers.md#write-your-own).
 
-`timestamp` is server *receipt* time — AuditFlow assigns it, a client cannot override it.
-`event_time` is the *business* time the action happened at the source (the transformer falls back
-to `timestamp` when a publisher omits it), and it is the analytics axis: `PARTITION BY`, `ORDER BY`
-and `TTL` all key on `event_time`, not `timestamp`. Partitioning or grouping on `timestamp` instead
-silently breaks any backfill or replay, because a late-arriving event then lands in the wrong
-partition and the wrong retention window relative to when it actually happened.
+## Operate
 
-`ORDER BY` leads with `tenant_id` because every dashboard query is tenant-scoped first. Tune
-`PARTITION BY` and `TTL` to your retention policy — the values above are illustrative.
+**Delivery guarantees.**
 
-The table is a `ReplacingMergeTree` keyed on `event_id`, not a plain `MergeTree`: AuditFlow is
-at-least-once, so a DLQ replay after the ~24h idempotency window can re-deliver an event, and
-`ReplacingMergeTree` collapses the two copies on merge (the later `timestamp` wins as the version
-column). That collapse only happens at merge time, so a query issued between deliveries can still
-see both rows — use `SELECT ... FINAL` (or an aggregating rollup) for any query where
-double-counting would matter, such as revenue.
+- A delivery that fails is retried after 5 s, 30 s, 2 min, 10 min, 30 min, 1 h, then every 3 h, until it succeeds, the pipeline's `retry.maxAttempts` is used up, or `retry.maxAge` (default 24 h) has passed.
+- Throttling (rate limit, in-flight cap, full bulkhead) defers a delivery without spending an attempt.
+- Poison deliveries (a 4xx from a sink, malformed transformer output) are dead-lettered at once instead of retried.
+- Circuit breakers guard every transformer and sink call; shutdown drains in-flight work.
 
-```yaml
-pipelines:
-  - name: analytics
-    enabled: true
-    transformer:
-      name: audit_clickhouse
-    sink:
-      name: clickhouse_sink
-      properties:
-        service-url: http://clickhouse:8123
-        database: audit
-        table: audit_events
-        username: auditflow
-        password: ${secretRef:clickhouse-password}
-```
+**Dead-letter queue.** Every tenant has its own DLQ, one entry per failed pipeline with the reason and last error. The actuator endpoint `/actuator/dlq/<tenantId>` is the operator surface:
 
-**Insert batching.** AuditFlow delivers one event per request, and row-at-a-time inserts into
-MergeTree create one part per row. The sink relies on ClickHouse's server-side `async_insert` to
-batch them, with `wait_for_async_insert=1` so a successful delivery means the row is durably
-written and the retry/DLQ chain stays meaningful. This costs up to `async-insert-busy-timeout-ms`
-of latency per delivery. Never set `wait-for-async-insert: false` to buy that latency back — it
-makes the sink acknowledge events it may still lose.
+| Method | Effect |
+|---|---|
+| `GET` | Counts by pipeline and reason. Does not change the queue. |
+| `POST` | Replays the tenant's entries, optionally for one `pipeline`. |
+| `DELETE` | Purges entries, optionally for one `pipeline`. **Irreversible.** |
 
-Because every delivery blocks until its own flush, **the rows a flush can collect are bounded by
-how many deliveries are in flight at once, not by how long the window is.** Measured against
-ClickHouse 25.3, the largest flush always equalled the delivery concurrency. So the lever for
-fewer parts is more concurrent delivery (more sink replicas, more consumer concurrency) — a longer
-window only makes each caller wait longer, which lowers throughput and starves the very buffer it
-was meant to fill. At 32 concurrent deliveries a 1000 ms window measured worse on every axis than
-the 200 ms default: 24.7 vs 31.5 rows per flush, 24 vs 18 new parts, and 1016 ms vs 198 ms p50
-delivery latency.
+Only that tenant's messages are touched; there is no un-scoped DLQ operation.
 
-| Property | Default | Notes |
+**Pipeline inspection.** `GET /actuator/pipelines/<tenantId>` lists the deployed pipelines with their effective retry and batch settings and any warnings. `POST /actuator/pipelines/<tenantId>/dry-run` evaluates events (or an inline tenant document) against the pipelines without delivering anything.
+
+**Infrastructure.**
+
+| Component | Role | Managed alternatives |
 |---|---|---|
-| `async-insert-busy-timeout-ms` | `200` | ClickHouse aliases this to `async_insert_busy_timeout_max_ms` — it sets the **max** of the window, not the window. Keep `timeout` (default 10s) comfortably above it. |
-| `async-insert-use-adaptive-busy-timeout` | `true` | Since ClickHouse 24.2 the window floats between the min and the max based on ingest rate. Leaving it on keeps latency low when events are sparse. Set `false` to pin the window at the max: worth ~5.1 → 7.9 rows per flush and 52 → 35 parts *if* deliveries are genuinely concurrent, but it costs ~3.4× p50 latency if they are not. |
-| `async-insert-busy-timeout-min-ms` | ClickHouse's `50` | Lower bound of the adaptive window; has no effect once the adaptive timeout is off. |
+| RabbitMQ 4.x | Buffering, retry delays, dead-lettering. Standard AMQP only, no plugins. Kafka is not supported. | Amazon MQ for RabbitMQ, CloudAMQP |
+| Redis or Valkey | Idempotency keys and, with several replicas, the shared rate limit. Not storage. | ElastiCache, Azure Cache for Redis, Memorystore |
 
-`async_insert_max_data_size` and `async_insert_max_query_number` are not exposed: both are ceilings
-that can only flush a batch *earlier*, and neither is the binding constraint here — an audit row is
-~473 bytes against a 10 MiB default, and ClickHouse only honours the query-number limit when
-`async_insert_deduplicate` is enabled.
+A single replica can run without Redis (`auditflow.idempotency.store: memory`, `tenants.ratelimit.backend: in-memory`, plus excluding Spring's Redis auto-configuration). More than one replica needs Redis, or each replica enforces its own quota.
 
-**Duplicates.** DLQ replay can re-deliver an event. AuditFlow's `eventId` deduplication (~24h)
-absorbs the common case, and the table schema above absorbs the rest: it is a `ReplacingMergeTree`
-keyed on `event_id`, not a plain `MergeTree`, so a re-delivered row is collapsed on merge rather
-than counted twice. Deduplication happens only within a partition and only after merge, so a query
-run between deliveries can still see both rows — use `FINAL` for anything where a duplicate would
-matter, such as revenue.
+**Observability.** Traces, logs and metrics come from runtime auto-instrumentation (see [Monitoring and observability](../../operate-manage/monitoring-observability.md)). The `auditflow.tenant.events{tenant,provider,outcome}` counter tracks routed, delivered, quarantined and rejected events per tenant.
 
-## REST APIs
+## Before you go live
 
-AuditFlow primarily consumes events from RabbitMQ, but also provides an API to publish directly or manage configurations.
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/audit/publish` | `POST` | Publish a single event synchronously. |
-| `/actuator/health`| `GET` | Health check endpoint. |
-
-## Events
-
-AuditFlow listens to the shared RabbitMQ exchange for all ecosystem events.
-
-| Event Property | Required | Description |
-|----------------|----------|-------------|
-| `eventId` | Yes | Unique UUID for the event. |
-| `eventType` | Yes | Dot-separated action name (e.g., `user.login`). |
-| `tenantId` | No | Target tenant. If omitted, routes to `_platform`. |
-
-## Examples
-
-### Custom Transformer Plugin
-
-Create a transformer to mask sensitive data (`transformers/mask.py`):
-
-```python
-def transform(input_data: dict) -> dict:
-    if "email" in input_data.get("payload", {}):
-        input_data["payload"]["email"] = "***@***.com"
-    return input_data
-```
-
-## Operations
-
-AuditFlow is designed to be horizontally scaled. Increase the `replicaCount` in your Helm chart to process more events concurrently. The underlying RabbitMQ queues will automatically distribute messages across the replicas.
+- [ ] Every tenant that publishes has a tenant document; unknown tenants are rejected with `403`.
+- [ ] Redaction rules cover every field that must not reach a sink. A `hash` rule needs `AUDITFLOW_REDACTION_HASH_KEY` from a secret.
+- [ ] Sink credentials are `${secretRef:<key>}` references, never literals in pipeline files.
+- [ ] More than one backend replica runs with Redis for idempotency and rate limiting.
+- [ ] Someone owns the DLQ: there is no automatic expiry, and a purge cannot be undone.
+- [ ] On Kubernetes with NetworkPolicy enabled, sinks on ports other than 443 have a matching `networkPolicy.extraEgress` rule.
 
 ## Troubleshooting
 
-| Symptom | Cause | Resolution |
-|---------|-------|------------|
-| Events not reaching sink | Pipeline condition mismatch | Verify the `eventType` and `tenantId` match the pipeline definition. |
-| Python plugin crash | Syntax error in plugin | Check the AuditFlow logs for Python tracebacks. Ensure the plugin implements the correct method signature. |
-| RabbitMQ connection error | Bad credentials or network | Verify `SPRING_RABBITMQ_*` environment variables. |
+| Symptom | Likely cause | What to do |
+|---|---|---|
+| `403 TENANT_NOT_PROVISIONED` | No tenant document for the token's tenant | Add the tenant file or ConfigMap; it is picked up live. |
+| Event accepted but nothing delivered | No pipeline condition matched | Use the pipeline dry run against the event. |
+| Deliveries pile up in the DLQ | Sink unreachable or rejecting | Check `GET /actuator/dlq/<tenantId>` reasons, fix the sink, then replay. |
+| A sink module is missing from `GET /registry` | The module failed to import | Check the sink or transformer service log for the import error. |
+
+## Next steps
+
+- [Pipelines and tenants](./pipelines.md)
+- [Sinks and transformers](./sinks-and-transformers.md)
+- [Architecture overview](../../introduction/architecture.md)
