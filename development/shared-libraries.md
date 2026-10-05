@@ -1,10 +1,10 @@
 ---
-title: Shared Libraries
+title: Shared libraries
 parent: Community & Contributing
 nav_order: 5
 ---
 
-# Shared Libraries
+# Shared libraries
 
 [labs64.io-commons](https://github.com/Labs64/labs64.io-commons) holds the libraries every service uses to take part in the platform's identity and contract model, and the build parent of every Java service.
 
@@ -18,11 +18,11 @@ nav_order: 5
 | `openapi-schema-generator` | Java 17+ | Extracts versioned JSON Schema documents from an OpenAPI 3.1 contract |
 | `auth-context-python` | Python 3.13+ | The same identity context for Python: ASGI middleware, FastAPI dependencies, an httpx propagation hook, a pytest fixture |
 
-The Java and Python identity-context libraries behave identically: both are tested against the shared vectors in `test-vectors/`. `auth-policy-cerbos/` holds the tooling that generates and validates the Cerbos policies.
+The Java and Python identity-context libraries behave identically. The tests of both run against the shared vectors in `test-vectors/`. `auth-policy-cerbos/` holds the tooling that generates and validates the Cerbos policies.
 
 ## Use them
 
-**Java.** Inherit the parent; it pins every commons library, so declare them without a version:
+**Java.** Inherit the parent. It pins every commons library, so declare them without a version:
 
 ```xml
 <parent>
@@ -47,7 +47,7 @@ The Java and Python identity-context libraries behave identically: both are test
 </repositories>
 ```
 
-Pin a released version. `0.0.0-SNAPSHOT` is the unreleased main branch: use it only while developing against unreleased commons changes, because a release build refuses it.
+Pin a released version. `0.0.0-SNAPSHOT` is the unreleased main branch. Use it only while developing against unreleased commons changes, because a release build refuses it.
 
 **Python.**
 
@@ -80,7 +80,7 @@ From this one block the build generates:
 | Cerbos policies (`--cerbos-output`) | The central policy decision point |
 | A routes manifest `<module>.routes.yaml` (`--routes-output`) | The [Auth Gateway](../modules/auth-gateway/index.md) |
 
-`x-labs64.auth.resource` optionally names the resource for `@Authorize` (a SpEL reference such as `#paymentId`). The standard OpenAPI `security` block is not used for authorization.
+`x-labs64.auth.resource` can name the resource for `@Authorize`, as a SpEL reference such as `#paymentId`. Authorization does not use the standard OpenAPI `security` block.
 
 ## Build them
 
@@ -92,4 +92,4 @@ just python                              # Python only
 just install-java                        # install all Java artefacts as 0.0.0-SNAPSHOT locally
 ```
 
-Releases follow the [common release model](./releases.md): every Java artefact here shares one version and is released together.
+Releases follow the [common release model](./releases.md): every Java artefact in this repository shares one version and releases together.

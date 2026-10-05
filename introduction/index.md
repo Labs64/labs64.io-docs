@@ -22,7 +22,7 @@ Whether you are evaluating one service, integrating a product team, or operating
 
 ## The ecosystem at a glance
 
-Every external request enters through the Auth Gateway. Inside the cluster, services call each other's REST APIs directly as service principals, and audit events are delivered to AuditFlow over its HTTP API. No service reads another service's database.
+Every external request enters through the Auth Gateway. Inside the cluster, services call each other's REST APIs directly as service principals, and send audit events to AuditFlow over its HTTP API. No service reads another service's database.
 
 ```mermaid
 flowchart TB

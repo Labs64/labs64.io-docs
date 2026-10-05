@@ -7,51 +7,51 @@ has_children: true
 
 # AuditFlow
 
-AuditFlow captures audit events from your services and delivers them, with sensitive fields removed at the door, to wherever they need to live: a search index, cold storage, a SIEM, or several of these at once. A service publishes an event with one REST call; routing is YAML configuration per tenant. AuditFlow handles buffering, redaction, deduplication, retries and fan-out.
+AuditFlow takes audit events from your services, removes sensitive fields, and delivers the events to one or more destinations, such as a search index, cold storage or a SIEM. A service publishes an event with one REST call. Routing is YAML configuration per tenant. AuditFlow handles buffering, redaction, deduplication, retries and fan-out.
 
-AuditFlow is a router, not a system of record. It has no database of its own: the [sinks](./sinks-and-transformers.md) you configure (OpenSearch, ClickHouse, S3, Splunk, …) own persistence, retention and query.
+AuditFlow is a router and has no database of its own. The [sinks](./sinks-and-transformers.md) you configure (OpenSearch, ClickHouse, S3, Splunk and others) own persistence, retention and query.
 
 ## When it fits
 
 - You need a reliable answer to "who did what, when, and from where" across many services, and each service solves it differently today.
 - Events must reach more than one destination: a search index for operations, an archive for compliance, an alert channel for security.
 - Sensitive fields such as user IDs, e-mail addresses or session tokens must never reach log storage.
-- Losing an audit event is a compliance failure, not a gap in a graph.
+- Losing an audit event counts as a compliance failure.
 
-AuditFlow complements OpenTelemetry rather than replacing it:
+AuditFlow works alongside OpenTelemetry and does not replace it:
 
 | | Observability (OpenTelemetry) | AuditFlow |
 |---|---|---|
 | Question answered | *Is my system healthy?* | *Who did what, when, with what outcome?* |
 | Consumer | SREs and platform engineers | Compliance, security, legal, auditors |
-| Data | High volume, sampled, short retention | Every event matters, lossless, long retention |
+| Data | High volume, sampled, short retention | Lossless, long retention |
 
-It is not the right tool for distributed tracing, metrics or infrastructure logs, or for intercepting raw HTTP traffic at a proxy: your services decide what to publish.
+Do not use it for distributed tracing, metrics or infrastructure logs. It also does not intercept raw HTTP traffic at a proxy. Your services decide what to publish.
 
 ## Usage scenarios
 
 | Scenario | How AuditFlow handles it |
 |---|---|
-| **Compliance audit trail** (GDPR, SOC 2, ISO 27001, HIPAA) | Redact personal data at ingest, then fan out to OpenSearch for search and S3 for immutable archival. |
-| **Security alerting and SIEM** | A conditional pipeline sends only `security.*` events to Splunk or a webhook; routine events go to cheaper storage. Retries ride out a SIEM outage. |
-| **Multi-tenant SaaS audit logs** | Each tenant owns its pipelines, quota and sink credentials; events never cross tenants. |
-| **Central audit hub** | Every service publishes to one endpoint; routing logic lives in one place instead of in each service. |
+| Compliance audit trail (GDPR, SOC 2, ISO 27001, HIPAA) | Redact personal data at ingest, then fan out to OpenSearch for search and S3 for immutable archival. |
+| Security alerting and SIEM | A conditional pipeline sends only `security.*` events to Splunk or a webhook, and routine events go to cheaper storage. AuditFlow keeps retrying while the SIEM is down. |
+| Multi-tenant SaaS audit logs | Each tenant owns its pipelines, quota and sink credentials. Events never cross tenants. |
+| Central audit hub | Every service publishes to one endpoint, and the routing logic lives in one place instead of in each service. |
 
 ## Key capabilities
 
 | Capability | What you get |
 |---|---|
-| **Pipelines as configuration** | Routing, transformation and destinations are per-tenant YAML, picked up live without a restart. |
-| **Condition routing** | Field-level rules on any event field, nested `all`/`any` groups, 19 operators. |
-| **Fan-out** | One event, many independent pipelines; a failing destination never delays or duplicates the others. |
-| **Ingest-time redaction** | Mask, keyed-hash or drop fields before the event reaches the broker. |
-| **Confirmed publish** | `/audit/publish` answers `200` only after the broker has durably stored the event. |
-| **Retries and dead-lettering** | Per-pipeline retries over hours, then a tenant-scoped dead-letter queue you can inspect, replay or purge. |
-| **Idempotency** | Duplicate `eventId`s are suppressed, so publishers can retry safely. |
-| **Tenant isolation** | Per-tenant pipelines, rate limit, in-flight cap, secrets and DLQ. |
-| **Batching** | Publish up to 100 events per call; sinks can write a batch in one request. |
-| **Tamper evidence** | The S3 sink can write a signed, hash-chained digest per object. |
-| **15 built-in sinks** | Plus your own Python sink or transformer, loaded at runtime. |
+| Pipelines as configuration | Routing, transformation and destinations are per-tenant YAML, which AuditFlow picks up live without a restart. |
+| Condition routing | Field-level rules on any event field, with nested `all`/`any` groups and 19 operators. |
+| Fan-out | One event can go through many independent pipelines. A failing destination never delays or duplicates the others. |
+| Ingest-time redaction | Mask, keyed-hash or drop fields before the event reaches the broker. |
+| Confirmed publish | `/audit/publish` answers `200` only after the broker has durably stored the event. |
+| Retries and dead-lettering | Per-pipeline retries over hours, then a tenant-scoped dead-letter queue you can inspect, replay or purge. |
+| Idempotency | AuditFlow suppresses duplicate `eventId`s, so publishers can retry safely. |
+| Tenant isolation | Per-tenant pipelines, rate limit, in-flight cap, secrets and DLQ. |
+| Batching | Publish up to 100 events per call. Sinks can write a batch in one request. |
+| Tamper evidence | The S3 sink can write a signed, hash-chained digest per object. |
+| 15 built-in sinks | You can add your own Python sink or transformer, loaded at runtime. |
 
 ## How it works
 
@@ -68,7 +68,7 @@ AuditFlow runs as three services:
 1. The backend validates the event, assigns the server `timestamp`, applies redaction and checks the tenant (provisioned, enabled, within quota).
 2. It publishes the event to RabbitMQ and waits for the broker's confirm before answering.
 3. The router evaluates every enabled pipeline of the event's tenant and creates one delivery per match.
-4. Each delivery runs its transformer and sink. Failures are retried with growing delays; exhausted or malformed deliveries go to the tenant's DLQ.
+4. Each delivery runs its transformer and sink. The backend retries failures with growing delays and sends exhausted or malformed deliveries to the tenant's DLQ.
 
 ## Start here
 
@@ -102,7 +102,7 @@ just ch-events   # the same event, stored in ClickHouse
 
 ## API contract
 
-The contract is `auditflow-api/src/main/resources/openapi/openapi-audit-v1.yaml` in the [AuditFlow repository](https://github.com/Labs64/labs64.io-auditflow). Through the gateway the paths are prefixed with `/auditflow/api/v1`.
+The contract is `auditflow-api/src/main/resources/openapi/openapi-audit-v1.yaml` in the [AuditFlow repository](https://github.com/Labs64/labs64.io-auditflow). Through the gateway, the paths carry the prefix `/auditflow/api/v1`.
 
 | Operation | Method and path | Scope |
 |---|---|---|
@@ -111,7 +111,7 @@ The contract is `auditflow-api/src/main/resources/openapi/openapi-audit-v1.yaml`
 
 | Status | Meaning |
 |---|---|
-| `200` | The broker stored the event; it will be routed. |
+| `200` | The broker stored the event, and AuditFlow routes it. |
 | `400` | The event is invalid. |
 | `403` | `TENANT_NOT_PROVISIONED` or `TENANT_DISABLED`. |
 | `429` | `TENANT_RATE_LIMITED`; retry after `Retry-After`, keeping the same `eventId`. |
@@ -119,17 +119,17 @@ The contract is `auditflow-api/src/main/resources/openapi/openapi-audit-v1.yaml`
 
 A batch answers with one `ACCEPTED`/`REJECTED` result per event, so one bad event never blocks the others.
 
-**Compatibility.** v1 is additive-only: new paths, fields and enum values may appear, nothing is removed or narrowed. CI rejects any change that would break a v1 client.
+**Compatibility.** v1 is additive-only. New paths, fields and enum values may appear, and nothing is removed or narrowed. CI rejects any change that would break a v1 client.
 
 ### The event
 
-`AuditEvent` requires only `eventType` and `sourceSystem`. `tenantId` selects the tenant's pipelines (through the gateway it comes from your token, not the body); events without a tenant belong to the reserved `_platform` tenant. `eventId` makes retries safe. `timestamp` is assigned by the server; the business time of the action goes in `eventTime`.
+`AuditEvent` requires only `eventType` and `sourceSystem`. `tenantId` selects the tenant's pipelines. Through the gateway, the tenant comes from your token, not the body. Events without a tenant belong to the reserved `_platform` tenant. `eventId` makes retries safe. The server assigns `timestamp`, and the business time of the action goes in `eventTime`.
 
 Everything else your domain needs goes in `extra`, an open map:
 
-- **No key is required**, and keys AuditFlow does not know are delivered unchanged.
-- **Absent stays absent**: a missing key is omitted, never filled with a placeholder such as `"unknown"`.
-- **Convention keys** `userId`, `actionName`, `actionStatus`, `actionMessage`, `sessionId`, `durationMs` and `responseStatus` are promoted by the bundled transformers into dedicated fields and columns. You can promote your own keys too; see [Sinks and transformers](./sinks-and-transformers.md#promote-your-own-extra-keys).
+- No key is required, and AuditFlow delivers keys it does not know unchanged.
+- A missing key stays absent. AuditFlow never fills it with a placeholder such as `"unknown"`.
+- The bundled transformers promote the convention keys `userId`, `actionName`, `actionStatus`, `actionMessage`, `sessionId`, `durationMs` and `responseStatus` into dedicated fields and columns. You can promote your own keys too; see [Sinks and transformers](./sinks-and-transformers.md#promote-your-own-extra-keys).
 
 ## Configure
 
@@ -142,7 +142,7 @@ Everything else your domain needs goes in `extra`, an open map:
 
 ## Extend
 
-Sinks and transformers are plain Python modules loaded at runtime. Mount your own into `sinks_bootstrap/` or `transformers_bootstrap/` (a volume or ConfigMap on Kubernetes) and reference it by file name in a pipeline. No backend change and no image rebuild. See [Sinks and transformers: write your own](./sinks-and-transformers.md#write-your-own).
+Sinks and transformers are plain Python modules loaded at runtime. Mount your own into `sinks_bootstrap/` or `transformers_bootstrap/` (a volume or ConfigMap on Kubernetes) and reference it by file name in a pipeline. This needs no backend change and no image rebuild. See [Sinks and transformers: write your own](./sinks-and-transformers.md#write-your-own).
 
 ## Operate
 
@@ -153,7 +153,7 @@ Sinks and transformers are plain Python modules loaded at runtime. Mount your ow
 - Poison deliveries (a 4xx from a sink, malformed transformer output) are dead-lettered at once instead of retried.
 - Circuit breakers guard every transformer and sink call; shutdown drains in-flight work.
 
-**Dead-letter queue.** Every tenant has its own DLQ, one entry per failed pipeline with the reason and last error. The actuator endpoint `/actuator/dlq/<tenantId>` is the operator surface:
+**Dead-letter queue.** Every tenant has its own DLQ, one entry per failed pipeline with the reason and last error. Operators manage it through the actuator endpoint `/actuator/dlq/<tenantId>`:
 
 | Method | Effect |
 |---|---|
@@ -161,7 +161,7 @@ Sinks and transformers are plain Python modules loaded at runtime. Mount your ow
 | `POST` | Replays the tenant's entries, optionally for one `pipeline`. |
 | `DELETE` | Purges entries, optionally for one `pipeline`. **Irreversible.** |
 
-Only that tenant's messages are touched; there is no un-scoped DLQ operation.
+Each operation touches only that tenant's messages. There is no un-scoped DLQ operation.
 
 **Pipeline inspection.** `GET /actuator/pipelines/<tenantId>` lists the deployed pipelines with their effective retry and batch settings and any warnings. `POST /actuator/pipelines/<tenantId>/dry-run` evaluates events (or an inline tenant document) against the pipelines without delivering anything.
 
@@ -170,7 +170,7 @@ Only that tenant's messages are touched; there is no un-scoped DLQ operation.
 | Component | Role | Managed alternatives |
 |---|---|---|
 | RabbitMQ 4.x | Buffering, retry delays, dead-lettering. Standard AMQP only, no plugins. Kafka is not supported. | Amazon MQ for RabbitMQ, CloudAMQP |
-| Redis or Valkey | Idempotency keys and, with several replicas, the shared rate limit. Not storage. | ElastiCache, Azure Cache for Redis, Memorystore |
+| Redis or Valkey | Idempotency keys and, with several replicas, the shared rate limit. It is not storage. | ElastiCache, Azure Cache for Redis, Memorystore |
 
 A single replica can run without Redis (`auditflow.idempotency.store: memory`, `tenants.ratelimit.backend: in-memory`, plus excluding Spring's Redis auto-configuration). More than one replica needs Redis, or each replica enforces its own quota.
 
@@ -178,18 +178,18 @@ A single replica can run without Redis (`auditflow.idempotency.store: memory`, `
 
 ## Before you go live
 
-- [ ] Every tenant that publishes has a tenant document; unknown tenants are rejected with `403`.
+- [ ] Every tenant that publishes has a tenant document. AuditFlow rejects unknown tenants with `403`.
 - [ ] Redaction rules cover every field that must not reach a sink. A `hash` rule needs `AUDITFLOW_REDACTION_HASH_KEY` from a secret.
 - [ ] Sink credentials are `${secretRef:<key>}` references, never literals in pipeline files.
 - [ ] More than one backend replica runs with Redis for idempotency and rate limiting.
-- [ ] Someone owns the DLQ: there is no automatic expiry, and a purge cannot be undone.
+- [ ] Someone owns the DLQ. Entries do not expire automatically, and a purge cannot be undone.
 - [ ] On Kubernetes with NetworkPolicy enabled, sinks on ports other than 443 have a matching `networkPolicy.extraEgress` rule.
 
 ## Troubleshooting
 
 | Symptom | Likely cause | What to do |
 |---|---|---|
-| `403 TENANT_NOT_PROVISIONED` | No tenant document for the token's tenant | Add the tenant file or ConfigMap; it is picked up live. |
+| `403 TENANT_NOT_PROVISIONED` | No tenant document for the token's tenant | Add the tenant file or ConfigMap. AuditFlow picks it up live. |
 | Event accepted but nothing delivered | No pipeline condition matched | Use the pipeline dry run against the event. |
 | Deliveries pile up in the DLQ | Sink unreachable or rejecting | Check `GET /actuator/dlq/<tenantId>` reasons, fix the sink, then replay. |
 | A sink module is missing from `GET /registry` | The module failed to import | Check the sink or transformer service log for the import error. |

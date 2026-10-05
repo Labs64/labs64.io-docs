@@ -32,13 +32,13 @@ Example configuration:
 ```
 
 Never commit real keys. The Stripe CLI signing secret and the Dashboard
-endpoint signing secret are different values. Store the secret belonging to
-the endpoint that sends events to the current environment.
+endpoint signing secret are different values. Store the secret of the endpoint
+that sends events to the current environment.
 
 ## API endpoint override
 
-By default, the provider lets the Stripe SDK use Stripe's official API endpoint. Isolated
-integration environments may set the provider-owned Spring property:
+By default, the Stripe SDK calls Stripe's official API endpoint. An isolated integration
+environment can point it elsewhere with this Spring property, which the Stripe provider owns:
 
 ```yaml
 payment-provider:
@@ -46,16 +46,16 @@ payment-provider:
     api-base-url: http://localhost:8090
 ```
 
-Spring's environment-variable equivalent is:
+The equivalent environment variable is:
 
 ```bash
 PAYMENT_PROVIDER_STRIPE_API_BASE_URL=http://localhost:8090
 ```
 
-This is process-level test infrastructure configuration, not tenant `PaymentProvider` config.
-The Stripe provider's auto-configuration owns the property and applies it only while constructing
-the Stripe SDK client. If it is absent, the SDK default is unchanged. Payment Gateway does not
-contain Stripe-specific configuration binding.
+This setting applies to the whole process and is meant for test infrastructure. It is not part
+of the tenant `PaymentProvider` config. The Stripe provider's auto-configuration applies it only
+when it builds the Stripe SDK client. Without the property, the SDK uses its default endpoint.
+The Payment Gateway core has no Stripe-specific configuration binding.
 
 ## Webhook endpoint
 
@@ -75,9 +75,9 @@ http://localhost:8080/providers/stripe/webhooks
 https://gateway.example.com/payment-gateway/api/v1/providers/stripe/webhooks
 ```
 
-The external gateway prefix is deployment-specific. Confirm it before
-registering the endpoint. Stripe must be able to reach the URL over the
-internet; it cannot call `localhost` directly.
+The external gateway prefix depends on your deployment. Confirm it before you
+register the endpoint. Stripe must reach the URL over the internet, so it
+cannot call `localhost`.
 
 ## Required webhook events
 
@@ -91,13 +91,13 @@ Configure the Stripe endpoint for these events:
 | `checkout.session.expired` | `FAILED` |
 
 The provider stores `paymentTransactionId` in Checkout Session and Payment
-Intent metadata. The webhook uses this metadata to restore the correct
-transaction and provider configuration before signature verification.
+Intent metadata. The webhook handler uses this metadata to restore the
+transaction and its provider configuration before it verifies the signature.
 
 ## Dashboard setup
 
-1. Open Stripe Dashboard and select the correct Test or Live mode.
-2. Go to **Developers → Webhooks** and add the public Payment Gateway webhook URL.
+1. Open the Stripe Dashboard and select Test or Live mode to match the environment.
+2. Open **Developers**, then **Webhooks**, and add the public Payment Gateway webhook URL.
 3. Select the events listed above.
 4. Reveal the endpoint signing secret.
 5. Save that value as `webhookSecret` in the corresponding Payment Gateway
@@ -120,28 +120,29 @@ stripe listen \
   --forward-to http://localhost:8080/providers/stripe/webhooks
 ```
 
-`stripe listen` prints a temporary `whsec_...` signing secret. Put that value
-in the local Stripe provider configuration while the listener is in use.
+`stripe listen` prints a temporary `whsec_...` signing secret. Use that value as
+`webhookSecret` in the local Stripe provider configuration while the listener runs.
 
 ## Checkout flow
 
 1. The client calls `/payments/{paymentId}/pay` and supplies absolute
-   `checkout.returnUrl` and `checkout.cancelUrl` values. These are the final
-   tenant/client destinations.
+   `checkout.returnUrl` and `checkout.cancelUrl` values. The gateway sends the
+   customer to one of these URLs at the end of the flow.
 2. Payment Gateway validates the request before creating the payment attempt.
 3. Payment Gateway creates the transaction and Checkout Session, then builds
    its own provider callback URLs.
 4. The Stripe provider creates a Stripe Checkout Session using the gateway
    callback URLs and stores the gateway transaction ID in Stripe metadata.
 5. The client follows the returned redirect action to Stripe Checkout.
-6. Completion can reach Payment Gateway through the browser return, a Stripe
-   webhook, or both.
+6. The payment result reaches Payment Gateway through the browser return, a
+   Stripe webhook, or both.
 7. The provider verifies the webhook using the exact raw body and
    `Stripe-Signature`, then returns a normalized provider result.
 8. Payment Gateway applies the result under a database lock. A duplicate
    terminal result cannot overwrite the transaction.
 9. For a successful one-time payment, the transaction becomes `SUCCESS`, the
-   payment becomes `CLOSED`, and finalized/closed events are published.
+   payment becomes `CLOSED`, and Payment Gateway publishes the `payment.finalized`
+   and `payment.closed` events.
 
 ## Automated PSP integration coverage
 
@@ -167,22 +168,21 @@ just test-psp
 just test-down
 ```
 
-This deterministic suite verifies our integration contract and state transitions. It does not
-prove that Stripe's hosted UI, credentials, account configuration, or live network are healthy;
-those remain the responsibility of a small separately scheduled smoke flow against Stripe test
-mode.
+This deterministic suite verifies the gateway's integration contract and state transitions. It
+does not prove that Stripe's hosted UI, credentials, account configuration, or live network are
+healthy. Checking those needs a separate, scheduled smoke flow against Stripe test mode.
 
 ## Troubleshooting
 
-- **Controller breakpoint is not reached:** verify the route and external
+- **Controller breakpoint is not reached.** Verify the route and external
   gateway prefix. Check that the endpoint is publicly reachable.
-- **HTTP 400 / signature verification failed:** the configured
+- **HTTP 400 or signature verification failed.** The configured
   `webhookSecret` does not belong to the sending endpoint, or the raw request
   body was modified before verification.
-- **Webhook cannot restore the transaction:** confirm the event belongs to a
+- **Webhook cannot restore the transaction.** Confirm the event belongs to a
   Checkout Session created by this provider version and contains
   `paymentTransactionId` metadata.
-- **Stripe CLI remains on `Getting ready`:** run it with `--log-level debug`
-  and check proxy/firewall access to Stripe WebSocket endpoints.
-- **Browser return and webhook arrive together:** this is expected. The
+- **Stripe CLI remains on `Getting ready`.** Run it with `--log-level debug`
+  and check that no proxy or firewall blocks the Stripe WebSocket endpoints.
+- **Browser return and webhook arrive together.** This is expected. The
   transaction update lock and terminal-state guard make processing idempotent.

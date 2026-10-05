@@ -11,12 +11,12 @@ Labs64.IO modules are designed to be configured externally using a Twelve-Factor
 
 - **No Hardcoded Credentials:** All credentials must be injected via Secrets.
 - **Environment Variables:** Used for runtime overrides (e.g., PSP API keys).
-- **Helm Values:** Used for declarative infrastructure configurations (e.g., replica counts, gateway routes).
+- **Helm Values:** Used for declarative infrastructure configuration, such as replica counts and gateway routes.
 - **Module Specific:** Each module maintains its own configuration surface.
 
 ## Helm Values Structure
 
-When deploying via Kubernetes, the primary configuration surface is each chart's values; see the [Helm charts reference](../reference/helm-values.md).
+On Kubernetes, you configure each module through the values of its chart. See the [Helm charts reference](../reference/helm-values.md).
 
 | Section | Purpose | Example |
 |---------|---------|---------|
@@ -30,7 +30,7 @@ When deploying via Kubernetes, the primary configuration surface is each chart's
 ## Production Recommendations
 
 For production environments:
-1. Always use Kubernetes Secrets for sensitive values. Supply them through `secrets.data` from your CI, or `externalSecrets.enabled: true`.
+1. Always use Kubernetes Secrets for sensitive values. Supply them through `secrets.data` from your CI, or set `externalSecrets.enabled: true`.
 2. Enable `observability.enabled` to ensure traces and metrics are collected.
 3. Manage your configuration using GitOps (e.g., ArgoCD) to maintain an audit trail of configuration changes.
 

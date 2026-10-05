@@ -1,10 +1,10 @@
 ---
-title: Architecture Overview
+title: Architecture overview
 parent: Overview
 nav_order: 3
 ---
 
-# Architecture Overview
+# Architecture overview
 
 Labs64.IO is a set of independent services behind one authenticated edge. Each service owns its API, its data and its release cycle; the platform supplies what they share: identity and access control, tenant isolation, audit delivery, observability and deployment packaging. You can adopt one service or all of them.
 
@@ -22,7 +22,7 @@ Labs64.IO is a set of independent services behind one authenticated edge. Each s
 
 ## Identity and access
 
-Authorization is enforced at more than one point, but decided in one place: every check goes to the same central Cerbos policy decision point (PDP), evaluating the same generated policy.
+Several points enforce authorization, and one place decides it. Every check goes to the same central Cerbos policy decision point (PDP) and evaluates the same generated policy.
 
 ```mermaid
 sequenceDiagram
@@ -33,14 +33,14 @@ sequenceDiagram
     participant PDP as Cerbos PDP
     participant M as Service
 
-    C->>T: request + Bearer token
+    C->>T: request with Bearer token
     T->>T: remove inbound X-Auth-* headers
     T->>AG: ForwardAuth
     AG->>AG: verify token, match the operation
     AG->>PDP: may this caller reach this operation?
     PDP-->>AG: allow
     AG-->>T: trusted X-Auth-* headers
-    T->>M: request + trusted headers
+    T->>M: request with trusted headers
     M->>PDP: may this caller act on this resource?
     PDP-->>M: allow
     M->>M: business logic, tenant-scoped data
@@ -49,9 +49,9 @@ sequenceDiagram
 
 | Enforcement point | Where | Decides |
 |---|---|---|
-| **Edge** | [Auth Gateway](../modules/auth-gateway/index.md) | Is the token valid, and may this caller reach this operation at all? |
-| **Domain** | Inside each service, from generated annotations (`@RequireScopes`, `@RequireTenant`, `@Authorize`) | May this caller perform this action on this resource? |
-| **Data** | Where a service adopts it (Checkout purchase-order lists) | Which rows may this caller see? The policy is turned into a database query filter. |
+| Edge | [Auth Gateway](../modules/auth-gateway/index.md) | Is the token valid, and may this caller reach this operation at all? |
+| Domain | Inside each service, from generated annotations (`@RequireScopes`, `@RequireTenant`, `@Authorize`) | May this caller perform this action on this resource? |
+| Data | Where a service adopts it (Checkout purchase-order lists) | Which rows may this caller see? The service turns the policy into a database query filter. |
 
 **The identity context.** After a successful edge check the service receives four headers, and nothing else about the caller:
 
@@ -60,15 +60,15 @@ sequenceDiagram
 | `X-Auth-User` | The caller. Service principals are prefixed (`svc:` at the edge, `service:<module>` for internal calls). |
 | `X-Auth-Scopes` | The caller's scopes. |
 | `X-Auth-Tenant` | The caller's tenant, or `-` for a tenant-less call. |
-| `X-Request-ID` | Correlation ID, propagated on every downstream call. |
+| `X-Request-ID` | Correlation ID. Services propagate it on every downstream call. |
 
-The contract only grows: services ignore headers they do not know. The shared [Commons](https://github.com/Labs64/labs64.io-commons) libraries parse it for Java and Python, enforce it fail-closed and propagate it on outbound calls.
+The contract only adds headers. Services ignore headers they do not know. The shared [Commons](https://github.com/Labs64/labs64.io-commons) libraries parse it for Java and Python, enforce it fail-closed and propagate it on outbound calls.
 
 **Policy from the contract.** Each operation in a service's OpenAPI document carries an `x-labs64.auth` block: required scopes, whether a tenant is required, and the resource type. An operation without it is public. At build time this one block generates the service's annotations, the Cerbos policies and the edge routing manifest, so documentation, routing and policy cannot diverge.
 
-**Service-to-service calls.** A service acting on its own behalf, for example Payment Gateway sending audit events, calls the target service directly inside the cluster as its own service principal (`service:<module>`), with the scopes from its integration configuration and the tenant of the record it is acting on. It never forwards an end user as itself.
+**Service-to-service calls.** A service acting on its own behalf, for example Payment Gateway sending audit events, calls the target service directly inside the cluster as its own service principal (`service:<module>`), with the scopes from its integration configuration and the tenant of the record it is acting on. It never forwards the original end user as the authenticated caller.
 
-**Trust boundary.** Only the edge is reachable from outside. Inside the cluster, services trust the identity headers they receive, so a workload that could reach a service directly could forge them; NetworkPolicies that allow only the edge and named caller services are what prevent this. Cryptographic verification of in-cluster callers (mTLS or workload identity) is not part of the platform.
+**Trust boundary.** Only the edge is reachable from outside. Inside the cluster, services trust the identity headers they receive, so a workload that could reach a service directly could forge them; NetworkPolicies prevent this by allowing only the edge and named caller services. Cryptographic verification of in-cluster callers (mTLS or workload identity) is not part of the platform.
 
 See [Security and compliance](../operate-manage/security-compliance.md) for the deployment checklist.
 
@@ -85,7 +85,7 @@ flowchart LR
     W --> S2[("S3 archive")]
 ```
 
-AuditFlow is a router, not a store: the sinks are the systems of record.
+AuditFlow routes events and does not store them. The sinks are the systems of record.
 
 ## Multi-tenancy
 
@@ -104,7 +104,7 @@ Each service has its own database and credentials. See [Scaling and multi-tenanc
 
 ## Observability
 
-Telemetry is infrastructure-owned. Services carry no OpenTelemetry SDK: the OpenTelemetry Java agent (Java services) and `opentelemetry-instrument` (Python services) attach at deployment when observability is enabled.
+Telemetry is infrastructure-owned. Services carry no OpenTelemetry SDK. The OpenTelemetry Java agent (Java services) and `opentelemetry-instrument` (Python services) attach at deployment when observability is enabled.
 
 ```mermaid
 flowchart LR
@@ -124,7 +124,7 @@ See [Monitoring and observability](../operate-manage/monitoring-observability.md
 ```mermaid
 flowchart TB
     subgraph local["Local evaluation"]
-        DC["Docker Compose"] --> M1["One service + its dependencies"]
+        DC["Docker Compose"] --> M1["One service and its dependencies"]
     end
     subgraph dev["Local Kubernetes"]
         K3D["k3d cluster"] -->|"Helm"| E1["Full ecosystem"]

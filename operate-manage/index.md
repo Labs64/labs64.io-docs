@@ -23,7 +23,7 @@ flowchart LR
 | Need | Start here |
 |---|---|
 | Select an ownership and support model | [Deployment Tiers](./deployment-tiers.md) |
-| Install and configure charts | [Kubernetes & Helm Setup](./kubernetes-helm-setup.md) |
+| Install and configure charts | [Kubernetes & Helm setup](./kubernetes-helm-setup.md) |
 | Expose services safely | [Traefik Gateway Routing](./traefik-gateway-routing.md) |
 | Plan resilience and tenancy | [Databases & Persistence](./databases-persistence.md) · [Scaling & Multi-Tenancy](./scaling-multi-tenancy.md) |
 | Detect and resolve problems | [Monitoring & Observability](./monitoring-observability.md) · [Troubleshooting](./troubleshooting.md) |

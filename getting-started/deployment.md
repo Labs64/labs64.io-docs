@@ -15,11 +15,11 @@ Used by developers and evaluators. The entire ecosystem is deployed to a lightwe
 - **Use Case:** Validating API contracts, debugging module interactions.
 
 ### 2. Managed cloud services
-Run the ecosystem on a managed Kubernetes service with managed data stores, for example EKS with RDS (PostgreSQL), ElastiCache (Valkey) and Amazon MQ (RabbitMQ), installed with the `labs64io-ecosystem` umbrella Helm chart.
+Run the ecosystem on a managed Kubernetes service with managed data stores, for example EKS with RDS (PostgreSQL), ElastiCache (Valkey) and Amazon MQ (RabbitMQ). Install it with the `labs64io-ecosystem` umbrella Helm chart.
 - **Use Case:** High availability, secure, and scalable deployments.
 
 ### 3. Bring Your Own Infrastructure (BYO)
-Labs64.IO is agnostic to the underlying cloud provider. As long as you provide a Kubernetes cluster, PostgreSQL, Redis (or Valkey), a RabbitMQ broker and an OIDC provider, the Helm charts work unchanged; see [Kubernetes & Helm setup](../operate-manage/kubernetes-helm-setup.md).
+Labs64.IO does not depend on a specific cloud provider. If you provide a Kubernetes cluster, PostgreSQL, Redis or Valkey, a RabbitMQ broker and an OIDC provider, the Helm charts work unchanged. See [Kubernetes & Helm setup](../operate-manage/kubernetes-helm-setup.md).
 
 ## Helm Chart Repository
 

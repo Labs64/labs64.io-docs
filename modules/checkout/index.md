@@ -6,7 +6,7 @@ nav_order: 3
 
 # Checkout
 
-Checkout is a white-label checkout: a backend that manages purchase orders and customers and records checkout transactions, and a brandable web UI on top of it. A purchase order describes what is being sold (items, prices, currency, tax, an optional sales window); a customer checks it out with billing and shipping details and the required consents, which creates a checkout transaction.
+Checkout is a white-label checkout. It has a backend that manages purchase orders and customers and records checkout transactions, and a brandable web UI on top of it. A purchase order describes what you sell: items, prices, currency, tax and an optional sales window. A customer checks it out with billing and shipping details and the required consents, and that creates a checkout transaction.
 
 The repository ships two services:
 
@@ -19,12 +19,12 @@ The repository ships two services:
 
 | Capability | What you get |
 |---|---|
-| **Purchase orders** | Items, currency, tax (fixed or percentage) and extras, validated on write; an optional time range limits when the order can be checked out. |
-| **Customers** | Customer records you can attach to purchase orders. |
-| **Checkout** | `POST /purchase-orders/{id}/checkout` takes billing and shipping details, consents and the payment method, and records a checkout transaction. |
-| **Tenant isolation** | Every record belongs to the caller's tenant, taken from the trusted gateway context. |
-| **Policy-filtered lists** | Purchase-order lists are filtered by the central authorization policy, so a caller only sees the orders the policy allows. |
-| **Runtime branding** | The UI reads its configuration from a mounted `env.json` at runtime, so one image serves many brands. |
+| Purchase orders | Items, currency, tax (fixed or percentage) and extras. The backend validates them on write, and an optional time range limits when the order can be checked out. |
+| Customers | Customer records you can attach to purchase orders. |
+| Checkout | `POST /purchase-orders/{id}/checkout` takes billing and shipping details, consents and the payment method, and records a checkout transaction. |
+| Tenant isolation | Every record belongs to the caller's tenant, taken from the trusted gateway context. |
+| Policy-filtered lists | The central authorization policy filters purchase-order lists, so a caller sees only the orders the policy allows. |
+| Runtime branding | The UI reads its configuration from a mounted `env.json` at runtime, so one image serves many brands. |
 
 ## How it works
 
@@ -42,7 +42,7 @@ sequenceDiagram
     BE-->>UI: checkout transaction (PENDING)
 ```
 
-A checkout transaction is `PENDING`, `COMPLETED`, `FAILED` or `CANCELED`. Checkout does not call the Payment Gateway: settle the payment with the [Payment Gateway](../payment-gateway/index.md) from your own system. Checkout needs no message broker.
+A checkout transaction is `PENDING`, `COMPLETED`, `FAILED` or `CANCELED`. Checkout does not call the Payment Gateway. Settle the payment with the [Payment Gateway](../payment-gateway/index.md) from your own system. Checkout needs no message broker.
 
 ## Start here
 
@@ -71,9 +71,9 @@ Every operation requires a tenant. Errors carry a `code` such as `VALIDATION_ERR
 
 ## Configure
 
-- **Backend:** PostgreSQL connection through the standard Spring datasource settings; with the Helm chart these come from the platform database and a Kubernetes Secret.
-- **UI:** runtime configuration in `env.json`, mounted as a ConfigMap on Kubernetes (default path `/config/env.json`).
-- **Kubernetes:** the `checkout` chart in [labs64.io-helm-charts](https://github.com/Labs64/labs64.io-helm-charts/tree/master/charts/checkout) deploys both services (`ui.enabled` for the UI).
+- **Backend.** The backend connects to PostgreSQL through the standard Spring datasource settings. With the Helm chart, these settings come from the platform database and a Kubernetes Secret.
+- **UI.** The UI reads its runtime configuration from `env.json`, mounted as a ConfigMap on Kubernetes (default path `/config/env.json`).
+- **Kubernetes.** The `checkout` chart in [labs64.io-helm-charts](https://github.com/Labs64/labs64.io-helm-charts/tree/master/charts/checkout) deploys both services. `ui.enabled` switches the UI on.
 
 ## Next steps
 

@@ -6,11 +6,11 @@ nav_order: 1
 
 # API Reference (OpenAPI)
 
-Every Labs64.IO service is OpenAPI-first: the contract is the source of truth, server interfaces and models are generated from it, and its `x-labs64.auth` blocks generate the authorization policy and gateway routing (see [Shared libraries](../development/shared-libraries.md#authorization-from-the-openapi-contract)).
+Every Labs64.IO service is OpenAPI-first. The contract is the source of truth, and the build generates server interfaces and models from it. The `x-labs64.auth` blocks of the contract generate the authorization policy and gateway routing. See [Shared libraries](../development/shared-libraries.md#authorization-from-the-openapi-contract).
 
 ## Browse the APIs
 
-With the `api-docs` chart installed, the gateway serves an aggregated Swagger UI at `/swagger-ui` (locally `http://gateway.localhost/swagger-ui`). Each service also serves its own document at `/<module>/v3/api-docs`.
+With the `api-docs` chart installed, the gateway serves an aggregated Swagger UI at `/swagger-ui`, locally `http://gateway.localhost/swagger-ui`. Each service also serves its own document at `/<module>/v3/api-docs`.
 
 ## Contracts
 
@@ -22,4 +22,4 @@ With the `api-docs` chart installed, the gateway serves an aggregated Swagger UI
 
 The Auth Gateway and Customer Portal have no business API.
 
-Java models are published for two contracts: `io.labs64:auditflow-api` (models and a client) and `io.labs64:payment-gateway-api` (models), both compatible with Java 17.
+Two contracts have published Java artefacts, both compatible with Java 17. `io.labs64:auditflow-api` has models and a client. `io.labs64:payment-gateway-api` has models.

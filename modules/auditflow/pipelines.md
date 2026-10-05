@@ -1,10 +1,10 @@
 ---
-title: Pipelines and Tenants
+title: Pipelines and tenants
 parent: AuditFlow
 nav_order: 1
 ---
 
-# Pipelines and Tenants
+# Pipelines and tenants
 
 Every pipeline belongs to exactly one tenant, and an event is routed only through the pipelines of its own tenant. There is no global pipeline list and no fall-through to another tenant. Events without a tenant belong to the reserved `_platform` tenant.
 
@@ -17,7 +17,7 @@ A tenant is one YAML document. AuditFlow reads tenant documents from one of two 
 | `local-dir` (default) | `<tenantId>.yaml` files in `tenants.source.local-dir.path`, polled every 5 s | Docker Compose |
 | `gitops-configmap` | ConfigMaps labelled `auditflow.io/tenant`, watched live | The Helm chart |
 
-Changes are picked up without a restart. Removing a tenant offboards it: new events are rejected, and events already in flight are quarantined (`TENANT_UNRESOLVED`) instead of delivered.
+AuditFlow picks up changes without a restart. Removing a tenant offboards it. AuditFlow rejects new events for that tenant and quarantines events already in flight (`TENANT_UNRESOLVED`) instead of delivering them.
 
 ```yaml
 # tenants/acme.yaml
@@ -67,7 +67,7 @@ pipelines:
 | `403 TENANT_DISABLED` | The document has `enabled: false`. |
 | `429 TENANT_RATE_LIMITED` | The tenant exceeded `quota`; the response carries `Retry-After`. |
 
-The rate limit is a token bucket. With one replica it can run in memory (`tenants.ratelimit.backend: in-memory`). With several replicas set `redis`, so all replicas share one budget. A per-tenant in-flight cap (`tenants.consumer.max-in-flight-per-tenant`, default 32) keeps a noisy tenant from starving the others during delivery.
+The rate limit is a token bucket. With one replica it can run in memory (`tenants.ratelimit.backend: in-memory`). With several replicas, set `redis` so all replicas share one budget. A per-tenant in-flight cap (`tenants.consumer.max-in-flight-per-tenant`, default 32) limits how many deliveries of one tenant run at once, so a busy tenant cannot hold up delivery for the others.
 
 ## Conditions
 
@@ -97,7 +97,7 @@ To check a condition before deploying it, send sample events to `POST /actuator/
 | `sink.fallback` | A second sink tried when the primary fails with a retryable error (network, timeout, 5xx), before the event is retried or dead-lettered. |
 | `transformers` | A list of transformers applied in order, instead of the single `transformer`. |
 
-Pipelines are independent: each matching pipeline gets its own delivery, retried and dead-lettered on its own.
+Pipelines are independent. Each matching pipeline gets its own delivery, which AuditFlow retries and dead-letters separately.
 
 ## Sink credentials
 
@@ -108,11 +108,11 @@ Never put credentials in a tenant document. Reference them as `${secretRef:<key>
 | `env` (default) | Environment variable `AUDITFLOW_TENANT_<ID>_<KEY>` |
 | `k8s-secret` | Kubernetes Secret `auditflow-tenant-<id>-creds` |
 
-A missing key fails the delivery and retries it; it is never replaced by an empty value or another tenant's credential.
+A missing key fails the delivery, and AuditFlow retries it. AuditFlow never replaces a missing value with an empty one or with another tenant's credential.
 
 ## Redaction
 
-Redaction runs at ingest, before the event reaches the broker, so a redacted value never appears in the broker, its logs or any sink. Rules are deployment-wide and apply to every tenant.
+Redaction runs at ingest, before the event reaches the broker. A redacted value never appears in the broker, its logs or any sink. Rules are deployment-wide and apply to every tenant.
 
 ```yaml
 auditflow:
@@ -129,7 +129,7 @@ auditflow:
 
 A rule without `action` masks.
 
-`hash` writes an HMAC-SHA256 of the value as 64 hex characters, so equal values still correlate but cannot be recovered by hashing guesses. It needs a key:
+`hash` writes an HMAC-SHA256 of the value as 64 hex characters. Equal values still correlate, and without the key nobody can recover a value by hashing guesses. It needs a key:
 
 ```bash
 openssl rand -base64 32
@@ -140,6 +140,6 @@ Supply it as `AUDITFLOW_REDACTION_HASH_KEY` from a secret (Helm: `secrets.data.A
 - With a `hash` rule enabled and no key, or a key shorter than 32 characters, the backend refuses to start.
 - All replicas need the same key, or the same value hashes differently.
 - Changing the key makes old and new hashes incomparable.
-- Whoever holds the key can test guesses against hashes: this is pseudonymisation, not anonymisation.
+- Whoever holds the key can test guesses against hashes. This is pseudonymisation, not anonymisation.
 
-Do not redact a key you promote to a reporting column: the column then reads as empty, not as an error.
+Do not redact a key you promote to a reporting column. The column then reads as empty, with no error.

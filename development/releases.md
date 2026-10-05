@@ -1,10 +1,10 @@
 ---
-title: Releases and Versions
+title: Releases and versions
 parent: Community & Contributing
 nav_order: 3
 ---
 
-# Releases and Versions
+# Releases and versions
 
 One release model applies to every Labs64.IO repository.
 
@@ -13,9 +13,9 @@ One release model applies to every Labs64.IO repository.
 1. **A release is a tag.** Publishing a GitHub Release with tag `X.Y.Z` (no `v` prefix) is the whole release gesture. Nothing is committed back.
 2. **No file carries the version.** Java poms declare `<version>${revision}</version>`, which defaults to `0.0.0-SNAPSHOT` (built from source, unreleased). The release build sets it from the tag, so the jar, the image tag and label and the chart `appVersion` are the same number.
 3. **Releases are rebuildable.** A release build refuses any `-SNAPSHOT` parent or dependency.
-4. **Deploy by digest.** Charts pin first-party images as `image@sha256:…`, written by the release pipeline; a tag can be moved, a digest cannot.
-5. **Every version has one owner.** A version is written in exactly one place; a value two places must share is checked by `just check-pins`.
-6. **The umbrella chart version is the ecosystem release.** A new version of `labs64io-ecosystem` is what you install to get a consistent set of modules.
+4. **Deploy by digest.** The release pipeline pins first-party images in the charts as `image@sha256:…`. A tag can be moved, a digest cannot.
+5. **Every version has one owner.** A version is written in exactly one place. `just check-pins` checks any value that two places must share.
+6. **The umbrella chart version is the ecosystem release.** Install a new version of `labs64io-ecosystem` to get a consistent set of modules.
 
 ## What is published where
 
@@ -36,10 +36,10 @@ A release pushes `labs64/<image>:X.Y.Z` and `:latest`. Every green build of a ma
 | Number | Meaning |
 |---|---|
 | `X.Y.Z` | A module release: jar, image tag and label, chart `appVersion` |
-| `0.0.0-SNAPSHOT` | Built from source, unreleased; what local builds and main-branch CI use |
+| `0.0.0-SNAPSHOT` | Built from source and unreleased. Local builds and main-branch CI use it. |
 | `edge` | The latest green main-branch image |
 | `labs64io-parent` version | The Spring Boot line, security overrides, shared Java dependency versions and every commons library version |
-| Chart `version` | A chart package; bumped whenever the chart or a chart it bundles changes |
+| Chart `version` | A chart package. It bumps whenever the chart or a chart it bundles changes. |
 | `labs64io-ecosystem` version | The ecosystem release |
 
 Other pins each have a single home: the CLI toolchain in `labs64.io-workspace/tool-versions.env`, third-party Helm charts in `labs64.io-helm-charts/helmfile.yaml.gotmpl`, CRD sets in `labs64.io-helm-charts/justfile.versions`.
@@ -52,9 +52,9 @@ Other pins each have a single home: the CLI toolchain in `labs64.io-workspace/to
 2. The release workflow tests, builds the multi-arch images with that version, pushes them and verifies their labels.
 3. It sends the image digests to the helm-charts repository, where an automated pull request pins them, sets `appVersion` and bumps the module chart and the umbrella chart.
 4. A maintainer checks the digests against the release run and merges.
-5. The new chart versions are published to the Helm repository.
+5. The chart release publishes the new chart versions to the Helm repository.
 
-When `labs64.io-commons` changed, release it first, then move the modules to the new `labs64io-parent` (Renovate opens those pull requests), then release the modules.
+If `labs64.io-commons` changed, release it first, then move the modules to the new `labs64io-parent` (Renovate opens those pull requests), then release the modules.
 
 To consume a release, upgrade to the new `labs64io-ecosystem` version, or to the new module chart version if you install modules individually.
 
@@ -62,8 +62,8 @@ To consume a release, upgrade to the new `labs64io-ecosystem` version, or to the
 
 [Renovate](https://docs.renovatebot.com/) proposes updates in every repository from one shared preset (`default.json` in the workspace).
 
-- Routine updates are grouped and opened weekly; new Labs64 artefacts (a new `labs64io-parent`, a new umbrella chart) at any time; major updates carry the label `major-update`.
-- First-party images are never touched by Renovate: the release pipeline pins them.
+- Renovate groups routine updates and opens them weekly. It proposes new Labs64 artefacts, such as a new `labs64io-parent` or a new umbrella chart, at any time. Major updates carry the label `major-update`.
+- Renovate never touches first-party images. The release pipeline pins them.
 - A version written outside a package manifest needs a comment naming its source on the line above, so Renovate can follow it:
 
   ```text
