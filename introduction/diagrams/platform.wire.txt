@@ -33,7 +33,7 @@ traefik -> co
 traefik -> pg
 traefik -> af
 co.right -> postgres.left
-pg.right -> redis.bottom
+pg.right:1 -> redis.left
 pg.top -> postgres.left
 pg.bottom ..> af.top : audit events
 af.right -> rabbit.left
