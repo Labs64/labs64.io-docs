@@ -8,33 +8,7 @@ nav_order: 3
 
 Labs64.IO is a set of independent services behind one authenticated edge. Each service owns its API, its data and its release cycle; the platform supplies what they share: identity and access control, tenant isolation, audit delivery, observability and deployment packaging. You can adopt one service or all of them.
 
-```mermaid
-flowchart TB
-  client([Applications · users · services])
-  subgraph edge["Edge"]
-    traefik["Traefik"]
-    ag["Auth Gateway"]
-  end
-  idp[("OIDC identity provider")]
-  pdp["Cerbos policy decision point"]
-  subgraph modules["Services"]
-    pg["Payment Gateway"]
-    co["Checkout"]
-    af["AuditFlow"]
-  end
-  ui["Checkout UI · Customer Portal"]
-  sinks[("Audit sinks:<br/>OpenSearch, S3, ClickHouse, SIEM …")]
-
-  client --> traefik --> ag
-  ag -. verify token .-> idp
-  ag -- authorize --> pdp
-  traefik --> pg & co & af & ui
-  pg -- authorize --> pdp
-  co -- authorize --> pdp
-  af -- authorize --> pdp
-  pg -. audit events .-> af
-  af --> sinks
-```
+![Labs64.IO platform: clients reach the services through Traefik and the Auth Gateway, which verifies tokens with the identity provider and asks the Cerbos policy decision point; services keep their data in PostgreSQL and Redis, and AuditFlow buffers audit events on RabbitMQ and delivers them to the audit sinks](./diagrams/platform.svg)
 
 ## Principles
 

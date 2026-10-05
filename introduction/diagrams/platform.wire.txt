@@ -1,0 +1,41 @@
+[client]      +-- Edge ----+                   +-- Services ----+      +-- Data ----+
+              | [traefik]  |                   | [ui]           |      | [postgres] |
+              | [authgw]   |                   | [co]           |      | [redis]    |
+              +------------+                   | [pg]           |      | [rabbit]   |
+                                               | [af]           |      +------------+
+              +-- Policy & identity ----+      +----------------+
+              | [pdp]                   |                              [sinks]
+              | [idp]                   |
+              +-------------------------+
+
+legend:
+client   = Clients | apps, users, services {client}
+traefik  = Traefik | Gateway API {service}
+authgw   = Auth Gateway | token + edge authz {service}
+pdp      = Cerbos PDP | generated policies {service}
+idp      = OIDC provider | Keycloak, Auth0, … {external}
+pg       = Payment Gateway {service}
+co       = Checkout | API + UI {service}
+af       = AuditFlow {service}
+ui       = Customer Portal {service}
+postgres = PostgreSQL | database per service {store}
+redis    = Redis / Valkey | idempotency {store}
+rabbit   = RabbitMQ | AuditFlow buffer {queue}
+sinks    = Audit sinks | OpenSearch, S3, SIEM … {external}
+
+edges:
+client -> traefik : HTTPS
+traefik -> authgw : ForwardAuth
+authgw -> pdp : authorize
+authgw ..> idp : keys
+traefik -> ui
+traefik -> co
+traefik -> pg
+traefik -> af
+pg -> postgres
+co -> postgres
+pg -> redis
+af -> rabbit
+pg ..> af : audit events
+af -> sinks : deliver
+gap: 100

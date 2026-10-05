@@ -1,0 +1,23 @@
+[maint]      +-- Module repository ----+      +-- Docker Hub ----+      +-- Helm charts repository ----+      +-- Helm repository ----+
+             | [rel]                   |      | [img]            |      | [pr]                         |      | [chart]               |
+             | [wf]                    |      +------------------+      | [cr]                         |      +-----------------------+
+             +-------------------------+                                +------------------------------+
+
+legend:
+maint = Maintainer {client}
+rel   = GitHub Release | tag X.Y.Z {service}
+wf    = Release workflow | test · build · push {service}
+img   = labs64/<image>:X.Y.Z | immutable digest {store}
+pr    = Chart-update PR | pins digests, bumps charts {service}
+cr    = Chart release | on merge {service}
+chart = labs64io-ecosystem | new version {store}
+
+edges:
+maint -> rel : publish
+rel -> wf
+wf -> img : push
+wf -> pr : digests
+maint ..> pr : review, merge
+pr -> cr
+cr -> chart : publish
+gap: 110

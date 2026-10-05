@@ -55,18 +55,7 @@ It is not the right tool for distributed tracing, metrics or infrastructure logs
 
 ## How it works
 
-```mermaid
-flowchart LR
-    P["Your service"] -->|"POST /audit/publish"| BE["AuditFlow backend<br/>validate · redact · tenant gate"]
-    BE -->|"confirmed publish"| MQ[("RabbitMQ")]
-    MQ --> R["Router<br/>one delivery per matching pipeline"]
-    R --> T["Transformer<br/>(Python)"]
-    T --> S["Sink<br/>(Python)"]
-    S --> D1[("OpenSearch")]
-    S --> D2[("S3 archive")]
-    S --> D3["SIEM / webhook"]
-    R -. "exhausted / poison" .-> DLQ[("Tenant DLQ")]
-```
+![AuditFlow components: your service publishes to the backend, which redacts and checks the tenant, publishes to RabbitMQ, routes each event to one delivery per matching pipeline, and the delivery worker runs the transformer and sink services, sending exhausted deliveries to the tenant DLQ](./diagrams/auditflow.svg)
 
 AuditFlow runs as three services:
 

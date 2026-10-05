@@ -48,6 +48,7 @@ aux_links:
     - "https://github.com/Labs64/labs64.io-workspace"
 
 exclude:
+  - "**/*.wire.txt"   # boxdiagram sources; only the generated SVGs are published
   - README.md
   - AGENTS.md
   - CLAUDE.md

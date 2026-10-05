@@ -15,6 +15,12 @@ helm search repo labs64io
 helm show values labs64io/<chart>
 ```
 
+A typical cluster, as the local development stack and the umbrella chart lay it out:
+
+![Cluster layout: Traefik, External Secrets Operator, PostgreSQL, Redis and RabbitMQ in namespace tools; the api-gateway, authz-pdp and the module charts in namespace labs64io; the OpenTelemetry Collector, Tempo, Loki, Prometheus and Grafana in namespace monitoring](./diagrams/cluster.svg)
+
+Traefik routes requests to the modules after the api-gateway's ForwardAuth check; the modules use the data stores in `tools` and, with observability enabled, send telemetry to the collector in `monitoring`. Namespaces are configurable.
+
 ## Charts
 
 | Chart | Purpose | Needs | Gateway routes |

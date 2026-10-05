@@ -46,14 +46,7 @@ Other pins each have a single home: the CLI toolchain in `labs64.io-workspace/to
 
 ## How a module release flows
 
-```mermaid
-flowchart LR
-  R["GitHub Release<br/>X.Y.Z"] --> W["Release workflow<br/>test · build · push images"]
-  W --> H[("Docker Hub<br/>image:X.Y.Z + digest")]
-  W -->|"image digests"| PR["Chart-update PR<br/>pins digests, sets appVersion,<br/>bumps module chart + umbrella"]
-  PR -->|"review & merge"| CR["Chart release"]
-  CR --> REPO[("Helm repository<br/>new labs64io-ecosystem version")]
-```
+![Release flow: a maintainer publishes a GitHub Release, the release workflow pushes the images to Docker Hub and sends their digests to the helm-charts repository, where a chart-update pull request is reviewed and merged and the chart release publishes the new labs64io-ecosystem version](./diagrams/release-flow.svg)
 
 1. A maintainer publishes a GitHub Release `X.Y.Z` on the main branch.
 2. The release workflow tests, builds the multi-arch images with that version, pushes them and verifies their labels.

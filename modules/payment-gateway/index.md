@@ -28,16 +28,7 @@ Shipped providers: **Stripe**, **PayPal** and **NoOp** (a test provider that alw
 
 ### Resource model
 
-```mermaid
-flowchart LR
-  def["Payment definitions<br/>(deployment catalog)<br/>providers, currencies, countries,<br/>recurring support"]
-  prov["Payment providers<br/>(per tenant)<br/>active flag + PSP config"]
-  pay["Payments"]
-  tx["Payment transactions<br/>one per payment attempt"]
-  def -->|"constrains"| prov
-  prov -->|"used by"| pay
-  pay -->|"attempts"| tx
-```
+![Payment Gateway: payment definitions constrain the tenant payment providers used by payments and their transactions; the gateway core calls provider modules (stripe, paypal, noop) through the provider SPI, and the stripe and paypal modules talk to the PSP APIs and receive their webhooks](./diagrams/payment-gateway.svg)
 
 | Resource | Owner | What it is |
 |---|---|---|

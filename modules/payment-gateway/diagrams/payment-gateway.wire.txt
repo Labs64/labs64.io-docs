@@ -1,0 +1,34 @@
+[app]      +-- Resources ----+      +-- Payment Gateway ----+      +-- Provider modules ----+      +-- PSPs ----+
+           | [def]           |      | [core]                |      | [stripe]               |      | [sapi]     |
+           | [prov]          |      | [spi]                 |      | [paypal]               |      | [papi]     |
+           | [pay]           |      +-----------------------+      | [noop]                 |      +------------+
+           | [tx]            |                                     +------------------------+
+           +-----------------+
+
+legend:
+app    = Your application {client}
+def    = Payment definitions | deployment catalog {store}
+prov   = Payment providers | per tenant, PSP config {store}
+pay    = Payments | READY … CLOSED {store}
+tx     = Payment transactions | PENDING → SUCCESS / FAILED {store}
+core   = Gateway core | idempotency · locking {service}
+spi    = Provider SPI {service}
+stripe = stripe | Checkout + webhooks {service}
+paypal = paypal | orders + webhooks {service}
+noop   = noop | test, always succeeds {service}
+sapi   = Stripe {external}
+papi   = PayPal {external}
+
+edges:
+app -> pay : REST
+def -> prov : constrains
+prov -> pay
+pay -> tx
+pay -> core
+core -> spi
+spi -> stripe
+spi -> paypal
+spi -> noop
+stripe <-> sapi : API · webhook
+paypal <-> papi : API · webhook
+gap: 110

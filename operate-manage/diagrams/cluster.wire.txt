@@ -1,0 +1,38 @@
+[client]      +-- namespace tools ----+      +-- namespace labs64io ----+      +-- namespace monitoring ----+
+              | [traefik]             |      | [apigw]                  |      | [otel]                     |
+              | [eso]                 |      | [pdp]                    |      | [backends]                 |
+              | [pgsql]               |      | [pg]                     |      | [grafana]                  |
+              | [redis]               |      | [co]                     |      +----------------------------+
+              | [rabbit]              |      | [af]                     |
+              +-----------------------+      | [ui]                     |
+                                             +--------------------------+
+
+legend:
+client   = Clients {client}
+traefik  = Traefik | Gateway labs64io-gateway {service}
+eso      = External Secrets Operator {service}
+pgsql    = PostgreSQL {store}
+redis    = Redis / Valkey {store}
+rabbit   = RabbitMQ {queue}
+apigw    = api-gateway | Auth Gateway + middlewares {service}
+pdp      = authz-pdp | Cerbos {service}
+pg       = payment-gateway {service}
+co       = checkout | API + UI {service}
+af       = auditflow {service}
+ui       = customer-portal {service}
+otel     = OpenTelemetry Collector {service}
+backends = Tempo · Loki · Prometheus {store}
+grafana  = Grafana {service}
+
+edges:
+client -> traefik : HTTPS
+traefik -> apigw : ForwardAuth
+apigw -> pdp
+traefik -> pg
+traefik -> co
+traefik -> af
+traefik -> ui
+af ..> otel : OTLP
+otel -> backends
+backends -> grafana
+gap: 100
