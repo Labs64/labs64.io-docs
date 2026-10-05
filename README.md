@@ -28,7 +28,7 @@ The documentation source for the Labs64.IO Ecosystem — everything needed to ru
 | **Payment Gateway** | One payment API across multiple PSPs | [module reference](./modules/payment-gateway/index.md) |
 | **Customer Portal** | The customer-facing frontend | [module reference](./modules/customer-portal/index.md) |
 
-Module status and versions are published on the website, sourced from [`_data/modules.yml`](https://github.com/Labs64/labs64.io-website/blob/master/_data/modules.yml).
+Module status and versions are published on the website, sourced from [`_data/modules.yml`](https://github.com/Labs64/labs64.io/blob/master/_data/modules.yml).
 
 ## Working on these docs
 
