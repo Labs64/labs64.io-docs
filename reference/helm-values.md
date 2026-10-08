@@ -6,19 +6,22 @@ nav_order: 5
 
 # Helm Charts Reference
 
-All Labs64.IO modules are deployed using Helm. While each module exposes its own `values.yaml`, they all share a standard set of root keys for consistency.
+All module charts use the shared `chart-libs` library, so they share these values. Run `helm show values labs64io/<chart>` for the complete, documented list of a chart.
 
-## Standard Chart Structure
+| Value | Purpose |
+|---|---|
+| `enabled` | Turn the module on or off. The umbrella chart uses it. |
+| `replicaCount`, `autoscaling` | Fixed replicas, or a HorizontalPodAutoscaler |
+| `image.repository`, `image.tag`, `image.digest` | The image. `digest` (`sha256:…`) takes precedence over any tag. |
+| `applicationYaml` | Spring application configuration of a Java service |
+| `env`, `envFrom` | Extra environment variables |
+| `secrets.data` | Secret values that the chart renders into a Kubernetes `Secret` when `externalSecrets.enabled` is `false` |
+| `externalSecrets.enabled`, `externalSecrets.secretKey` | Resolve the secret through External Secrets Operator instead |
+| `gateway.enabled`, `gateway.routes`, `gateway.parentRefs` | Gateway API routes of the module and the `Gateway` they attach to |
+| `networkPolicy` | The module's NetworkPolicy. `extraEgress` adds destinations. |
+| `observability.enabled` | Inject runtime instrumentation and the OTLP endpoint |
+| `resources`, probes, `podDisruptionBudget` | Standard Kubernetes workload settings |
 
-| Value Key | Description | Default Type |
-|-----------|-------------|--------------|
-| `image.repository` | Docker image name. | string |
-| `image.tag` | Docker image tag. | string |
-| `replicaCount` | Number of pods. | integer |
-| `ingress.enabled` | Whether to create an Ingress resource. | boolean |
-| `ingress.hosts` | List of hostnames for routing. | array |
-| `env` | Environment variables injected into the pod. | map (key/value) |
-| `envFrom` | Secrets or ConfigMaps to load as environment variables. | list |
-| `observability.enabled` | Toggle OTEL auto-instrumentation. | boolean |
+Charts with a database also have `migrationJob`, which runs schema migrations before the service starts. AuditFlow has `tenants`, for tenant documents as ConfigMaps. Checkout and the Customer Portal have `ui`.
 
-For module-specific Helm configurations, check the **Configuration** section within the specific module documentation (e.g., [Checkout Configuration](../modules/checkout/index.md)).
+See [Kubernetes & Helm setup](../operate-manage/kubernetes-helm-setup.md) for installation.

@@ -1,29 +1,37 @@
 ---
-title: Configuration & Environment Variables
+title: Configuration & environment variables
 parent: Reference
 nav_order: 3
 ---
 
-# Ecosystem Configuration
+# Configuration & environment variables
 
-While individual modules document their specific configuration properties, this page highlights shared ecosystem configurations that span multiple modules.
+Each service documents its own settings on its page. This page lists the conventions they share.
 
-## Centralized Configurations
+## Conventions
 
-| Component | Shared By | Configuration Strategy |
-|-----------|-----------|------------------------|
-| **Database Credentials** | All backend modules | Provisioned per module, injected via K8s Secrets. |
-| **RabbitMQ Connection** | AuditFlow | The only module with a broker dependency; credentials injected via `SPRING_RABBITMQ_USERNAME` and `SPRING_RABBITMQ_PASSWORD`. |
-| **Auth Gateway JWKS URL** | Auth Gateway, Checkout, Customer Portal | Standardized endpoint at `/auth/jwks` for token validation. |
-| **Observability (Tempo/Loki/Prometheus)** | All modules | OTel endpoint injected globally via `OTEL_EXPORTER_OTLP_ENDPOINT`. |
+| Topic | Convention |
+|---|---|
+| Credentials | Only from Kubernetes Secrets or environment variables. The charts render them from `secrets.data` or an `ExternalSecret`, never into a ConfigMap. |
+| Application settings | Java services take Spring properties. With the charts, set them under `applicationYaml`. |
+| Identity | Services do not validate tokens. They read the trusted `X-Auth-*` headers that the [Auth Gateway](../modules/auth-gateway/index.md) sets. |
+| Databases | One database and one least-privilege login per service. |
+| Message broker | Only AuditFlow uses one, RabbitMQ. |
+| Telemetry | The deployment injects it when `observability.enabled` is on. |
 
 ## Shared environment variables
 
-| Variable | Description | Applicable to |
+| Variable | Set by | Purpose |
 |---|---|---|
-| `SPRING_PROFILES_ACTIVE` | Selects the Spring Boot runtime profile. | Java services |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | Points telemetry at the OpenTelemetry Collector. | Instrumented services |
-| `JAVA_TOOL_OPTIONS` | Supplies Java runtime options such as the telemetry agent. | Java services |
-| `SPRING_RABBITMQ_HOST` | Addresses the configured RabbitMQ broker. | AuditFlow |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | The charts, when observability is enabled | Where services send traces, logs and metrics |
+| `JAVA_TOOL_OPTIONS` | The charts | Java runtime options, including the OpenTelemetry Java agent |
+| `SPRING_PROFILES_ACTIVE` | You | Spring Boot profile of a Java service |
 
-Use Helm values to describe non-secret settings and Kubernetes Secret references for credentials. Module-specific variables remain documented on the relevant service page.
+## Service settings
+
+| Service | Settings |
+|---|---|
+| Auth Gateway | [`OIDC_*`, `CERBOS_URL`, `ROUTES_DIR`, …](../modules/auth-gateway/index.md#configure) |
+| AuditFlow | [Tenants, pipelines, redaction](../modules/auditflow/pipelines.md). RabbitMQ credentials go in `RABBITMQ_USERNAME` and `RABBITMQ_PASSWORD`. |
+| Payment Gateway | [Payment definitions, `AUDITFLOW_*`](../modules/payment-gateway/index.md#configure) |
+| Checkout | [Database, UI `env.json`](../modules/checkout/index.md#configure) |

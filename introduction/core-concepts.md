@@ -38,4 +38,4 @@ flowchart LR
 3. Treat secrets and policy as deployment configuration, never source code.
 4. Build observability into the deployment from the first environment.
 
-For the topology behind these concepts, see [Architecture Overview](./architecture.md).
+For the topology behind these concepts, see [Architecture overview](./architecture.md).

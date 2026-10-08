@@ -6,96 +6,76 @@ nav_order: 3
 
 # Checkout
 
-## Overview
-The Checkout module provides a whitelabel, drop-in workflow for converting carts into paid orders. It handles the state machine for an order lifecycle and interfaces seamlessly with the Payment Gateway.
+Checkout is a white-label checkout. It has a backend that manages purchase orders and customers and records checkout transactions, and a brandable web UI on top of it. A purchase order describes what you sell: items, prices, currency, tax and an optional sales window. A customer checks it out with billing and shipping details and the required consents, and that creates a checkout transaction.
 
-## Capabilities
+The repository ships two services:
 
-| Capability | Description |
-|------------|-------------|
-| **Order State Machine** | Manages states from `CREATED` to `PAID`, `FAILED`, or `REFUNDED`. |
-| **Payment Orchestration** | Communicates with the Payment Gateway to initiate transactions. |
+| Service | Stack | Role |
+|---|---|---|
+| `checkout-be` | Java, Spring Boot | REST API for purchase orders, customers and checkout transactions |
+| `checkout-fe` | Vue 3, Vite, Pinia | White-label checkout UI |
 
-## Architecture
+## Key capabilities
 
-Checkout sits behind the Auth Gateway and accepts REST calls to initiate an order. It then synchronously calls the Payment Gateway. Checkout needs no message broker.
+| Capability | What you get |
+|---|---|
+| Purchase orders | Items, currency, tax (fixed or percentage) and extras. The backend validates them on write, and an optional time range limits when the order can be checked out. |
+| Customers | Customer records you can attach to purchase orders. |
+| Checkout | `POST /purchase-orders/{id}/checkout` takes billing and shipping details, consents and the payment method, and records a checkout transaction. |
+| Tenant isolation | Every record belongs to the caller's tenant, taken from the trusted gateway context. |
+| Policy-filtered lists | The central authorization policy filters purchase-order lists, so a caller sees only the orders the policy allows. |
+| Runtime branding | The UI reads its configuration from a mounted `env.json` at runtime, so one image serves many brands. |
+
+## How it works
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant C as Client
-    participant CO as Checkout
-    participant PG as Payment Gateway
+    participant S as Your system
+    participant UI as Checkout UI
+    participant BE as Checkout backend
 
-    C->>CO: POST /orders
-    CO->>CO: Create Order (Status: PENDING)
-    CO->>PG: POST /payments/charge
-    PG-->>CO: Payment Success
-    CO->>CO: Update Order (Status: PAID)
-    CO-->>C: Order Confirmation
+    S->>BE: POST /purchase-orders (items, currency, tax)
+    S->>UI: send the customer to the checkout page
+    UI->>BE: GET /purchase-orders/{id}
+    UI->>BE: POST /purchase-orders/{id}/checkout (billing, shipping, consents, payment method)
+    BE-->>UI: checkout transaction (PENDING)
 ```
 
-## Quick Start
+A checkout transaction is `PENDING`, `COMPLETED`, `FAILED` or `CANCELED`. Checkout does not call the Payment Gateway. Settle the payment with the [Payment Gateway](../payment-gateway/index.md) from your own system. Checkout needs no message broker.
 
-If you are running the ecosystem via Kubernetes (`just up` in the workspace repository), the Checkout module is automatically deployed.
+## Start here
 
-Test it by creating an order:
+Checkout is part of the full ecosystem deployment; see [Run the full ecosystem locally](../../getting-started/run-the-full-ecosystem-locally.md). To run it on its own:
+
 ```bash
-curl -sS -i -X POST http://gateway.localhost/checkout/api/v1/orders \
-  -H "Authorization: Bearer <TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{"items":[{"id":"item1","quantity":1}],"currency":"USD"}'
+git clone https://github.com/Labs64/labs64.io-checkout.git
+cd labs64.io-checkout/checkout-be && just dev-up    # backend + PostgreSQL, Swagger at :8080/swagger-ui.html
+cd ../checkout-fe && just dev-up                     # UI at :5173
 ```
 
-## Configuration
+## API contract
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PAYMENT_GATEWAY_URL` | Base URL of the internal Payment Gateway. | `http://payment-gateway:8080` |
-| `SPRING_DATASOURCE_URL` | PostgreSQL connection string. | (Provided by Helm) |
+The contract is `checkout-be/src/main/resources/openapi/openapi-checkout-v1.yaml` in the [Checkout repository](https://github.com/Labs64/labs64.io-checkout). Through the gateway the paths are prefixed with `/checkout/api/v1`.
 
-## REST APIs
+| Operation | Method and path | Scope |
+|---|---|---|
+| List / create customers | `GET`, `POST /customers` | `customer:read` / `customer:write` |
+| Read / update a customer | `GET`, `PATCH /customers/{id}` | `customer:read` / `customer:write` |
+| List / create purchase orders | `GET`, `POST /purchase-orders` | `purchase-order:read` / `purchase-order:write` |
+| Read / update a purchase order | `GET`, `PATCH /purchase-orders/{id}` | `purchase-order:read` / `purchase-order:write` |
+| Check out | `POST /purchase-orders/{id}/checkout` | `purchase-order:checkout` |
+| List / read checkout transactions | `GET /checkout-transactions[/{id}]` | `checkout-transaction:read` |
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/v1/orders` | `POST` | Create a new order. |
-| `/api/v1/orders/{id}` | `GET` | Retrieve order details. |
-| `/api/v1/orders/{id}/cancel` | `POST` | Cancel a pending order. |
+Every operation requires a tenant. Errors carry a `code` such as `VALIDATION_ERROR`, `CONFLICT` or `CONSENT_REQUIRED`.
 
-## Events
+## Configure
 
-| Event Type | Description |
-|------------|-------------|
-| `checkout.order.created` | Emitted when an order is first created. |
-| `checkout.order.paid` | Emitted when payment is successfully captured. |
-| `checkout.order.cancelled` | Emitted when an order is manually cancelled. |
+- **Backend.** The backend connects to PostgreSQL through the standard Spring datasource settings. With the Helm chart, these settings come from the platform database and a Kubernetes Secret.
+- **UI.** The UI reads its runtime configuration from `env.json`, mounted as a ConfigMap on Kubernetes (default path `/config/env.json`).
+- **Kubernetes.** The `checkout` chart in [labs64.io-helm-charts](https://github.com/Labs64/labs64.io-helm-charts/tree/master/charts/checkout) deploys both services. `ui.enabled` switches the UI on.
 
-## Examples
+## Next steps
 
-### Creating an Order via API
-
-```json
-POST /api/v1/orders
-{
-  "customerRef": "cust_12345",
-  "items": [
-    {
-      "sku": "PROD-A",
-      "price": 1000,
-      "quantity": 2
-    }
-  ],
-  "currency": "USD"
-}
-```
-
-## Operations
-
-Checkout requires a PostgreSQL database to maintain order state. Ensure the database is backed up regularly and monitor the connection pool metrics via Grafana.
-
-## Troubleshooting
-
-| Symptom | Cause | Resolution |
-|---------|-------|------------|
-| Payment initiation fails | Payment Gateway unreachable | Verify the `PAYMENT_GATEWAY_URL` is correct and the PG pod is running. |
-| Orders stuck in PENDING | Missing webhook or async response | Ensure the Payment Gateway is correctly emitting success events back to the message bus or webhook endpoint. |
+- [Payment Gateway](../payment-gateway/index.md)
+- [Customer Portal](../customer-portal/index.md)
