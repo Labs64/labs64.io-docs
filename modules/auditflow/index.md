@@ -75,7 +75,7 @@ its own field set, and keys AuditFlow does not recognise are delivered unchanged
 metadata map, so an event never loses data by using your own names.
 
 A small convention sits on top: the generic audit-semantics keys `userId`, `actionName`,
-`actionStatus`, `actionMessage`, `sessionId`, `durationMs` and `responseStatus`, which the bundled
+`actionStatus`, `actionMessage`, `durationMs` and `responseStatus`, which the bundled
 transformers **promote** out of the map into dedicated fields and columns. Promotion is what turns a
 key into a queryable report dimension. All of them are optional, and an absent key produces an
 omitted field, never a placeholder.
@@ -170,7 +170,6 @@ CREATE TABLE IF NOT EXISTS audit.audit_events
     action_status    LowCardinality(String),
     action_message   String,
     user_id          String,
-    session_id       String,
     duration_ms      Nullable(UInt32),
     response_status  Nullable(UInt16),
 
