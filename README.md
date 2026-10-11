@@ -13,7 +13,8 @@ The documentation source for the Labs64.IO Ecosystem — everything needed to ru
 
 | You want to... | Go to |
 |---|---|
-| Run the ecosystem, or one module | [`getting-started/`](./getting-started/index.md) |
+| See it running in five minutes | [`getting-started/quickstart.md`](./getting-started/quickstart.md) |
+| Run one module, your own cluster, or everything from source | [`getting-started/`](./getting-started/index.md) |
 | Configure or integrate a module | the module table below |
 | Understand how it fits together | [`introduction/architecture.md`](./introduction/architecture.md) |
 | Build and change the code | [`development/contributing.md`](./development/contributing.md) |

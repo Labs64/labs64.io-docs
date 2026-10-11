@@ -1,35 +1,55 @@
 ---
-title: Choose a Deployment Path
+title: Compare the Paths
 parent: Get Started
-nav_order: 1
+nav_order: 5
 ---
 
-# Choose a Deployment Path
+# Compare the Paths
 
-Choose the smallest environment that will answer your current question. All paths preserve the same core boundaries: services own their data, traffic crosses the gateway, and configuration stays outside application code.
+Four ways to run Labs64.IO, side by side. If you just want a recommendation: start with the [Quickstart](./quickstart.md), and come back here when you need to decide what comes after it.
 
-| Path | Choose it when | Time to first result | Best next step |
-|---|---|---|---|
-| One module locally | You need to validate a focused capability or API | Minutes | [Run one module locally](./run-one-module-locally.md) |
-| Full ecosystem locally | You need to inspect cross-service behavior | A local setup session | [Run the full ecosystem locally](./run-the-full-ecosystem-locally.md) |
-| Kubernetes cluster | You are creating a shared, durable environment | A planned deployment | [Deploy to your Kubernetes cluster](./deploy-to-kubernetes.md) |
+## At a glance
+
+| | [Quickstart](./quickstart.md) | [One module](./run-one-module-locally.md) | [Your cluster](./deploy-to-kubernetes.md) | [Full ecosystem](./run-the-full-ecosystem-locally.md) |
+|---|---|---|---|---|
+| **For** | Evaluating | Exploring one service | A team or production | Contributing |
+| **Runs on** | Any Kubernetes cluster | Docker Compose | Your Kubernetes cluster | A local k3d cluster |
+| **Software comes from** | Published images and charts | Built from source | Published images and charts | Built from source |
+| **Gateway and authentication** | Yes, with a demo identity provider | No | Yes, with your identity provider | Yes, with a mock identity provider or Keycloak |
+| **Data stores** | Bundled, in the cluster | Bundled, in Compose | Yours, or bundled | Bundled, in the cluster |
+| **Services included** | AuditFlow, Payment Gateway | AuditFlow | The ones you choose | All of them |
+| **Time to first request** | About 5 minutes | A few minutes | An afternoon for a first environment | One long first build |
+| **Safe to expose** | No | No | Yes, after the go-live checks | No |
+
+## What each path needs on your machine
+
+| Tool | Quickstart | One module | Your cluster | Full ecosystem |
+|---|:---:|:---:|:---:|:---:|
+| `kubectl` | ✓ | | ✓ | ✓ |
+| Helm 4 | ✓ | | ✓ | ✓ |
+| Docker | For a local cluster | ✓ | | ✓ |
+| `just` | | ✓ | | ✓ |
+| JDK 25 and Maven | | ✓ | | |
+| k3d and Helmfile | | | | ✓ |
+
+The full ecosystem builds images inside a container, so it needs no JDK or Node on your machine. Its dev container brings every tool in the last column.
+
+## Which one, then?
 
 ```mermaid
 flowchart TD
-  Q{"What are you testing?"}
-  Q -->|"One API or capability"| A["One module locally"]
-  Q -->|"A user or payment flow across services"| B["Full ecosystem locally"]
-  Q -->|"Operations, scale, or team integration"| C["Kubernetes cluster"]
+  Q{"What do you want to learn?"}
+  Q -->|"Does this platform do what I need?"| A["Quickstart"]
+  Q -->|"How does one service behave?"| B["One module locally"]
+  Q -->|"How do we run it for real?"| C["Your Kubernetes cluster"]
+  Q -->|"How do I change it?"| D["Full ecosystem from source"]
 ```
 
-## Prerequisites by path
+A common sequence for a team adopting the platform:
 
-| Requirement | One module | Full ecosystem | Kubernetes cluster |
-|---|---:|---:|---:|
-| Docker | Required | Required | Required for image workflows |
-| `just` | Usually | Required | Recommended |
-| k3d | — | Required | Optional |
-| Helm | — | Required | Required |
-| kubectl | — | Recommended | Required |
+1. One person runs the **Quickstart** on a laptop to see whether the platform fits.
+2. The same person runs **one module** to learn its configuration in detail, usually AuditFlow and its pipelines.
+3. The platform team installs it on **your cluster**, first with bundled data stores, then with managed ones.
+4. Whoever needs a change the platform does not have yet sets up the **full ecosystem** and opens a pull request.
 
-Do not use local defaults as production configuration. The Kubernetes guide includes the security, persistence, and observability decisions required before go-live.
+> **Local defaults are not production configuration.** The first, second and fourth path use well-known passwords and an identity provider that authenticates nobody. Only the cluster path, with the [go-live checks](./deploy-to-kubernetes.md#before-you-go-live) done, is meant to face other people.

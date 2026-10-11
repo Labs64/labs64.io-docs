@@ -42,8 +42,8 @@ flowchart LR
 
 ## Quick Start
 
-The portal is accessible in the local Kubernetes deployment at:
-- **URL:** `http://portal.localhost`
+The portal is part of the [full local ecosystem](../../getting-started/run-the-full-ecosystem-locally.md). Once `just up` has finished, open:
+- **URL:** `http://gateway.localhost/customer-portal`
 
 ## Configuration
 

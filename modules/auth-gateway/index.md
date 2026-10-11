@@ -42,12 +42,15 @@ sequenceDiagram
 
 ## Quick Start
 
-Auth Gateway is automatically started in the Kubernetes deployment. 
-To test, make an unauthenticated request to the Checkout API:
+The Auth Gateway is part of every Kubernetes install; you do not start it separately. The [Quickstart](../../getting-started/quickstart.md) installs it in about five minutes and walks through the three answers it gives.
+
+A request without a token is refused with `401`:
 ```bash
-curl -i http://gateway.localhost/checkout/api/v1/orders
+curl -i -X POST http://localhost:8000/auditflow/api/v1/audit/publish \
+  -H 'Content-Type: application/json' -d '{}'
 ```
-*Expected: HTTP 403 Forbidden.*
+
+A request with a valid token that lacks the required scope is refused with `403`, and one with the right scope is forwarded to the service with a trusted tenant and user context.
 
 ## Configuration
 

@@ -12,7 +12,7 @@ The **ultimate documentation reference** for users who want to run, use, and con
 |------|---------|
 | `modules/<id>/index.md` | Per-module documentation, one page per module (e.g. `modules/checkout/`, `modules/payment-gateway/`, `modules/auditflow/`, `modules/auth-gateway/`, `modules/customer-portal/`) |
 | `introduction/architecture.md` | Architecture documentation |
-| `getting-started/` | Adopter guide — run one module, the whole ecosystem, or your own cluster; then configure a module |
+| `getting-started/` | Adopter guide — `quickstart.md` (the installer, `install.sh` in `labs64.io-helm-charts`; keep its commands and output in step with that script), one module, your own cluster, the whole ecosystem from source, first-run troubleshooting |
 | `development/contributing.md` | Contributor guide — build/test a module, OpenAPI-first workflow |
 | `introduction/index.md` | Jekyll home page (`permalink: /`; distinct from `README.md`, which is GitHub-only and excluded from the build) |
 | `_config.yml`, `Gemfile` | Site/theme configuration |

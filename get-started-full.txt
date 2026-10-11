@@ -1,7 +1,24 @@
 # Labs64.IO Get Started
 
-Choose one of three paths: run a single service locally to validate a focused capability; run the full ecosystem locally in k3d to validate cross-service behavior; or deploy selected Helm charts to a Kubernetes cluster for a shared environment.
+There are four paths. Start with the Quickstart unless you already know you need another one.
 
-Local service example: clone a service repository and use its just up workflow. Full ecosystem example: clone Labs64/labs64.io-workspace, run just doctor, just clone, and just up. Cluster environments require ingress, service-owned persistence, RabbitMQ where event flows are used, secret management, observability, and reviewed authorization policy.
+1. Quickstart, about five minutes. One script installs the platform on any Kubernetes cluster and verifies it with a real request. Needs kubectl 1.27+, Helm 4+ and a cluster; a local k3d cluster is enough:
+   k3d cluster create labs64io-demo -p "8000:80@loadbalancer" --k3s-arg "--disable=traefik@server:0"
+   curl -fsSL https://raw.githubusercontent.com/Labs64/labs64.io-helm-charts/master/install.sh -o install.sh
+   LABS64_PROFILE=quickstart bash install.sh
+   It installs the labs64io-ecosystem Helm chart into the labs64io namespace: Traefik gateway, Auth Gateway, policy engine, AuditFlow, Payment Gateway, Swagger UI, bundled PostgreSQL, RabbitMQ and Valkey, and a demo identity provider. Evaluation only: the demo identity provider issues a token to anyone.
+   Manage it with: bash install.sh status | smoke | stop | start | uninstall.
 
-Read /docs/getting-started/ and its child pages for the complete commands and go-live checks.
+2. One module locally, no Kubernetes. AuditFlow on Docker Compose. Needs Docker, just, JDK 25 and Maven:
+   git clone https://github.com/Labs64/labs64.io-auditflow.git && cd labs64.io-auditflow && just up
+   curl -s -X POST http://localhost:8080/audit/publish -H 'Content-Type: application/json' -d '{"eventType":"user.login","sourceSystem":"quickstart","tenantId":"demo"}'
+
+3. Your own Kubernetes cluster (AWS EKS, Azure AKS, Google GKE, on-premises). Same Helm chart, with your OIDC identity provider, data stores and secrets. Routes: the installer's BYO profile (LABS64_PROFILE=byo LABS64_OIDC_DISCOVERY_URL=... bash install.sh), the labs64io/labs64io-ecosystem umbrella chart with your own values file, or individual module charts. The preflight chart checks broker, database, cache and identity provider connectivity first. The umbrella chart ships an AWS reference profile, values.aws.yaml. Cluster environments require a real identity provider, TLS, managed secrets, backups, network policies and observability before go-live.
+
+4. Full ecosystem from source, for contributors. Needs Docker plus either the workspace dev container or k3d, Helm 4, Helmfile, kubectl and just:
+   mkdir labs64.io && cd labs64.io
+   git clone https://github.com/Labs64/labs64.io-workspace.git && cd labs64.io-workspace
+   just doctor && just clone && just up
+   Then open http://gateway.localhost/swagger-ui/.
+
+Read /docs/getting-started/ and its child pages for the complete commands, first-request walkthroughs, troubleshooting and go-live checks.

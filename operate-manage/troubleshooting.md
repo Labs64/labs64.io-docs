@@ -38,4 +38,4 @@ flowchart TD
 | Read service logs | `kubectl logs deploy/<service> -n <namespace> --since=15m` |
 | Check recent events | `kubectl get events -A --sort-by=.lastTimestamp` |
 
-For local onboarding issues, see the legacy [local troubleshooting notes](../getting-started/troubleshooting.md). Keep production fixes narrow, documented, and reversible.
+For problems on a first local run or a fresh install, see [Troubleshooting your first run](../getting-started/troubleshooting.md). Keep production fixes narrow, documented, and reversible.

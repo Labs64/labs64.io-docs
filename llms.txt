@@ -9,10 +9,12 @@ Labs64.IO is a modular digital commerce platform with independently deployable s
   - Core Concepts: /docs/introduction/core-concepts.html
   - Architecture Overview: /docs/introduction/architecture.html
 - Get Started: /docs/getting-started/
-  - Choose a Deployment Path: /docs/getting-started/choose-a-deployment-path/
+  - Quickstart (one script, any Kubernetes cluster, about five minutes): /docs/getting-started/quickstart/
   - Run One Module Locally: /docs/getting-started/run-one-module-locally/
-  - Run the Full Ecosystem Locally: /docs/getting-started/run-the-full-ecosystem-locally/
-  - Deploy to Your Kubernetes Cluster: /docs/getting-started/deploy-to-kubernetes/
+  - Deploy to Your Kubernetes Cluster (AWS, Azure, Google Cloud, on-premises): /docs/getting-started/deploy-to-kubernetes/
+  - Run the Full Ecosystem Locally (contributors, built from source): /docs/getting-started/run-the-full-ecosystem-locally/
+  - Compare the Paths: /docs/getting-started/choose-a-deployment-path/
+  - Troubleshooting Your First Run: /docs/getting-started/troubleshooting/
 - Services & Modules: /docs/services/
   - Core Platform: Auth Gateway, AuditFlow, MCP Gateway (planned)
   - Commerce & Billing: NetLicensing (planned), Payment Gateway, Checkout, Invoicing (planned)

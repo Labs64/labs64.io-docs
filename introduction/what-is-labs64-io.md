@@ -40,4 +40,4 @@ flowchart LR
   D --> E["Operate a cohesive platform"]
 ```
 
-Next: learn the [core concepts](./core-concepts.md), or choose a [deployment path](../getting-started/choose-a-deployment-path.md).
+Next: learn the [core concepts](./core-concepts.md), or see it run with the [Quickstart](../getting-started/quickstart.md).

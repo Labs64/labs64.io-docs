@@ -12,10 +12,12 @@ Build a secure commerce platform one focused capability at a time. Labs64.IO com
 
 Whether you are evaluating one service, integrating a product team, or operating the ecosystem on Kubernetes, this guide is the shortest path from first request to a production-ready foundation.
 
+> **In a hurry?** The [Quickstart](../getting-started/quickstart.md) installs the platform on any Kubernetes cluster with one script and has you calling an API in about five minutes.
+
 | I want to… | Start here |
 |---|---|
 | Understand the platform and its vocabulary | [What is Labs64.IO?](./what-is-labs64-io.md) · [Core concepts](./core-concepts.md) |
-| Make a deployment choice and run it | [Get started](../getting-started/index.md) |
+| Run it: on a laptop, on my cluster, or from source | [Get started](../getting-started/index.md) |
 | Explore a product capability | [Services & Modules](../modules/index.md) |
 | Run the platform reliably | [Operate & Manage](../operate-manage/index.md) |
 | Find a contract or setting | [Reference](../reference/index.md) |
@@ -39,7 +41,7 @@ flowchart TB
 
 ## A practical path to value
 
-1. **Choose a path.** Start one service locally, run the ecosystem locally, or prepare a Kubernetes environment.
+1. **Choose a path.** Install the platform in minutes with the Quickstart, run one service locally, prepare a Kubernetes environment for your team, or build everything from source.
 2. **Use a capability.** Each service page explains its role, integration boundary, configuration, operations, and next step.
 3. **Operate with confidence.** Apply the shared deployment, security, observability, and tenancy patterns before production.
 
@@ -52,7 +54,7 @@ flowchart TB
 | Section | For | What you will find |
 |---|---|---|
 | [Overview](./index.md) | Everyone | Platform purpose, concepts, and architecture |
-| [Get Started](../getting-started/index.md) | First adopters | Decision guide and runnable local/cluster paths |
+| [Get Started](../getting-started/index.md) | First adopters and contributors | A five-minute quickstart, then local, cluster and from-source paths |
 | [Services & Modules](../modules/index.md) | Builders | Product areas, service roles, and integration paths |
 | [Operate & Manage](../operate-manage/index.md) | Platform teams | Helm, routing, persistence, scaling, security, and runbooks |
 | [Reference](../reference/index.md) | Integrators | APIs, events, configuration, images, charts, and glossary |

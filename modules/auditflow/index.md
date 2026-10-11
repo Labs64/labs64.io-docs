@@ -52,7 +52,7 @@ flowchart LR
 
 ## Quick Start
 
-Run AuditFlow independently using Docker Compose:
+Run AuditFlow on its own with Docker Compose. `just up` builds the backend on your machine first, so you need Docker, [`just`](https://github.com/casey/just), JDK 25 and Maven:
 
 ```bash
 git clone https://github.com/Labs64/labs64.io-auditflow.git
@@ -60,12 +60,16 @@ cd labs64.io-auditflow
 just up
 ```
 
-Test it by publishing an event:
+Publish an event for the `demo` tenant that ships with the repository, then watch it arrive:
 ```bash
 curl -sS -i -X POST http://localhost:8080/audit/publish \
   -H 'Content-Type: application/json' \
-  -d '{"eventType":"demo.event","sourceSystem":"demo","extra":{"hello":"world"}}'
+  -d '{"eventType":"demo.event","sourceSystem":"demo","tenantId":"demo","extra":{"hello":"world"}}'
+
+just log sink
 ```
+
+[Run one module locally](../../getting-started/run-one-module-locally.md) walks through this in detail. To call AuditFlow through the gateway, with authentication, take the [Quickstart](../../getting-started/quickstart.md).
 
 ## Event fields
 

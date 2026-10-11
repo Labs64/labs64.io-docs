@@ -40,7 +40,14 @@ sequenceDiagram
 
 ## Quick Start
 
-The Payment Gateway is automatically deployed as part of the full ecosystem. To test it, use the Checkout module to initiate a purchase, which will automatically call the Payment Gateway.
+The Payment Gateway is installed by the [Quickstart](../../getting-started/quickstart.md) and by the [full local ecosystem](../../getting-started/run-the-full-ecosystem-locally.md). With a token from either guide, list the configured payment providers:
+
+```bash
+curl -s -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8000/payment-gateway/api/v1/payment-providers
+```
+
+On the full local ecosystem the address is `http://gateway.localhost`. To exercise a whole purchase, use the Checkout module, which calls the Payment Gateway for you.
 
 ## Configuration
 

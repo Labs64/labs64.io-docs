@@ -37,7 +37,7 @@ sequenceDiagram
 
 ## Quick Start
 
-If you are running the ecosystem via Kubernetes (`just up` in the workspace repository), the Checkout module is automatically deployed.
+Checkout is part of the [full local ecosystem](../../getting-started/run-the-full-ecosystem-locally.md): `just up` in the workspace repository deploys it. That page also shows how to get the token used below.
 
 Test it by creating an order:
 ```bash
