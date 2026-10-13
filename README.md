@@ -17,11 +17,22 @@
 
 ## Why Docs?
 
-Good documentation is read by people who are in the middle of something. This site is organised around what they are doing:
+Good documentation is read by people who are in the middle of something: trying to get a first request through, or deciding whether this is the right tool for the team. This site is organised around what they are doing.
 
 1. **Get started.** A five-minute Quickstart and a comparison of every way to run Labs64.IO.
 2. **Use a module.** One reference per module: capabilities, API, configuration, events, operations and troubleshooting.
 3. **Change the code.** A contributor guide, the workspace layout and the OpenAPI-first workflow.
+
+**A good fit if**
+
+- You want to run, use or configure a Labs64.IO module and need the reference.
+- You are evaluating the platform and want to compare the ways to run it.
+- You found a page that is wrong or missing and want to fix it.
+
+**Probably not what you need if**
+
+- You are looking for marketing or positioning: that lives on [labs64.io](https://labs64.io).
+- You want internal design records: those are in a private repository.
 
 ## Get started
 
@@ -46,16 +57,17 @@ Not sure? Open the [published site](https://labs64.io/docs/) first; come back he
 
 ### 1. `install.sh`: the quick ecosystem start
 
-The Quickstart is the first page of this site: one script installs the gateway, AuditFlow and Payment Gateway on any Kubernetes cluster, then proves it with a real request. No cluster? A throwaway one on your laptop is enough:
+The Quickstart is the first page of this site: one script installs the gateway, AuditFlow and Payment Gateway on any Kubernetes cluster, then proves it with a real request.
 
 ```bash
-k3d cluster create labs64io-demo -p "8000:80@loadbalancer" --k3s-arg "--disable=traefik@server:0"   # optional
+# No cluster yet? A throwaway one needs only Docker and k3d:
+k3d cluster create labs64io-demo -p "8000:80@loadbalancer" --k3s-arg "--disable=traefik@server:0"
 
 curl -fsSL https://raw.githubusercontent.com/Labs64/labs64.io-helm-charts/master/install.sh -o install.sh
 bash install.sh
 ```
 
-Press Enter three times to take the defaults. You finish with a gateway you can `curl`, interactive API docs and a working token flow:
+Press Enter three times to take the defaults. A few minutes later you should see:
 
 ```text
   PASS  Obtained a demo access token from mock-oidc
@@ -66,11 +78,11 @@ Press Enter three times to take the defaults. You finish with a gateway you can 
    API docs:  http://localhost:8000/swagger-ui/
 ```
 
-Every command on that page is kept in step with `install.sh` in `labs64.io-helm-charts`. The same script later runs `status`, `stop`, `start` and `uninstall`. This is an evaluation install with a demo identity provider: keep it on a local or private cluster. Details: [Quickstart](https://labs64.io/docs/getting-started/quickstart/) · [`install.sh`](https://github.com/Labs64/labs64.io-helm-charts/blob/master/install.sh).
+Every command on that page is kept in step with `install.sh` in `labs64.io-helm-charts`. The same script later runs `status`, `stop`, `start` and `uninstall`. This is an evaluation install with a demo identity provider: keep it on a local or private cluster. Details: [Quickstart](https://labs64.io/docs/getting-started/quickstart.html) · [`install.sh`](https://github.com/Labs64/labs64.io-helm-charts/blob/master/install.sh).
 
 ### 2. Kubernetes: on your own cluster
 
-The adopter guides cover running on your own cluster: choosing a path, deploying to Kubernetes, configuring identity and troubleshooting. Start at [Get Started](https://labs64.io/docs/getting-started/) and [Deploy to your Kubernetes cluster](https://labs64.io/docs/getting-started/deploy-to-kubernetes/).
+The adopter guides cover running on your own cluster: choosing a path, deploying to Kubernetes, configuring identity and troubleshooting. Start at [Get Started](https://labs64.io/docs/getting-started/) and [Deploy to your Kubernetes cluster](https://labs64.io/docs/getting-started/deploy-to-kubernetes.html).
 
 ### 3. Docker: on your machine
 
@@ -99,10 +111,12 @@ Everything below is in the [Docs documentation](https://labs64.io/docs/):
 
 | I want to… | Read |
 |---|---|
-| Run Labs64.IO in five minutes | [Quickstart](https://labs64.io/docs/getting-started/quickstart/) |
-| Choose how to run it | [Choose a deployment path](https://labs64.io/docs/getting-started/choose-a-deployment-path/) |
-| Change the code | [Contributing guide](https://labs64.io/docs/development/contributing/) |
-| Compare all the ways to run Labs64.IO | [Choose a deployment path](https://labs64.io/docs/getting-started/choose-a-deployment-path/) |
+| Run Labs64.IO in five minutes | [Quickstart](https://labs64.io/docs/getting-started/quickstart.html) |
+| Choose how to run it | [Choose a deployment path](https://labs64.io/docs/getting-started/choose-a-deployment-path.html) |
+| Change the code | [Contributing guide](https://labs64.io/docs/development/contributing.html) |
+| Compare all the ways to run Labs64.IO | [Choose a deployment path](https://labs64.io/docs/getting-started/choose-a-deployment-path.html) |
+
+Something not working? [Troubleshooting your first run](https://labs64.io/docs/getting-started/troubleshooting.html) covers the usual suspects, and you are always welcome to [open an issue](https://github.com/Labs64/labs64.io-docs/issues).
 
 ## Features
 
@@ -129,6 +143,18 @@ Everything below is in the [Docs documentation](https://labs64.io/docs/):
   │ https://labs64.io/docs                                              │
   └─────────────────────────────────────────────────────────────────────┘
 ```
+
+## Where things live
+
+| You want… | Look in |
+|---|---|
+| The five-minute path | [`getting-started/quickstart.md`](getting-started/quickstart.md) |
+| To choose how to run it | [`getting-started/`](getting-started/index.md) |
+| A module's API, configuration and operations | [`modules/<module>/`](modules/index.md) |
+| How it fits together | [`introduction/architecture.md`](introduction/architecture.md) |
+| To change the code | [`development/contributing.md`](development/contributing.md) |
+
+The published site is at [labs64.io/docs](https://labs64.io/docs/).
 
 ## Using Docs with AI agents
 
@@ -160,7 +186,7 @@ Docs is one module of the [Labs64.IO Ecosystem](https://labs64.io); [every modul
 
 ## Contributing
 
-Contributions of all sizes are welcome. Fork, branch, run the checks described in [`AGENTS.md`](AGENTS.md), and open a pull request. If you are unsure whether something fits, open an issue first.
+We would love your help. Found a typo, a stale command or a missing explanation? A one-line fix is a real contribution here. Fork the repository, make your change on a branch, run the checks described in [`AGENTS.md`](AGENTS.md) and open a pull request. Not sure whether an idea fits? Open an issue first and we will talk it through; that is a perfectly good way to start.
 
 ## License
 
