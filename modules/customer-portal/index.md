@@ -7,52 +7,45 @@ nav_order: 3
 # Customer Portal
 
 ## Overview
-The Customer Portal is a self-service, white-labelled frontend for end users. It allows customers to view their order history, manage payment methods, and update their profile.
+Customer Portal is the customer-facing single-page app of the platform: a Vue 3 application built into static files and served by unprivileged nginx behind the API Gateway.
+
+> **Current scope.** The repository ships the front-end shell, with a home page and a shopping-cart page. A Java backend (`customer-portal-be`) is planned but not implemented, so the portal does not yet call a Labs64.IO API on its own.
 
 ## Capabilities
 
 | Capability | Description |
 |------------|-------------|
-| **Order Management** | View past orders and current statuses. |
-| **Profile Management** | Update user details and preferences. |
-| **Responsive Design** | Built with Vue 3 and Bootstrap 5 for mobile and desktop. |
+| **Static, one image** | A multi-stage build produces files served by unprivileged nginx; the image runs on any cluster or static host. |
+| **Edge authentication** | Sign-in is handled at the API Gateway (OIDC/JWT); the app itself is static. |
+| **Modern front end** | Vue 3 (Composition API), Vite, Pinia, TypeScript, Bootstrap 5 and Bootstrap Vue Next. |
+| **Composable** | Module federation (`@originjs/vite-plugin-federation`) is available for micro-frontends. |
+| **Tested** | Unit tests with Vitest, end-to-end tests with Playwright, linted with ESLint. |
 
 ## Architecture
 
-The Customer Portal is a Single Page Application (SPA) served by Nginx. It communicates via REST to the Labs64.IO APIs through the Auth Gateway.
+The portal is a single-page app served by nginx. The API Gateway authenticates the caller and routes `/customer-portal` to it.
 
 ```mermaid
 flowchart LR
-    Browser["Client Browser"]
-    
-    subgraph K8s_Cluster ["K8s Cluster"]
-        CP["Customer Portal Pod (Nginx)"]
-        T["Traefik Ingress"]
-        AG["Auth Gateway"]
-        CO["Checkout API"]
-    end
-    
-    Browser -->|"GET /"| T
-    T -->|"Serve Static Assets"| CP
-    
-    Browser -->|"GET /api/v1/orders"| T
-    T --> AG
-    AG --> CO
+    Browser["Browser"] -->|"GET /customer-portal"| GW["API Gateway"]
+    GW -->|"static files"| CP["customer-portal-fe<br/>Vue 3 · nginx (unprivileged)"]
 ```
 
 ## Quick Start
 
-The portal is part of the [full local ecosystem](../../getting-started/run-the-full-ecosystem-locally.md). Once `just up` has finished, open:
-- **URL:** `http://gateway.localhost/customer-portal`
+Install the platform with the BYO profile of the [installer](../../getting-started/deploy-to-kubernetes.md) and answer **yes** to "Enable Customer Portal", or run the [full local ecosystem](../../getting-started/run-the-full-ecosystem-locally.md) and open `http://gateway.localhost/customer-portal`.
+
+To see the app without a cluster, run the published image. Only the `edge` tag is published today:
+
+```bash
+docker run -d --rm --name portal -p 8080:8080 labs64/customer-portal-ui:edge
+```
+
+Open <http://localhost:8080> and clean up with `docker rm -f portal`.
 
 ## Configuration
 
-Because the portal is a compiled Vue application, runtime configuration is injected via a `config.json` file served by Nginx at startup.
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `VITE_API_BASE_URL` | The base URL for backend API calls. | `/api` |
-| `VITE_THEME_COLOR` | The primary brand color (hex). | `#0055ff` |
+The chart has no backend dependency; enable the UI with `ui.enabled`. The nginx image listens on port `8080` as an unprivileged user.
 
 ## REST APIs
 
@@ -60,32 +53,15 @@ The Customer Portal is a client, not a server. It does not expose REST APIs.
 
 ## Events
 
-The Customer Portal does not publish events directly to RabbitMQ.
-
-## Examples
-
-### Injecting Configuration via ConfigMap
-
-```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: customer-portal-config
-data:
-  config.json: |
-    {
-      "apiBaseUrl": "https://api.labs64.io",
-      "themeColor": "#ff0000"
-    }
-```
+The Customer Portal does not publish events.
 
 ## Operations
 
-The Customer Portal is packaged as static assets within an Nginx Alpine container. It is highly cacheable. In production, consider placing a CDN (like CloudFront or Cloudflare) in front of the Ingress to serve the static assets.
+The portal is stateless static content: scale it with replicas and cache it at the edge. Because authentication happens at the gateway, expose it only through the gateway route.
 
 ## Troubleshooting
 
 | Symptom | Cause | Resolution |
 |---------|-------|------------|
-| Blank page on load | API CORS issues | Ensure the API gateway is configured to allow origins from the portal domain. |
-| Routing 404s on refresh | Nginx misconfiguration | The Nginx container is pre-configured for SPA routing (`try_files $uri /index.html`). If overwritten, ensure this rule is restored. |
+| `ImagePullBackOff` | No release tag of `labs64/customer-portal-ui` exists yet | Use the `edge` tag, or build the image from the repository. |
+| `404` at `/customer-portal` | The route is not installed | Enable the module and its gateway route in the chart values. |

@@ -56,38 +56,66 @@ A request with a valid token that lacks the required scope is refused with `403`
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `AUTH_JWKS_URL` | The URL to fetch the public keys for JWT validation. | - |
-| `AUTH_CERBOS_ADDRESS` | The gRPC address of the Cerbos PDP. | `cerbos:3593` |
-| `AUTH_ALLOWED_ISSUERS`| Comma-separated list of valid token issuers. | - |
+| `OIDC_DISCOVERY_URL` | OIDC discovery endpoint; the JWKS and issuer are read from it. May be an in-cluster URL. | `{OIDC_URL}/realms/{OIDC_REALM}/.well-known/openid-configuration` |
+| `OIDC_URL`, `OIDC_REALM` | Provider base URL and realm, used to build the discovery URL. | mock OIDC, `default` |
+| `OIDC_ISSUER` | Canonical JWT issuer. An explicit value takes precedence over the discovery metadata. | discovery document |
+| `OIDC_AUDIENCE` | Expected JWT audience. | `account` |
+| `TOKEN_SCOPES_CLAIM_PATHS` | Comma-separated claim paths that carry scopes (union of all). | `scope,realm_access.roles,resource_access.{audience}.roles` |
+| `TOKEN_TENANT_CLAIM_PATH` | Claim path of the tenant identifier. | `tenant` |
+| `CERBOS_URL` | Central Cerbos policy engine (HTTP). | `http://localhost:3592` |
+| `ROUTES_DIR` | Directory of generated `<module>.routes.yaml` manifests (ConfigMap-mounted). | `routes` |
+| `STATIC_ROUTES_FILE` | Static prefix policies for surfaces without an OpenAPI spec (UI bundles). | `static_routes.yaml` |
+| `JWKS_CACHE_TTL` | Seconds a fetched key set is cached. | `3600` |
+
+Tokens are verified with RS256 only. Routes and scopes come from each module's OpenAPI contract; `POST /reload` re-reads the manifests without a restart.
 
 ## REST APIs
 
-The Auth Gateway does not expose business APIs. It exposes a single endpoint used by Traefik:
+The Auth Gateway does not expose business APIs. It exposes the endpoints Traefik and the platform use:
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/verify` | `GET` | The ForwardAuth target for Traefik. |
+| `/auth` | `GET` | The ForwardAuth target for Traefik: returns `200` with the trusted headers, or `401`/`403`. |
+| `/health` | `GET` | Liveness; also reports whether keys and routes are loaded. |
+| `/health/ready` | `GET` | Readiness: `503` until at least one module's routes have loaded. |
+| `/reload` | `POST` | Re-read the route manifests and static routes from disk. |
 
 ## Events
 
-The Auth Gateway does not publish domain events to RabbitMQ.
+The Auth Gateway does not publish domain events. Every module-route decision is logged with a request id.
 
 ## Examples
 
-### Upstream Trusted Headers
+### Upstream trusted headers
 
-When a request is allowed, the Auth Gateway injects these headers:
-- `X-Auth-User: usr_123`
-- `X-Auth-Scopes: read:orders write:orders`
-- `X-Auth-Tenant: tnt_abc`
+When a request is allowed, the Auth Gateway sets these headers for the module:
+
+| Header | Meaning |
+|--------|---------|
+| `X-Auth-User` | The subject, or `svc:<client>` for a service principal. |
+| `X-Auth-Scopes` | Comma-separated scopes. |
+| `X-Auth-Tenant` | The tenant, or `-` when the caller is tenant-less. |
+| `X-Request-ID` | The caller's id when well-formed, otherwise a generated UUIDv7. |
+
+### Failing closed
+
+A route with no policy is denied, even for a valid token:
+
+```bash
+curl -i localhost:8081/auth -H "X-Forwarded-Method: GET" -H "X-Forwarded-Uri: /payment-gateway/api/v1/payments"
+# HTTP/1.1 403 Forbidden
+# {"code":"FORBIDDEN","message":"No auth policy configured for: /payment-gateway/api/v1/payments", ...}
+```
 
 ## Operations
 
-Auth Gateway is stateless and can be aggressively scaled. It must be deployed alongside a Cerbos PDP sidecar or connected to a highly available Cerbos cluster.
+Auth Gateway is stateless and scales horizontally. It needs a reachable OIDC provider, the central Cerbos policy engine and the route manifests; until the manifests load it reports not ready.
 
 ## Troubleshooting
 
 | Symptom | Cause | Resolution |
 |---------|-------|------------|
-| Valid tokens rejected (403) | Cerbos policy mismatch | Verify the Cerbos policies mapped to the endpoint. Check Cerbos logs. |
-| JWT validation fails | Incorrect JWKS URL | Ensure `AUTH_JWKS_URL` is accessible from the Auth Gateway pod. |
+| `403` with "No auth policy configured" | The route is not in any manifest | Check that the module's routes manifest is mounted in `ROUTES_DIR` and call `POST /reload`. |
+| `403` for a valid token | The token lacks the required scope, or the policy denies it | Compare the token's scopes with the operation's required scopes; check the Cerbos logs. |
+| `401` for every request | Token cannot be verified | Check `OIDC_DISCOVERY_URL`, `OIDC_ISSUER` and `OIDC_AUDIENCE`; the discovery endpoint must be reachable from the pod. |
+| Not ready (`503`) at start | No route manifests loaded yet | Mount the generated `*.routes.yaml` files into `ROUTES_DIR`. |
