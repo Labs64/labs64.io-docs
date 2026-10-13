@@ -9,6 +9,9 @@ nav_order: 0
 
 The fastest way to tell whether AuditFlow fits is to find the situation closest to yours.
 
+- [**Integrating many systems and formats**](#integrating-many-systems-and-formats) — one dependable path instead of a script per consumer
+- [**Governed delivery across trust boundaries**](#governed-delivery-across-trust-boundaries) — the right data, to the right place, with sensitive fields handled once
+- [**An integration landscape that keeps changing**](#an-integration-landscape-that-keeps-changing) — add sources, formats and destinations without a redeploy
 - [**Compliance audit trail**](#compliance-audit-trail-gdpr-soc-2-iso-27001-hipaa) — GDPR, SOC 2, ISO 27001, HIPAA
 - [**Security event alerting**](#security-event-alerting-and-siem-integration) — route alerts to your SIEM in near real-time
 - [**Multi-tenant SaaS audit logs**](#multi-tenant-saas-audit-logs) — a pipeline per tenant, isolated and throttled
@@ -89,3 +92,44 @@ You're building a service that publishes audit events and want to verify end-to-
 - Walk through the step-by-step [Manual Verification (Smoke Test)](https://github.com/Labs64/labs64.io-auditflow/blob/master/DEVELOPERS.md#manual-verification-smoke-test) checklist — publish an event, confirm tenant isolation, confirm redaction, confirm the DLQ — each step with an expected result to check against
 
 ---
+
+---
+
+## Integrating many systems and formats
+
+Over the years an organisation accumulates systems that each describe the world in their own way, and consumers that each want the data in yet another. Every pairing gets its own script, its own mapping and its own idea of what happens when something is down.
+
+AuditFlow puts one dependable path in the middle. Every system publishes what happened as an event; a transformer maps a source's vocabulary into the shape consumers expect, once; pipelines deliver the result to each destination, retrying and recovering independently. Mappings live in one place and are tested with a dry run and fixtures before they go live.
+
+**What to try in a POC:**
+- Pick the most awkward source you have and publish a few of its real records as events.
+- Write the mapping as a transformer and check it with the pipeline dry run and a fixture file.
+- Deliver to one destination you care about, take it offline for a few minutes and confirm that events arrive when it returns, without duplicates.
+
+---
+
+## Governed delivery across trust boundaries
+
+Some data may not leave a boundary unchanged, some may only go to specific places, and every business unit has its own rules. Handling that separately in every integration is how things leak.
+
+AuditFlow applies the rules once, at the door. Sensitive fields are masked, hashed or dropped at ingest, before anything is buffered or stored. Routing conditions decide what goes where. Each tenant, whether a business unit, a subsidiary or a customer, has its own pipelines, quotas and credentials, and there is no path from one tenant's events into another's destinations. Evidence can be archived in a tamper-evident form.
+
+**What to try in a POC:**
+- Define a redaction rule for a personal-data field and confirm it is absent from every destination.
+- Create two tenants with different routes and confirm that neither can reach the other's destination.
+- Archive a set of events and verify the archive with the verification tooling.
+
+---
+
+## An integration landscape that keeps changing
+
+Integration work arrives as a stream of small requests, and each one tends to be built without retries, without redaction and without anyone remembering how it works later.
+
+In AuditFlow, a new destination is a small module and a new format is a small module: you mount it into a running deployment, reference it from a pipeline and it inherits tenant isolation, redaction, idempotency, retries, the dead-letter queue and telemetry. Routing is configuration that you change live and verify with a dry run before it carries traffic.
+
+**What to try in a POC:**
+- Start from a shipped sink or transformer and change what it does.
+- Mount it through the plug-in directory and confirm that it appears in the service registry.
+- Run a dry run before sending traffic.
+
+See [Sinks and transformers](../sinks-and-transformers/index.md#adding-your-own-sink-or-transformer) for the module contract.
