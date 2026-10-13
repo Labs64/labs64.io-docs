@@ -10,7 +10,7 @@ The **ultimate documentation reference** for users who want to run, use, and con
 
 | Path | Purpose |
 |------|---------|
-| `modules/<id>/index.md` | Per-module documentation, one page per module (e.g. `modules/checkout/`, `modules/payment-gateway/`, `modules/auditflow/`, `modules/auth-gateway/`, `modules/customer-portal/`) |
+| `modules/<id>/index.md` | Per-module documentation, one page per module (e.g. `modules/checkout/`, `modules/payment-gateway/`, `modules/auditflow/`, `modules/auth-gateway/`, `modules/customer-portal/`). A module with a lot of reference material may add child pages as `modules/<id>/<topic>/index.md` (`parent:` the module title, `grand_parent:` its section), as `modules/auditflow/` does; keep the module's own `index.md` as the entry point with the start-here content |
 | `introduction/architecture.md` | Architecture documentation |
 | `getting-started/` | Adopter guide — `quickstart.md` (the installer, `install.sh` in `labs64.io-helm-charts`; keep its commands and output in step with that script), one module, your own cluster, the whole ecosystem from source, first-run troubleshooting |
 | `development/contributing.md` | Contributor guide — build/test a module, OpenAPI-first workflow |
