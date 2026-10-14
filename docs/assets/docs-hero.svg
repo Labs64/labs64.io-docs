@@ -1,164 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 640" width="1200" height="640" role="img" aria-labelledby="t d">
+<svg viewBox="0 0 1200 640" xmlns="http://www.w3.org/2000/svg" width="1200" height="640" role="img" aria-labelledby="t d">
 <title id="t">Labs64.IO Docs</title>
-<desc id="d">Adopters, operators, contributors and AI agents read one site with a quickstart, deployment guides, per-module references and a contributor handbook.</desc>
+<desc id="d">The docs as a metro map: from Start, the Run it, Use it and Change it lines lead to quickstart, install, operate, concepts, module reference, API, architecture, build and contributing, with llms.txt for AI agents.</desc>
 <defs>
-  <radialGradient id="g1" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#E14817" stop-opacity=".45"/><stop offset="1" stop-color="#E14817" stop-opacity="0"/></radialGradient>
-  <radialGradient id="g2" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#F2951C" stop-opacity=".22"/><stop offset="1" stop-color="#F2951C" stop-opacity="0"/></radialGradient>
-  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#F8EDE5" stroke-opacity=".06"/></pattern>
-  <filter id="glow" x="-200%" y="-200%" width="500%" height="500%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-  <clipPath id="win"><rect width="1200" height="640" rx="18"/></clipPath>
-  <path id="pi0" d="M280,300 C355,300 355,355 430,355"/>
-  <path id="pi1" d="M280,370 C355,370 355,385 430,385"/>
-  <path id="pi2" d="M280,440 C355,440 355,425 430,425"/>
-  <path id="pi3" d="M280,510 C355,510 355,455 430,455"/>
-  <path id="po0" d="M770,355 C845,355 845,300 920,300"/>
-  <path id="po1" d="M770,385 C845,385 845,370 920,370"/>
-  <path id="po2" d="M770,425 C845,425 845,440 920,440"/>
-  <path id="po3" d="M770,455 C845,455 845,510 920,510"/>
-  <style>
+<radialGradient id="hg1" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#E14817" stop-opacity=".45"/><stop offset="1" stop-color="#E14817" stop-opacity="0"/></radialGradient>
+<radialGradient id="hg2" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#F2951C" stop-opacity=".22"/><stop offset="1" stop-color="#F2951C" stop-opacity="0"/></radialGradient>
+<pattern id="hgrid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#F8EDE5" stroke-opacity=".06"/></pattern>
+<filter id="hglow" x="-200%" y="-200%" width="500%" height="500%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<clipPath id="hwin"><rect width="1200" height="640" rx="18"/></clipPath>
+<style>
     .sans{font-family:Roboto,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif}
     .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace}
-    @media (prefers-reduced-motion: reduce){ animate, animateMotion{display:none} }
+    text{white-space:pre}
+    @media (prefers-reduced-motion: reduce){ animate, animateMotion, animateTransform{display:none} }
   </style>
 </defs>
-<g clip-path="url(#win)">
-  <rect width="1200" height="640" fill="#170A05"/>
-  <rect width="1200" height="640" fill="url(#grid)"/>
-  <ellipse cx="180" cy="40" rx="420" ry="300" fill="url(#g1)"/>
-  <ellipse cx="1040" cy="560" rx="360" ry="260" fill="url(#g2)"/>
-  <rect width="1200" height="44" fill="#22100A"/>
-  <line x1="0" y1="44" x2="1200" y2="44" stroke="#F8EDE5" stroke-opacity=".1"/>
-  <circle cx="28" cy="22" r="6" fill="#E14817"/><circle cx="50" cy="22" r="6" fill="#F2951C"/><circle cx="72" cy="22" r="6" fill="#87888A"/>
-  <text x="600" y="27" text-anchor="middle" class="mono" font-size="13" fill="#87888A" letter-spacing=".5">labs64.io-docs · labs64.io/docs</text>
-  <text x="64" y="100" class="sans" font-size="13" font-weight="500" letter-spacing="3.6" fill="#F08B53">LABS64.IO  ·  DOCS</text>
-  <text x="64" y="156" class="sans" font-size="48" font-weight="700" letter-spacing="-1.4" fill="#F8EDE5">Find the next step, fast.</text>
-  <text x="64" y="212" class="sans" font-size="48" font-weight="700" letter-spacing="-1.4" fill="#E14817">Run it. Use it. Change it.</text>
-  <text x="1136" y="212" text-anchor="end" class="mono" font-size="14" fill="#F8EDE5" fill-opacity=".6">Jekyll  ·  just-the-docs  ·  Mermaid</text>
-<use href="#pi0" fill="none" stroke="#F8EDE5" stroke-opacity=".22" stroke-width="1.5"/>
-<use href="#po0" fill="none" stroke="#F8EDE5" stroke-opacity=".22" stroke-width="1.5"/>
-<use href="#pi1" fill="none" stroke="#F8EDE5" stroke-opacity=".22" stroke-width="1.5"/>
-<use href="#po1" fill="none" stroke="#F8EDE5" stroke-opacity=".22" stroke-width="1.5"/>
-<use href="#pi2" fill="none" stroke="#F8EDE5" stroke-opacity=".22" stroke-width="1.5"/>
-<use href="#po2" fill="none" stroke="#F8EDE5" stroke-opacity=".22" stroke-width="1.5"/>
-<use href="#pi3" fill="none" stroke="#F8EDE5" stroke-opacity=".22" stroke-width="1.5"/>
-<use href="#po3" fill="none" stroke="#F8EDE5" stroke-opacity=".22" stroke-width="1.5"/>
-<text x="64" y="262" class="mono" font-size="12" letter-spacing="2.4" fill="#87888A">WHO READS IT</text>
-<rect x="64" y="274" width="216" height="52" rx="10" fill="#F8EDE5" fill-opacity=".05" stroke="#F8EDE5" stroke-opacity=".2"/>
-<circle cx="86" cy="300" r="4" fill="#E14817"/>
-<text x="102" y="297" class="sans" font-size="15" font-weight="700" fill="#F8EDE5">Evaluator</text>
-<text x="102" y="315" class="mono" font-size="11.5" fill="#F08B53">wants it running</text>
-<rect x="64" y="274" width="216" height="52" rx="10" fill="none" stroke="#E14817" stroke-width="2" opacity="0">
-      <animate attributeName="opacity" dur="6.0s" begin="0.0s" repeatCount="indefinite" values="0;1;0;0" keyTimes="0;0.05;0.1500;1"/></rect>
-<rect x="64" y="344" width="216" height="52" rx="10" fill="#F8EDE5" fill-opacity=".05" stroke="#F8EDE5" stroke-opacity=".2"/>
-<circle cx="86" cy="370" r="4" fill="#E14817"/>
-<text x="102" y="367" class="sans" font-size="15" font-weight="700" fill="#F8EDE5">Operator</text>
-<text x="102" y="385" class="mono" font-size="11.5" fill="#F08B53">deploys for a team</text>
-<rect x="64" y="344" width="216" height="52" rx="10" fill="none" stroke="#E14817" stroke-width="2" opacity="0">
-      <animate attributeName="opacity" dur="6.0s" begin="0.25s" repeatCount="indefinite" values="0;1;0;0" keyTimes="0;0.05;0.1500;1"/></rect>
-<rect x="64" y="414" width="216" height="52" rx="10" fill="#F8EDE5" fill-opacity=".05" stroke="#F8EDE5" stroke-opacity=".2"/>
-<circle cx="86" cy="440" r="4" fill="#E14817"/>
-<text x="102" y="437" class="sans" font-size="15" font-weight="700" fill="#F8EDE5">Developer</text>
-<text x="102" y="455" class="mono" font-size="11.5" fill="#F08B53">integrates a module</text>
-<rect x="64" y="414" width="216" height="52" rx="10" fill="none" stroke="#E14817" stroke-width="2" opacity="0">
-      <animate attributeName="opacity" dur="6.0s" begin="0.5s" repeatCount="indefinite" values="0;1;0;0" keyTimes="0;0.05;0.1500;1"/></rect>
-<rect x="64" y="484" width="216" height="52" rx="10" fill="#F8EDE5" fill-opacity=".05" stroke="#F8EDE5" stroke-opacity=".2"/>
-<circle cx="86" cy="510" r="4" fill="#E14817"/>
-<text x="102" y="507" class="sans" font-size="15" font-weight="700" fill="#F8EDE5">AI agent</text>
-<text x="102" y="525" class="mono" font-size="11.5" fill="#F08B53">reads llms.txt</text>
-<rect x="64" y="484" width="216" height="52" rx="10" fill="none" stroke="#E14817" stroke-width="2" opacity="0">
-      <animate attributeName="opacity" dur="6.0s" begin="0.75s" repeatCount="indefinite" values="0;1;0;0" keyTimes="0;0.05;0.1500;1"/></rect>
-<rect x="430" y="262" width="340" height="286" rx="14" fill="#F8EDE5" fill-opacity=".05" stroke="#F08B53" stroke-opacity=".55"/>
-<text x="454" y="293" class="mono" font-size="12" letter-spacing="2.4" fill="#F08B53">DOCUMENTATION</text>
-<rect x="454" y="308" width="64" height="34" rx="8" fill="#F8EDE5" fill-opacity=".05" stroke="#F8EDE5" stroke-opacity=".2"/>
-<rect x="454" y="308" width="64" height="34" rx="8" fill="#E14817" opacity="0">
-  <animate attributeName="opacity" dur="6.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.1917;0.2167;0.3167;0.3417;1.0000"/></rect>
-<text x="486" y="330" text-anchor="middle" class="mono" font-size="12" font-weight="500" fill="#F8EDE5">Start</text>
-<rect x="530" y="308" width="64" height="34" rx="8" fill="#F8EDE5" fill-opacity=".05" stroke="#F8EDE5" stroke-opacity=".2"/>
-<rect x="530" y="308" width="64" height="34" rx="8" fill="#E14817" opacity="0">
-  <animate attributeName="opacity" dur="6.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.3083;0.3333;0.4333;0.4583;1.0000"/></rect>
-<text x="562" y="330" text-anchor="middle" class="mono" font-size="12" font-weight="500" fill="#F8EDE5">Guides</text>
-<rect x="606" y="308" width="64" height="34" rx="8" fill="#F8EDE5" fill-opacity=".05" stroke="#F8EDE5" stroke-opacity=".2"/>
-<rect x="606" y="308" width="64" height="34" rx="8" fill="#E14817" opacity="0">
-  <animate attributeName="opacity" dur="6.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.4250;0.4500;0.5500;0.5750;1.0000"/></rect>
-<text x="638" y="330" text-anchor="middle" class="mono" font-size="12" font-weight="500" fill="#F8EDE5">Modules</text>
-<rect x="682" y="308" width="64" height="34" rx="8" fill="#F8EDE5" fill-opacity=".05" stroke="#F8EDE5" stroke-opacity=".2"/>
-<rect x="682" y="308" width="64" height="34" rx="8" fill="#E14817" opacity="0">
-  <animate attributeName="opacity" dur="6.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.5417;0.5667;0.6667;0.6917;1.0000"/></rect>
-<text x="714" y="330" text-anchor="middle" class="mono" font-size="12" font-weight="500" fill="#F8EDE5">Develop</text>
-<rect x="454" y="360" width="292" height="34" rx="8" fill="none" stroke="#F8EDE5" stroke-opacity=".2" stroke-dasharray="4 4"/>
-<text x="600" y="382" text-anchor="middle" class="mono" font-size="11.5" fill="#F8EDE5" fill-opacity=".7">five minutes to a first request</text>
-<rect x="454" y="410" width="292" height="122" rx="10" fill="#0A0402" fill-opacity=".6" stroke="#F8EDE5" stroke-opacity=".15"/>
-<g class="mono" font-size="12.5" fill="#F8EDE5">
-  <text x="470" y="436" fill-opacity=".5">{</text>
-  <text x="486" y="458"><tspan fill="#F08B53">"page"</tspan>: "modules/auditflow",</text>
-  <text x="486" y="480"><tspan fill="#F08B53">"audience"</tspan>: "adopter",</text>
-  <g><text x="486" y="502"><tspan fill="#F08B53">"status"</tspan>: "outdated"</text>
-    <animate attributeName="opacity" dur="6.0s" repeatCount="indefinite" values="1;1;0;0;1;1" keyTimes="0.0000;0.3083;0.3333;0.9333;0.9833;1.0000"/></g>
-  <g opacity="0"><text x="486" y="502"><tspan fill="#F08B53">"status"</tspan>: <tspan fill="#E14817" font-weight="700">"current"</tspan></text>
-    <animate attributeName="opacity" dur="6.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.3083;0.3333;0.9333;0.9833;1.0000"/></g>
-  <text x="470" y="524" fill-opacity=".5">}</text>
-</g>
-<text x="920" y="262" class="mono" font-size="12" letter-spacing="2.4" fill="#87888A">WHAT YOU FIND</text>
-<rect x="920" y="274" width="216" height="52" rx="10" fill="#F8EDE5" fill-opacity=".05" stroke="#F8EDE5" stroke-opacity=".2"/>
-<text x="942" y="297" class="sans" font-size="15" font-weight="700" fill="#F8EDE5">Get started</text>
-<text x="942" y="315" class="mono" font-size="11.5" fill="#F08B53">quickstart, paths</text>
-<path d="M1112,295 l5,5 l-5,5" fill="none" stroke="#E14817" stroke-width="2" stroke-linecap="round"/>
-<rect x="920" y="274" width="216" height="52" rx="10" fill="none" stroke="#E14817" stroke-width="2" opacity="0">
-      <animate attributeName="opacity" dur="6.0s" begin="4.4s" repeatCount="indefinite" values="0;1;0;0" keyTimes="0;0.05;0.1500;1"/></rect>
-<rect x="920" y="344" width="216" height="52" rx="10" fill="#F8EDE5" fill-opacity=".05" stroke="#F8EDE5" stroke-opacity=".2"/>
-<text x="942" y="367" class="sans" font-size="15" font-weight="700" fill="#F8EDE5">Module reference</text>
-<text x="942" y="385" class="mono" font-size="11.5" fill="#F08B53">API, config, ops</text>
-<path d="M1112,365 l5,5 l-5,5" fill="none" stroke="#E14817" stroke-width="2" stroke-linecap="round"/>
-<rect x="920" y="344" width="216" height="52" rx="10" fill="none" stroke="#E14817" stroke-width="2" opacity="0">
-      <animate attributeName="opacity" dur="6.0s" begin="4.6000000000000005s" repeatCount="indefinite" values="0;1;0;0" keyTimes="0;0.05;0.1500;1"/></rect>
-<rect x="920" y="414" width="216" height="52" rx="10" fill="#F8EDE5" fill-opacity=".05" stroke="#F8EDE5" stroke-opacity=".2"/>
-<text x="942" y="437" class="sans" font-size="15" font-weight="700" fill="#F8EDE5">Architecture</text>
-<text x="942" y="455" class="mono" font-size="11.5" fill="#F08B53">how it fits</text>
-<path d="M1112,435 l5,5 l-5,5" fill="none" stroke="#E14817" stroke-width="2" stroke-linecap="round"/>
-<rect x="920" y="414" width="216" height="52" rx="10" fill="none" stroke="#E14817" stroke-width="2" opacity="0">
-      <animate attributeName="opacity" dur="6.0s" begin="4.800000000000001s" repeatCount="indefinite" values="0;1;0;0" keyTimes="0;0.05;0.1500;1"/></rect>
-<rect x="920" y="484" width="216" height="52" rx="10" fill="#F8EDE5" fill-opacity=".05" stroke="#F8EDE5" stroke-opacity=".2"/>
-<text x="942" y="507" class="sans" font-size="15" font-weight="700" fill="#F8EDE5">Contributing</text>
-<text x="942" y="525" class="mono" font-size="11.5" fill="#F08B53">build and test</text>
-<path d="M1112,505 l5,5 l-5,5" fill="none" stroke="#E14817" stroke-width="2" stroke-linecap="round"/>
-<rect x="920" y="484" width="216" height="52" rx="10" fill="none" stroke="#E14817" stroke-width="2" opacity="0">
-      <animate attributeName="opacity" dur="6.0s" begin="5.0s" repeatCount="indefinite" values="0;1;0;0" keyTimes="0;0.05;0.1500;1"/></rect>
-<circle r="5" fill="#F8EDE5" opacity="0" filter="url(#glow)">
-      <animateMotion dur="6.0s" begin="0.0s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;0.2000;1" calcMode="linear"><mpath href="#pi0"/></animateMotion>
-      <animate attributeName="opacity" dur="6.0s" begin="0.0s" repeatCount="indefinite" values="0;1;1;0;0" keyTimes="0;0.02;0.1800;0.2000;1"/>
-    </circle>
-<circle r="5" fill="#F8EDE5" opacity="0" filter="url(#glow)">
-      <animateMotion dur="6.0s" begin="0.25s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;0.2000;1" calcMode="linear"><mpath href="#pi1"/></animateMotion>
-      <animate attributeName="opacity" dur="6.0s" begin="0.25s" repeatCount="indefinite" values="0;1;1;0;0" keyTimes="0;0.02;0.1800;0.2000;1"/>
-    </circle>
-<circle r="5" fill="#F8EDE5" opacity="0" filter="url(#glow)">
-      <animateMotion dur="6.0s" begin="0.5s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;0.2000;1" calcMode="linear"><mpath href="#pi2"/></animateMotion>
-      <animate attributeName="opacity" dur="6.0s" begin="0.5s" repeatCount="indefinite" values="0;1;1;0;0" keyTimes="0;0.02;0.1800;0.2000;1"/>
-    </circle>
-<circle r="5" fill="#F8EDE5" opacity="0" filter="url(#glow)">
-      <animateMotion dur="6.0s" begin="0.75s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;0.2000;1" calcMode="linear"><mpath href="#pi3"/></animateMotion>
-      <animate attributeName="opacity" dur="6.0s" begin="0.75s" repeatCount="indefinite" values="0;1;1;0;0" keyTimes="0;0.02;0.1800;0.2000;1"/>
-    </circle>
-<circle r="5" fill="#E14817" opacity="0" filter="url(#glow)">
-      <animateMotion dur="6.0s" begin="3.2s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;0.2000;1" calcMode="linear"><mpath href="#po0"/></animateMotion>
-      <animate attributeName="opacity" dur="6.0s" begin="3.2s" repeatCount="indefinite" values="0;1;1;0;0" keyTimes="0;0.02;0.1800;0.2000;1"/>
-    </circle>
-<circle r="5" fill="#E14817" opacity="0" filter="url(#glow)">
-      <animateMotion dur="6.0s" begin="3.4000000000000004s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;0.2000;1" calcMode="linear"><mpath href="#po1"/></animateMotion>
-      <animate attributeName="opacity" dur="6.0s" begin="3.4000000000000004s" repeatCount="indefinite" values="0;1;1;0;0" keyTimes="0;0.02;0.1800;0.2000;1"/>
-    </circle>
-<circle r="5" fill="#E14817" opacity="0" filter="url(#glow)">
-      <animateMotion dur="6.0s" begin="3.6s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;0.2000;1" calcMode="linear"><mpath href="#po2"/></animateMotion>
-      <animate attributeName="opacity" dur="6.0s" begin="3.6s" repeatCount="indefinite" values="0;1;1;0;0" keyTimes="0;0.02;0.1800;0.2000;1"/>
-    </circle>
-<circle r="5" fill="#E14817" opacity="0" filter="url(#glow)">
-      <animateMotion dur="6.0s" begin="3.8000000000000003s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;0.2000;1" calcMode="linear"><mpath href="#po3"/></animateMotion>
-      <animate attributeName="opacity" dur="6.0s" begin="3.8000000000000003s" repeatCount="indefinite" values="0;1;1;0;0" keyTimes="0;0.02;0.1800;0.2000;1"/>
-    </circle>
+<g clip-path="url(#hwin)">
+<rect width="1200" height="640" fill="#170A05"/><rect width="1200" height="640" fill="url(#hgrid)"/>
+<ellipse cx="180" cy="40" rx="420" ry="300" fill="url(#hg1)"/><ellipse cx="1040" cy="560" rx="360" ry="260" fill="url(#hg2)"/>
+<rect width="1200" height="44" fill="#22100A"/><line x1="0" y1="44" x2="1200" y2="44" stroke="#F8EDE5" stroke-opacity=".1"/>
+<circle cx="28" cy="22" r="6" fill="#E14817"/><circle cx="50" cy="22" r="6" fill="#F2951C"/><circle cx="72" cy="22" r="6" fill="#87888A"/>
+<text x="600" y="27" class="mono" font-size="13" fill="#87888A" text-anchor="middle" letter-spacing="0.5">labs64.io-docs · labs64.io/docs</text>
+<text x="64" y="100" class="sans" font-size="13" font-weight="500" fill="#F08B53" letter-spacing="3.6">LABS64.IO  ·  DOCUMENTATION</text>
+<text x="64" y="156" class="sans" font-size="48" font-weight="700" fill="#F8EDE5" letter-spacing="-1.4">Find the next step, fast.</text>
+<text x="64" y="212" class="sans" font-size="48" font-weight="700" fill="#E14817" letter-spacing="-1.4">Run it. Use it. Change it.</text>
+<text x="1136" y="212" class="mono" font-size="14" fill="#F8EDE5" fill-opacity="0.6" text-anchor="end">Jekyll  ·  just-the-docs  ·  Mermaid</text>
+<path d="M250,420 C200,470 150,500 120,528" fill="none" stroke="#87888A" stroke-width="3" stroke-dasharray="2 7" stroke-linecap="round"/><circle cx="120" cy="528" r="7" fill="#170A05" stroke="#87888A" stroke-width="3"/><text x="140" y="533" class="mono" font-size="13" fill="#F8EDE5">llms.txt</text><text x="140" y="550" class="mono" font-size="11" fill="#87888A">for AI agents</text><path id="hl0" d="M282,397 L400,397 L472,325 L1010,325" fill="none" stroke="#E14817" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="1"/><rect x="1020" y="312" width="72" height="26" rx="4" fill="#E14817"/><text x="1029" y="330" class="mono" font-size="12" font-weight="500" fill="#170A05" letter-spacing="1.2">RUN IT</text><circle cx="560" cy="325" r="8" fill="#170A05" stroke="#E14817" stroke-width="3.5"/><text x="560" y="307" class="sans" font-size="14" font-weight="700" fill="#F8EDE5" text-anchor="middle">Quickstart</text><circle cx="760" cy="325" r="8" fill="#170A05" stroke="#E14817" stroke-width="3.5"/><text x="760" y="307" class="sans" font-size="14" font-weight="700" fill="#F8EDE5" text-anchor="middle">Install with Helm</text><circle cx="960" cy="325" r="8" fill="#170A05" stroke="#E14817" stroke-width="3.5"/><text x="960" y="307" class="sans" font-size="14" font-weight="700" fill="#F8EDE5" text-anchor="middle">Operate</text><path id="hl1" d="M282,405 L1010,405" fill="none" stroke="#F2951C" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="1"/><rect x="1020" y="392" width="72" height="26" rx="4" fill="#F2951C"/><text x="1029" y="410" class="mono" font-size="12" font-weight="500" fill="#170A05" letter-spacing="1.2">USE IT</text><circle cx="560" cy="405" r="8" fill="#170A05" stroke="#F2951C" stroke-width="3.5"/><text x="560" y="387" class="sans" font-size="14" font-weight="700" fill="#F8EDE5" text-anchor="middle">Concepts</text><circle cx="760" cy="405" r="8" fill="#170A05" stroke="#F2951C" stroke-width="3.5"/><text x="760" y="387" class="sans" font-size="14" font-weight="700" fill="#F8EDE5" text-anchor="middle">Module reference</text><circle cx="960" cy="405" r="8" fill="#170A05" stroke="#F2951C" stroke-width="3.5"/><text x="960" y="387" class="sans" font-size="14" font-weight="700" fill="#F8EDE5" text-anchor="middle">API &amp; events</text><path id="hl2" d="M282,413 L400,413 L472,485 L1010,485" fill="none" stroke="#F8EDE5" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.85"/><rect x="1020" y="472" width="99" height="26" rx="4" fill="#F8EDE5"/><text x="1029" y="490" class="mono" font-size="12" font-weight="500" fill="#170A05" letter-spacing="1.2">CHANGE IT</text><circle cx="560" cy="485" r="8" fill="#170A05" stroke="#F8EDE5" stroke-width="3.5"/><text x="560" y="467" class="sans" font-size="14" font-weight="700" fill="#F8EDE5" text-anchor="middle">Architecture</text><circle cx="760" cy="485" r="8" fill="#170A05" stroke="#F8EDE5" stroke-width="3.5"/><text x="760" y="467" class="sans" font-size="14" font-weight="700" fill="#F8EDE5" text-anchor="middle">Build &amp; test</text><circle cx="960" cy="485" r="8" fill="#170A05" stroke="#F8EDE5" stroke-width="3.5"/><text x="960" y="467" class="sans" font-size="14" font-weight="700" fill="#F8EDE5" text-anchor="middle">Contributing</text><circle r="7" fill="#F8EDE5" filter="url(#hglow)" opacity="0"><animateMotion dur="6s" begin="0s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.3;1" calcMode="linear"><mpath href="#hl0"/></animateMotion><animate attributeName="opacity" values="0;1;1;0;0" keyTimes="0;.02;.28;.31;1" dur="6s" begin="0s" repeatCount="indefinite"/></circle><circle r="7" fill="#F8EDE5" filter="url(#hglow)" opacity="0"><animateMotion dur="6s" begin="2s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.3;1" calcMode="linear"><mpath href="#hl1"/></animateMotion><animate attributeName="opacity" values="0;1;1;0;0" keyTimes="0;.02;.28;.31;1" dur="6s" begin="2s" repeatCount="indefinite"/></circle><circle r="7" fill="#F8EDE5" filter="url(#hglow)" opacity="0"><animateMotion dur="6s" begin="4s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.3;1" calcMode="linear"><mpath href="#hl2"/></animateMotion><animate attributeName="opacity" values="0;1;1;0;0" keyTimes="0;.02;.28;.31;1" dur="6s" begin="4s" repeatCount="indefinite"/></circle><rect x="248" y="380" width="44" height="50" rx="22" fill="#F8EDE5" stroke="#170A05" stroke-width="3"/><text x="270" y="454" class="sans" font-size="15" font-weight="700" fill="#F8EDE5" text-anchor="middle">Start</text><text x="270" y="470" class="mono" font-size="11" fill="#F08B53" text-anchor="middle">5 minutes</text><g><animateTransform attributeName="transform" type="translate" values="0,0;0,-6;0,0" dur="2s" repeatCount="indefinite"/><path d="M270,370 c-14,-16 -14,-36 0,-36 c14,0 14,20 0,36z" fill="#E14817"/><circle cx="270" cy="346" r="5" fill="#170A05"/></g><text x="270" y="318" class="mono" font-size="11" fill="#E14817" text-anchor="middle" letter-spacing="2">YOU ARE HERE</text><text x="64" y="262" class="mono" font-size="12" fill="#87888A" letter-spacing="2.4">WHO RIDES</text><rect x="64" y="280" width="10" height="10" rx="2" fill="#E14817"/><text x="82" y="289" class="mono" font-size="12.5" fill="#F8EDE5" fill-opacity="0.85">Evaluator</text><rect x="64" y="302" width="10" height="10" rx="2" fill="#E14817"/><text x="82" y="311" class="mono" font-size="12.5" fill="#F8EDE5" fill-opacity="0.85">Operator</text><rect x="64" y="324" width="10" height="10" rx="2" fill="#F2951C"/><text x="82" y="333" class="mono" font-size="12.5" fill="#F8EDE5" fill-opacity="0.85">Developer</text><rect x="64" y="346" width="10" height="10" rx="2" fill="#F8EDE5"/><text x="82" y="355" class="mono" font-size="12.5" fill="#F8EDE5" fill-opacity="0.85">Contributor</text>
 <text x="64" y="598" class="mono" font-size="13" fill="#87888A">Apache-2.0 · Jekyll · GitHub Pages</text>
-<text x="1136" y="598" text-anchor="end" class="mono" font-size="13" fill="#F08B53">labs64.io/docs</text>
-<rect x="0" y="636" width="1200" height="4" fill="#E14817" opacity=".9">
-  <animate attributeName="width" dur="6.0s" repeatCount="indefinite" values="0;1200" calcMode="linear"/></rect>
-</g>
-<rect x=".5" y=".5" width="1199" height="639" rx="18" fill="none" stroke="#F8EDE5" stroke-opacity=".12"/>
-</svg>
+<text x="1136" y="598" class="mono" font-size="13" fill="#F08B53" text-anchor="end">labs64.io/docs</text>
+<rect x="0" y="636" width="1200" height="4" fill="#E14817" opacity=".9"><animate attributeName="width" dur="6s" repeatCount="indefinite" values="0;1200"/></rect>
+</g><rect x=".5" y=".5" width="1199" height="639" rx="18" fill="none" stroke="#F8EDE5" stroke-opacity=".12"/></svg>

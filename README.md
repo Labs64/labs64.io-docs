@@ -8,7 +8,7 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![📖 Documentation](https://img.shields.io/badge/📖-Documentation-AB6543.svg)](https://labs64.io/docs/)
 
-<p align="center"><img src="docs/assets/docs-hero.svg" alt="Docs: adopters, operators, contributors and AI agents read one site with a quickstart, deployment guides, per-module references and a contributor handbook, built with Jekyll and served at labs64.io/docs." width="880"></p>
+<p align="center"><img src="docs/assets/docs-hero.svg" alt="Docs: The docs as a metro map: from Start, the Run it, Use it and Change it lines lead to quickstart, install, operate, concepts, module reference, API, architecture, build and contributing, with llms.txt for AI agents." width="880"></p>
 
 [**Get started**](#get-started) · [Features](#features) · [Architecture](#architecture) · [AI agents](#using-docs-with-ai-agents) · [Ecosystem](#the-labs64io-ecosystem) · [Documentation](https://labs64.io/docs/) · [labs64.io](https://labs64.io)
 
