@@ -1,0 +1,16 @@
+# Ticking a box on this repository's Dependency Dashboard asks the Renovate runner to run now.
+# Why and how: Labs64/labs64.io-workspace .github/workflows/renovate-dashboard.yml. Identical in every
+# ecosystem repository (`just check-renovate-wiring`); needs the secret RENOVATE_TRIGGER_TOKEN.
+name: Labs64.IO - Renovate - Dashboard
+
+on:
+  issues:
+    types: [edited]
+
+permissions:
+  contents: read
+
+jobs:
+  run-renovate:
+    uses: Labs64/labs64.io-workspace/.github/workflows/renovate-dashboard.yml@v1
+    secrets: inherit
