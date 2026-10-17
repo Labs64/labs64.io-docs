@@ -104,7 +104,7 @@ curl -sS -i -X POST http://localhost:8080/audit/publish \
   -d '{"eventType":"user.login","sourceSystem":"keycloak","tenantId":"demo","extra":{"userId":"alice"}}'
 
 docker compose exec clickhouse clickhouse-client --user auditflow --password auditflow \
-  --query "SELECT event_type, source_system, tenant_id, user_id FROM audit.audit_events ORDER BY timestamp DESC LIMIT 5"
+  --query "SELECT event_type, source_system, tenant_id, user_id FROM audit.audit_events ORDER BY event_time DESC LIMIT 5"
 ```
 
 The row shows `user_id` as `***`: the demo configuration masks `extra.userId` at ingest, before the event reaches the broker or any destination.
@@ -141,7 +141,7 @@ docker compose exec clickhouse clickhouse-client --user auditflow --password aud
 
 ## Event fields
 
-`AuditEvent` requires only `eventType` and `sourceSystem`. `eventId` is optional: if you omit it the server assigns one and returns it in the `X-Audit-Event-Id` response header, and supplying a stable value makes retries idempotent. The server also assigns `timestamp` (receipt time); a client value is ignored.
+`AuditEvent` requires only `eventType` and `sourceSystem`. `eventId` is optional: if you omit it the server assigns one and returns it in the `X-Audit-Event-Id` response header, and supplying a stable value makes retries idempotent. The server also assigns `timestamp` (the receipt time); a client value is ignored. `eventTime` (when the action happened) is optional: see [Time fields](#time-fields-event-time-and-receipt-time).
 
 Everything your domain needs goes in `extra`, an open map. No key in it is required, and none is guaranteed. Every deployment defines its own field set, and keys AuditFlow does not recognise are delivered unchanged in the sink's metadata map, so an event never loses data by using your own names.
 
@@ -157,6 +157,23 @@ Four rules every bundled transformer and sink follows:
 | **Uniform extension** | Every bundled transformer takes the same `make_transform` call and environment mapping. |
 
 A domain-specific module may require its own keys, provided it documents them and gates on `eventType` first.
+
+### Time fields: event time and receipt time
+
+An event has exactly two times, and they mean different things:
+
+| | Event time | Receipt time |
+|---|---|---|
+| Field | `eventTime` | `timestamp` |
+| Means | when the audited action **happened** at the source | when AuditFlow **received** the event |
+| Set by | you; AuditFlow uses the receipt time when you omit it | AuditFlow only; a client value is ignored |
+| Use it for | reports, trends, "when did it happen" | arrival order, deduplication, an archive's date folders |
+
+The two are equal when you publish as the action happens, and differ for a backfill, a retried publish or a publisher whose clock is off. **Group reports on `eventTime`**: grouping on `timestamp` puts a backfill of two years of history into today's bucket. In ClickHouse, OpenSearch and Athena the same two times are `event_time` and `timestamp` (`eventtime` in Athena).
+
+Send `eventTime` when you publish later than the action (a queue, a batch import, an offline client). Leave it out when you publish at once: AuditFlow then sets it to the receipt time, so it is always present downstream. It is kept exactly as you send it, and it must be plausible: not more than 5 minutes after the receipt time (clock skew) and not older than 1095 days. Otherwise the event is rejected with `400 VALIDATION_ERROR` (in a batch, that event only), and the message names the limit. Operators change the limits with `auditflow.event-time.max-future` and `auditflow.event-time.max-age`.
+
+No other time belongs to an event. Delivery to a sink happens later, possibly hours later with retries, and is not recorded in it. [Which time each sink uses](./sinks-and-transformers/index.md#which-time-each-sink-uses).
 
 To promote your own keys, either build a transformer module on a bundled one:
 

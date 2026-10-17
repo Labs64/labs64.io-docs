@@ -16,6 +16,7 @@ All events are AuditFlow audit events with a common envelope:
 {
   "eventId": "uuid-string",
   "eventTime": "ISO-8601-string",
+  "timestamp": "ISO-8601-string",
   "eventType": "domain.entity.action",
   "sourceSystem": "string",
   "tenantId": "string",
@@ -23,6 +24,8 @@ All events are AuditFlow audit events with a common envelope:
   "extra": { ... }
 }
 ```
+
+`eventTime` is **when the action happened**; the publisher sets it, and AuditFlow uses the receipt time when it is omitted. `timestamp` is **when AuditFlow received the event**; AuditFlow sets it and ignores a client value. Reports group on `eventTime`; `timestamp` orders arrival and versions duplicates. Details and limits: [Time fields](../modules/auditflow/index.md#time-fields-event-time-and-receipt-time).
 
 ## Known Event Types
 

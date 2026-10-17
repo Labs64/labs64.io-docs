@@ -18,10 +18,10 @@ Sinks deliver events to destinations; transformers reshape or enrich an event be
 | `syslog_sink` | RFC 5424 syslog | one event at a time |
 | `loki_sink` | Grafana Loki | one push, equal label sets merged |
 | `opensearch_sink` | OpenSearch / Elasticsearch | one `_bulk` request |
-| `aws_s3_sink` | Amazon S3 | one JSON Lines object per partition folder |
+| `aws_s3_sink` | Amazon S3 | one JSON Lines object per partition folder (the receipt day) |
 | `aws_cloudwatch_sink` | Amazon CloudWatch Logs | one `PutLogEvents` call |
-| `gcs_sink` | Google Cloud Storage | one JSON Lines object per partition folder |
-| `azure_blob_sink` | Azure Blob Storage | one JSON Lines blob per partition folder |
+| `gcs_sink` | Google Cloud Storage | one JSON Lines object per partition folder (the receipt day) |
+| `azure_blob_sink` | Azure Blob Storage | one JSON Lines blob per partition folder (the receipt day) |
 | `datadog_sink` | Datadog Logs API | one request, up to 1000 entries |
 | `splunk_sink` | Splunk HTTP Event Collector | one request |
 | `snowflake_sink` | Snowflake (via the Python connector, not bundled) | one connection and one multi-row insert |
@@ -30,6 +30,21 @@ Sinks deliver events to destinations; transformers reshape or enrich an event be
 | `netlicensing_sink` | Licensing-platform integration: turns completed checkout transactions into licensee and license records; requires `extra.transaction` | one event at a time |
 
 The last column applies to pipelines with `batch.enabled: true`. `GET /registry` on the sink service reports the same per sink as `batch: true|false`.
+
+### Which time each sink uses
+
+An event has an **event time** (`eventTime`, when the action happened) and a **receipt time** (`timestamp`, when AuditFlow received it); see [Time fields](../index.md#time-fields-event-time-and-receipt-time). Every bundled sink and transformer uses them the same way, and none uses the moment of delivery.
+
+| Destination | Time used |
+|---|---|
+| ClickHouse, OpenSearch | both, as `event_time` and `timestamp`; reports group on `event_time` |
+| Loki, Splunk, syslog | the entry sits at the **event time** |
+| CloudWatch Logs | the entry sits at the **receipt time**: CloudWatch refuses entries older than 14 days, so an old `eventTime` stays inside the message |
+| S3, Google Cloud Storage, Azure Blob | folders and object names use the **receipt day** (UTC), so a publisher cannot choose where its data lands and a backfill lands in today's folder; `eventTime` is inside each object |
+| PostgreSQL | both inside `event_data`; the `inserted_at` column of the example table is the write time and is never a reporting axis |
+| Datadog, webhook, logging, Snowflake | the event as it is, with both times inside; the destination applies its own date handling (point Datadog's Log Date remapper at `eventTime` to date logs by event time) |
+
+To read an archive by the day things happened, filter on `eventTime` inside the objects: the date folders are the receipt day, and a late arrival sits in a later folder.
 
 On Kubernetes with the chart's NetworkPolicy enabled, the pod may only reach HTTPS (port 443) outside the platform services. A sink whose destination listens on another port (ClickHouse 8123 or 8443, PostgreSQL 5432, syslog, Splunk HEC 8088, Loki 3100, OpenSearch 9200) needs a matching `networkPolicy.extraEgress` rule in the chart values.
 
@@ -116,8 +131,8 @@ TTL toDateTime(event_time) + INTERVAL 1095 DAY;
 ```
 
 `timestamp` is server *receipt* time — AuditFlow assigns it, a client cannot override it.
-`event_time` is the *business* time the action happened at the source (the transformer falls back
-to `timestamp` when a publisher omits it), and it is the analytics axis: `PARTITION BY`, `ORDER BY`
+`event_time` is the *business* time the action happened at the source (AuditFlow sets it to the receipt
+time when a publisher omits it, so it is never empty), and it is the analytics axis: `PARTITION BY`, `ORDER BY`
 and `TTL` all key on `event_time`, not `timestamp`. Partitioning or grouping on `timestamp` instead
 silently breaks any backfill or replay, because a late-arriving event then lands in the wrong
 partition and the wrong retention window relative to when it actually happened.
@@ -199,5 +214,5 @@ Rules to preserve when you build a layer:
 
 - **Never add a domain key to the generic transformer or a domain column to the generic schema.** Extend with `make_transform()` and an `ALTER TABLE` script. A transformer takes no pipeline properties, so the module id selects a vocabulary: one module per domain.
 - **Every promoted key needs a column and every column a promoted key**, or the pairing silently half-works.
-- **`event_time` is the analytics axis**, `timestamp` is ingest time.
+- **`event_time` is the analytics axis**, `timestamp` is receipt time.
 - **Never redact a key that is promoted to a reporting dimension**: a redacted column reads as empty, not as an error.
