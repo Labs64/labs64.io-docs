@@ -19,7 +19,7 @@ If you have not run the Quickstart yet, do that first on a laptop. It takes five
 | A Kubernetes cluster where you can create namespaces and custom resource definitions | Everything | Routes use the Kubernetes Gateway API. The gateway is Traefik, which the chart can install for you |
 | An OIDC identity provider that supports the client-credentials grant | The gateway | Keycloak, Microsoft Entra ID, Auth0, Okta and similar. The claims that carry scopes and the tenant are configurable |
 | PostgreSQL | Payment Gateway, Checkout | One database per service: `payment_gateway`, `checkout` |
-| A RabbitMQ broker (AMQP 0-9-1) | AuditFlow | Self-hosted or a managed service |
+| A message broker: RabbitMQ (AMQP 0-9-1) or Amazon SQS | AuditFlow | RabbitMQ self-hosted or managed; SQS needs only an IAM role for AuditFlow. See [Choose a message broker](../modules/auditflow/deployment/index.md#choose-a-message-broker) |
 | A Redis-compatible store (Valkey or Redis) | AuditFlow, Payment Gateway | Used for deduplication and rate limiting, not as a system of record |
 | A DNS name and a TLS certificate | The gateway | Routes are served at `gateway.<your-domain>` |
 | A place to keep secrets | Everything | Plain Kubernetes Secrets work. Every module chart can read its secrets through External Secrets Operator instead |
@@ -192,11 +192,11 @@ The platform needs capabilities, not specific products. This is how they usually
 | Kubernetes | EKS | AKS | GKE | Any conformant cluster |
 | PostgreSQL | RDS for PostgreSQL | Azure Database for PostgreSQL | Cloud SQL for PostgreSQL | Bundled, or your own |
 | Redis-compatible store | ElastiCache (Valkey) | Azure Cache for Redis | Memorystore | Bundled, or your own |
-| RabbitMQ | Amazon MQ for RabbitMQ | Bundled, or a hosted RabbitMQ | Bundled, or a hosted RabbitMQ | Bundled, or your own |
+| Message broker (AuditFlow) | Amazon SQS, or Amazon MQ for RabbitMQ | Bundled, or a hosted RabbitMQ | Bundled, or a hosted RabbitMQ | Bundled RabbitMQ, or your own |
 | Secrets | Secrets Manager | Key Vault | Secret Manager | Kubernetes Secrets, Vault |
 | Identity | Any OIDC provider | Entra ID, or any OIDC provider | Any OIDC provider | Keycloak, or any OIDC provider |
 
-**On AWS**, the umbrella chart ships a reference profile, `values.aws.yaml`, for EKS with managed data stores and secrets read from AWS Secrets Manager through External Secrets Operator. You provision the infrastructure with the tool you prefer and pass its coordinates in a second values file; the header of `values.aws.yaml` lists exactly which ones. On this profile the gateway is installed first, as a release of its own:
+**On AWS**, the umbrella chart ships a reference profile, `values.aws.yaml`, for EKS with managed data stores, AuditFlow on Amazon SQS (through its IAM role) and secrets read from AWS Secrets Manager through External Secrets Operator. For Amazon MQ instead, set `auditflow.applicationYaml.auditflow.broker.type: rabbitmq` and the broker's host. You provision the infrastructure with the tool you prefer and pass its coordinates in a second values file; the header of `values.aws.yaml` lists exactly which ones. On this profile the gateway is installed first, as a release of its own:
 
 ```bash
 helm upgrade --install labs64io labs64io/labs64io-ecosystem -n labs64io \

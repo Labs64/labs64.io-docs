@@ -33,7 +33,7 @@ flowchart LR
 
 1. Gateway request rate, latency, and status codes.
 2. One service-health view per deployed service.
-3. RabbitMQ queue depth and consumer health for event-driven flows.
+3. Broker queue depth and consumer health for event-driven flows (RabbitMQ queues, or the SQS queues' visible messages), plus the age of the oldest DLQ entry on SQS, which deletes messages after 14 days.
 4. Database health, connections, and backup status for each stateful service.
 5. Sink delivery success and lag for AuditFlow pipelines.
 

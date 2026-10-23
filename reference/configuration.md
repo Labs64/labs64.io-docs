@@ -13,7 +13,7 @@ While individual modules document their specific configuration properties, this 
 | Component | Shared By | Configuration Strategy |
 |-----------|-----------|------------------------|
 | **Database Credentials** | All backend modules | Provisioned per module, injected via K8s Secrets. |
-| **RabbitMQ Connection** | AuditFlow | The only module with a broker dependency; credentials injected via `SPRING_RABBITMQ_USERNAME` and `SPRING_RABBITMQ_PASSWORD`. |
+| **Message broker** | AuditFlow | The only module with a broker dependency. `auditflow.broker.type`: `rabbitmq` (credentials injected via `SPRING_RABBITMQ_USERNAME` and `SPRING_RABBITMQ_PASSWORD`) or `sqs` (Amazon SQS, credentials from the pod's IAM role). See [Choose a message broker](../modules/auditflow/deployment/index.md#choose-a-message-broker). |
 | **Auth Gateway JWKS URL** | Auth Gateway, Checkout, Customer Portal | Standardized endpoint at `/auth/jwks` for token validation. |
 | **Observability (Tempo/Loki/Prometheus)** | All modules | OTel endpoint injected globally via `OTEL_EXPORTER_OTLP_ENDPOINT`. |
 
@@ -24,6 +24,8 @@ While individual modules document their specific configuration properties, this 
 | `SPRING_PROFILES_ACTIVE` | Selects the Spring Boot runtime profile. | Java services |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Points telemetry at the OpenTelemetry Collector. | Instrumented services |
 | `JAVA_TOOL_OPTIONS` | Supplies Java runtime options such as the telemetry agent. | Java services |
-| `SPRING_RABBITMQ_HOST` | Addresses the configured RabbitMQ broker. | AuditFlow |
+| `AUDITFLOW_BROKER_TYPE` | Selects the message broker: `rabbitmq` (default) or `sqs`. | AuditFlow |
+| `SPRING_RABBITMQ_HOST` | Addresses the configured RabbitMQ broker (`rabbitmq` only). | AuditFlow |
+| `AWS_REGION` | Region of the SQS queues when `auditflow.broker.sqs.region` is empty; set by IRSA / EKS Pod Identity. | AuditFlow (`sqs`) |
 
 Use Helm values to describe non-secret settings and Kubernetes Secret references for credentials. Module-specific variables remain documented on the relevant service page.

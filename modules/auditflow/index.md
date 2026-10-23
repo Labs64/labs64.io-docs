@@ -37,7 +37,7 @@ flowchart LR
 
     subgraph AuditFlow
         API[REST API<br/>redact + validate]
-        MQ[(RabbitMQ<br/>delivery queue, delay tiers, per-tenant DLQ)]
+        MQ[(RabbitMQ or Amazon SQS<br/>delivery queue, delays, per-tenant DLQ)]
         R[Router<br/>one delivery per matching pipeline]
         W[Delivery worker]
         T[Transformer service]
@@ -71,7 +71,7 @@ Key design decisions:
 - **The backend is both producer and consumer** of the same broker topic, which gives decoupling and buffering without a separate ingestion service.
 - **Pipelines are independent.** Each gets its own delivery message, retries and DLQ entry, so a failing destination never delays or repeats delivery to the others.
 - **Python services are stateless plugins.** They hold no broker connection or pipeline state; they receive a request, run a module function and return a result.
-- **RabbitMQ only.** AuditFlow relies on standard AMQP features (publisher confirms, durable queues, per-queue TTL with dead-letter exchanges), so no broker plugin is required. Kafka is not supported.
+- **RabbitMQ or Amazon SQS.** The broker is configuration (`auditflow.broker.type`): RabbitMQ with standard AMQP features only (publisher confirms, durable queues, per-queue TTL with dead-letter exchanges, no plugin), or Amazon SQS with no broker to run. Both give the same guarantees; the differences (event size, retention) are in [Choose a message broker](./deployment/index.md#choose-a-message-broker). Kafka is not supported.
 
 ## Quick Start
 
@@ -198,10 +198,15 @@ Configuration is provided through environment variables or Helm values.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `RABBITMQ_USERNAME` | RabbitMQ user. Required, no default. | none |
-| `RABBITMQ_PASSWORD` | RabbitMQ password. Required, no default. | none |
+| `AUDITFLOW_BROKER_TYPE` | Message broker: `rabbitmq` or `sqs` (`auditflow.broker.type`). | `rabbitmq` |
+| `RABBITMQ_USERNAME` | RabbitMQ user. Required with `rabbitmq`, no default. | none |
+| `RABBITMQ_PASSWORD` | RabbitMQ password. Required with `rabbitmq`, no default. | none |
+| `AUDITFLOW_BROKER_SQS_REGION` | AWS region of the SQS queues; empty uses the AWS SDK default. | empty |
+| `AUDITFLOW_BROKER_SQS_QUEUE_PREFIX` | Name prefix of the SQS queues. | `labs64-audit-` |
 | `AUDITFLOW_REDACTION_HASH_KEY` | Secret key for `hash` redaction rules, at least 32 characters. | none |
 | `AUDITFLOW_PROMOTED_KEYS` | JSON object mapping `extra` keys to columns for the transformer. | none |
+
+On SQS, credentials come from the AWS SDK default chain (an IAM role on EKS), never from configuration; see [Amazon SQS](./deployment/index.md#amazon-sqs) for the queues and the IAM policy.
 
 Tenant pipelines are read from the directory set by the `tenants.source.local-dir.path` property (`/config/tenants` by default; the compose stack mounts `./tenants`) or, on Kubernetes, from ConfigMaps labelled `auditflow.io/tenant`. Changes are picked up live, with no restart. See [Configuring pipelines](./configuring-pipelines/index.md) for the tenant file format, conditions and redaction, and [Deployment](./deployment/index.md) for Kubernetes and managed infrastructure.
 
@@ -213,7 +218,7 @@ The contract is OpenAPI-first and frozen within v1: changes are additive-only, a
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/audit/publish` | `POST` | Publish one event. Answers `200` only after the broker has confirmed it. |
+| `/audit/publish` | `POST` | Publish one event. Answers `200` only after the broker has stored it. |
 | `/audit/publish/batch` | `POST` | Publish up to 100 events; the answer carries a result per event. |
 | `/actuator/pipelines/<tenantId>` | `GET` | Deployed pipelines, effective retry and batch settings, warnings. |
 | `/actuator/pipelines/<tenantId>/dry-run` | `POST` | Show which pipelines a sample event would reach and why. |
@@ -221,7 +226,7 @@ The contract is OpenAPI-first and frozen within v1: changes are additive-only, a
 | `/actuator/health` | `GET` | Health check. |
 | `/swagger-ui.html` | `GET` | Interactive API documentation. |
 
-Publish errors an integration should handle: `400` invalid event, `403 TENANT_NOT_PROVISIONED` or `TENANT_DISABLED`, `429 TENANT_RATE_LIMITED` with `Retry-After`, and `503` when the broker did not confirm (retry with the same `eventId`).
+Publish errors an integration should handle: `400` invalid event, `403 TENANT_NOT_PROVISIONED` or `TENANT_DISABLED`, `413` an event larger than the gateway or the broker accepts (about 1 MiB on Amazon SQS; not retryable, in a batch a `VALIDATION_ERROR` for that event), `429 TENANT_RATE_LIMITED` with `Retry-After`, and `503` when the broker did not store the event (retry with the same `eventId`).
 
 ## Examples
 
@@ -243,7 +248,7 @@ More: [Sinks and transformers](./sinks-and-transformers/index.md#adding-your-own
 
 ## Operations
 
-AuditFlow scales horizontally. Increase `replicaCount` in your Helm values to process more events concurrently; RabbitMQ distributes deliveries across the replicas. Running more than one replica requires Redis, so that rate limits and deduplication are shared. See [Running without Redis](./deployment/index.md#running-without-redis).
+AuditFlow scales horizontally. Increase `replicaCount` in your Helm values to process more events concurrently; the broker distributes deliveries across the replicas. Running more than one replica requires Redis, so that rate limits and deduplication are shared. See [Running without Redis](./deployment/index.md#running-without-redis).
 
 ## Troubleshooting
 
@@ -255,3 +260,5 @@ AuditFlow scales horizontally. Increase `replicaCount` in your Helm values to pr
 | A sink never receives data on Kubernetes | NetworkPolicy allows only HTTPS egress | Add a matching `networkPolicy.extraEgress` rule for the sink's port. |
 | Python plugin fails | Syntax error, or wrong function signature | Check the sink or transformer service logs; `GET /registry` lists modules that failed to import. |
 | RabbitMQ connection error | Bad credentials or network | Verify `RABBITMQ_USERNAME`, `RABBITMQ_PASSWORD` and the broker host. |
+| SQS `AccessDenied` or `QueueDoesNotExist` | IAM role or queue prefix | The pod's role needs the [SQS policy](./deployment/index.md#amazon-sqs) on `<queue-prefix>*`; with `create-queues: false` every queue must exist. `/actuator/health` reports the `sqs` component. |
+| `413` from `/audit/publish` on SQS | Event above about 1 MiB | Send less (for example trim `extra`); SQS cannot carry larger messages. |

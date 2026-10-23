@@ -16,11 +16,11 @@ Used by developers and evaluators. The entire ecosystem is deployed to a lightwe
 
 ### 2. AWS QA / Staging / Production
 The recommended path for production workloads.
-- **Tooling:** EKS, RDS (PostgreSQL), Amazon MQ (RabbitMQ), Terraform and the `labs64io-ecosystem` umbrella Helm chart.
+- **Tooling:** EKS, RDS (PostgreSQL), Amazon SQS (AuditFlow's message broker; Amazon MQ for RabbitMQ also works), Terraform and the `labs64io-ecosystem` umbrella Helm chart.
 - **Use Case:** High availability, secure, and scalable deployments.
 
 ### 3. Bring Your Own Infrastructure (BYO)
-Labs64.IO is agnostic to the underlying cloud provider. As long as you provide a Kubernetes cluster, a PostgreSQL-compatible database, and a RabbitMQ broker, the Helm charts will function correctly.
+Labs64.IO is agnostic to the underlying cloud provider. As long as you provide a Kubernetes cluster, a PostgreSQL-compatible database, and a message broker for AuditFlow (RabbitMQ, or Amazon SQS), the Helm charts will function correctly.
 
 ## Helm Chart Repository
 

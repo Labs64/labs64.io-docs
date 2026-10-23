@@ -45,7 +45,7 @@ On success, the Auth Gateway injects a trusted header contract that all upstream
 
 ## Event-Driven Architecture
 
-While modules use synchronous REST calls for direct actions (e.g., initiating a payment), audit events are sent to AuditFlow over its HTTP API by an authenticated service principal. AuditFlow buffers them on its own RabbitMQ broker and routes them per tenant.
+While modules use synchronous REST calls for direct actions (e.g., initiating a payment), audit events are sent to AuditFlow over its HTTP API by an authenticated service principal. AuditFlow buffers them on its own message broker (RabbitMQ or Amazon SQS) and routes them per tenant.
 
 ```mermaid
 flowchart LR
@@ -55,7 +55,7 @@ flowchart LR
     
     subgraph AuditFlow
         API[AuditFlow API]
-        MQ[(RabbitMQ)]
+        MQ[(RabbitMQ / Amazon SQS)]
         AF[Delivery workers]
     end
     
@@ -155,7 +155,7 @@ flowchart TB
     subgraph Production
         EKS[AWS EKS / BYO K8s] -->|Helm Deploy| E2[Full Ecosystem High Availability]
         E2 --> AWS_RDS[(AWS RDS)]
-        E2 --> AWS_MQ[(Amazon MQ)]
+        E2 --> AWS_MQ[(Amazon SQS)]
     end
 ```
 

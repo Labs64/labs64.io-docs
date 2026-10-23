@@ -18,8 +18,13 @@ Route events selectively using rich field-level condition rules on any JSON fiel
 ## Asynchronous, decoupled processing
 Every audit event is buffered on the message broker before processing. Your calling service gets an immediate acknowledgement and continues — the pipeline runs on a separate consumer thread. API latency stays flat under burst load, and the broker absorbs traffic spikes without back-pressure reaching upstream services.
 
-## RabbitMQ transport, self-hosted or managed
-The event backbone is RabbitMQ (AMQP 0-9-1, 4.x): the in-cluster broker of the Helm chart, Amazon MQ for RabbitMQ, CloudAMQP or any other RabbitMQ service. AuditFlow relies on standard AMQP features only (publisher confirms, durable queues, per-queue TTL with dead-letter exchanges), so no broker plugin is required. Kafka is not supported: delayed redelivery and per-tenant dead-lettering would need a different design there.
+## RabbitMQ or Amazon SQS, by configuration
+The event backbone is a choice of configuration (`auditflow.broker.type`), with the same delivery guarantees on either:
+
+- **RabbitMQ** (AMQP 0-9-1, 4.x): the in-cluster broker of the Helm chart, Amazon MQ for RabbitMQ, CloudAMQP or any other RabbitMQ service. AuditFlow relies on standard AMQP features only (publisher confirms, durable queues, per-queue TTL with dead-letter exchanges), so no broker plugin is required.
+- **Amazon SQS**: no broker to run, size or patch; AuditFlow authenticates with its IAM role and creates each tenant's dead-letter queue on first use. SQS caps an event at about 1 MiB and keeps messages, dead-letter entries included, for at most 14 days.
+
+Kafka is not supported: delayed redelivery and per-tenant dead-lettering would need a different design there. Details and the setup of each: [Choose a message broker](../deployment/index.md#choose-a-message-broker).
 
 ## Multi-destination fan-out
 A single event can be delivered to multiple sinks simultaneously — log it to Loki, archive it to S3, and alert via webhook, all from one publish call. Each pipeline is independent: different conditions, different transformers, different destinations, evaluated in parallel.
@@ -37,7 +42,7 @@ Declare which fields to mask (`***`), hash or drop entirely. A hashed value is a
 Each event carries an `eventId`. The consumer checks a deduplication store before processing: duplicate deliveries from broker redelivery, network retries, or at-least-once producers are silently suppressed. Uses Redis (Valkey) for distributed dedup, in the local stack as in Kubernetes; an in-memory store is available for single-process runs without Redis. Claim TTL and completion TTL are independently configurable.
 
 ## Resilience and fault tolerance
-- **End-to-end acknowledgement.** `/audit/publish` answers 200 only after the broker has confirmed it stored the event (publisher confirms, durable queue, persistent message). If the broker cannot confirm, the client gets 503 and retries with the same `eventId`.
+- **End-to-end acknowledgement.** `/audit/publish` answers 200 only after the broker has confirmed it stored the event (RabbitMQ: publisher confirms, durable queue, persistent message; SQS: a successful `SendMessage`). If the broker cannot confirm, the client gets 503 and retries with the same `eventId`.
 - **Per-pipeline delivery.** Each event becomes one delivery per matching pipeline, so a slow or failing destination never holds up the others or causes duplicates in them.
 - **Retries over hours, per pipeline.** A failed delivery comes back after growing delays (5 s, 30 s, 2 min, 10 min, 30 min, 1 h, then every 3 h) until it succeeds, the pipeline's `retry.maxAttempts` is used up, or `retry.maxAge` (default 24 h) has passed. A ten-minute sink outage is ridden out without operator action.
 - **Backpressure, not failure.** Throttling (pipeline rate limit, a tenant's in-flight cap, a full bulkhead) defers a delivery for a few seconds without spending an attempt.
