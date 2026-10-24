@@ -138,6 +138,8 @@ flowchart LR
 
 This ensures zero instrumentation drift between the application code and the telemetry collected.
 
+[Monitoring & Observability](../operate-manage/monitoring-observability.md) shows how to collect these signals in each deployment, and which alerts tell you that events are not arriving.
+
 ## Deployment Architecture
 
 Labs64.IO provides flexibility from local testing to production deployments.
