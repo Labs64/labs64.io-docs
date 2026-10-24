@@ -40,16 +40,6 @@ sequenceDiagram
     T->>M: Forwarded Request
 ```
 
-### What a request goes through
-
-1. **Traefik** receives the request and asks the gateway to decide (ForwardAuth, `GET /auth`).
-2. The gateway **verifies the token**: signature (RS256, keys from your provider's JWKS), issuer, audience and expiry.
-3. It **finds the route** in the manifests generated from each module's OpenAPI contract. No policy for the route means the request is denied.
-4. It asks **Cerbos** whether this caller may perform this action on this resource.
-5. If allowed, it returns the identity as headers (`X-Auth-User`, `X-Auth-Scopes`, `X-Auth-Tenant`, `X-Request-ID`) and Traefik forwards the request.
-
-The modules behind the gateway trust those headers, which is exactly why they must never be reachable around it.
-
 ## Quick Start
 
 The Auth Gateway is part of every Kubernetes install; you do not start it separately. The [Quickstart](../../getting-started/quickstart.md) installs it in about five minutes and walks through the three answers it gives.
@@ -157,21 +147,6 @@ curl -i localhost:8081/auth -H "X-Forwarded-Method: GET" -H "X-Forwarded-Uri: /p
 # HTTP/1.1 403 Forbidden
 # {"code":"FORBIDDEN","message":"No auth policy configured for: /payment-gateway/api/v1/payments", ...}
 ```
-
-### Using the gateway with AI agents
-
-The gateway is what makes it safe to let an agent call the platform: the agent gets a token with only the scopes it needs, and the gateway enforces them.
-
-- **Give an agent its own client.** Use a service principal (client credentials) with a minimal scope set; the gateway turns the token into `X-Auth-User: svc:<client>` and `X-Auth-Scopes` for the module.
-- **Predictable refusals.** `401` means no or invalid token; `403` means a valid token without the required scope, or no policy for the route. An agent can tell which and stop retrying.
-- **Discover the surface.** The aggregated Swagger UI lists every installed module's OpenAPI contract.
-
-## Before you go live
-
-- **Use your own identity provider.** The demo provider in the Quickstart issues a valid token to anyone who asks.
-- **Do not expose modules around the gateway.** Network policies should allow module traffic only from the gateway.
-- **Check that every route has a policy.** The gateway denies unknown routes, so a missing manifest shows up as `403`, not as an open door.
-- **Review scopes against your provider's claims.** `TOKEN_SCOPES_CLAIM_PATHS` must match where your provider puts scopes or roles.
 
 ## Operations
 

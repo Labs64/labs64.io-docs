@@ -26,6 +26,25 @@ If you have not run the Quickstart yet, do that first on a laptop. It takes five
 
 You do not have to bring all of it on day one. The chart can run PostgreSQL, RabbitMQ and Valkey inside the cluster, with persistent volumes, until you move them to managed services.
 
+## How the charts fit together
+
+```
+  ┌──────────────────────────────────────────────────────────────────────┐
+  │ install.sh  ·  helm install labs64io/labs64io-ecosystem               │
+  └──────────────────────────────────┬───────────────────────────────────┘
+                                     │ umbrella chart
+        ┌─────────────┬──────────────┼──────────────┬──────────────┐
+  ┌─────▼─────┐ ┌─────▼──────┐ ┌─────▼──────┐ ┌─────▼──────┐ ┌─────▼──────┐
+  │ api-      │ │ authz-pdp  │ │ auditflow  │ │ payment-   │ │ checkout · │
+  │ gateway   │ │ (Cerbos)   │ │            │ │ gateway    │ │ portal     │
+  └─────┬─────┘ └────────────┘ └─────┬──────┘ └─────┬──────┘ └────────────┘
+        │ Traefik + Gateway API      │ RabbitMQ      │ PostgreSQL · Redis
+        ▼                            ▼               ▼
+  your identity provider        your infrastructure (or bundled for evaluation)
+```
+
+Deployment modes, capability requirements and the AWS reference profile are described in the Helm charts repository's [`docs/reference.md`](https://github.com/Labs64/labs64.io-helm-charts/blob/master/docs/reference.md).
+
 ## 1. Add the chart repository
 
 ```bash
@@ -181,7 +200,7 @@ Every module chart installs on its own, so you can adopt a single capability and
 helm upgrade --install auditflow labs64io/auditflow -n labs64io -f auditflow-values.yaml
 ```
 
-Module charts bundle no data stores; you point each at yours. The [Helm charts repository](https://github.com/Labs64/labs64.io-helm-charts/blob/master/docs/reference.md#building-box-cherry-pick-your-modules) lists what each module needs, the routes it exposes, and a commented production example per module under `overrides/<module>/values.prod-example.yaml`.
+Module charts bundle no data stores; you point each at yours. The [Helm charts repository](https://github.com/Labs64/labs64.io-helm-charts#building-box-cherry-pick-your-modules) lists what each module needs, the routes it exposes, and a commented production example per module under `overrides/<module>/values.prod-example.yaml`.
 
 ## AWS, Azure, Google Cloud and on-premises
 

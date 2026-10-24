@@ -23,6 +23,23 @@ Unit tests for a module live in that module's repository. This suite needs a run
 | Auth enforcement | A generated matrix across every route: the scopes it should and should not accept |
 | Across modules | A payment appearing in AuditFlow (local cluster only, via correlation-scoped logs) |
 
+## Architecture
+
+```
+  ┌────────────────────────────────────────────┐
+  │ Robot Framework suite   tests/ + resources/│
+  └──────────────┬──────────────┬──────────────┘
+                 │ mint token   │ HTTP
+        ┌────────▼─────┐   ┌────▼───────────────────────────────┐
+        │ mock OIDC or │   │ Gateway edge: Traefik + auth proxy │
+        │ Keycloak     │   └────┬───────────────────────┬───────┘
+        └──────────────┘        │                       │
+                       ┌────────▼───────┐      ┌────────▼────────┐
+                       │ AuditFlow      │      │ Payment Gateway │
+                       └────────────────┘      └─────────────────┘
+  results: output.xml · log.html · report.html · CI job summary
+```
+
 ## Run the suite
 
 Needs Python 3.14:

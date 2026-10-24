@@ -246,15 +246,6 @@ Reference it from a pipeline with `transformer.name: mask`. For redaction that m
 
 More: [Sinks and transformers](./sinks-and-transformers/index.md#adding-your-own-sink-or-transformer).
 
-### Using AuditFlow from an AI agent
-
-AuditFlow gives an agent a durable record of what it did, with one HTTP call per action and no SDK.
-
-- **Emit audit events from an agent.** `POST /audit/publish` (or `/audit/publish/batch`, up to 100 events) with `eventType` (for example `agent.tool.called`), `sourceSystem` (the agent's name) and the details in `extra`. Fields listed in your redaction rules are removed before the event is stored anywhere.
-- **Machine-readable contract.** The OpenAPI v1 spec is served at `/v3/api-docs`. It is additive-only within v1, so generated clients and tool definitions stay valid.
-- **Errors an agent can act on.** See the publish errors under [REST APIs](#rest-apis); on `503` retry with the same `eventId` and duplicates are suppressed.
-- **Check routing before relying on it.** `POST /actuator/pipelines/<tenantId>/dry-run` shows which pipelines a sample event would reach and why.
-
 ## Operations
 
 AuditFlow scales horizontally. Increase `replicaCount` in your Helm values to process more events concurrently; the broker distributes deliveries across the replicas. Running more than one replica requires Redis, so that rate limits and deduplication are shared. See [Running without Redis](./deployment/index.md#running-without-redis).

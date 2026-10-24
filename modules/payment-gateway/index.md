@@ -42,6 +42,14 @@ sequenceDiagram
     PG--)AF: payment.* events (HTTP, as a service principal)
 ```
 
+The repository is split into three Maven modules:
+
+| Module | Stack | Role |
+|---|---|---|
+| `payment-gateway-api` | Java 17, OpenAPI | Canonical contract and validated shared models |
+| `payment-gateway-be` | Java 25, Spring Boot 4 | REST API, idempotency, webhooks, provider registry |
+| `payment-gateway-providers` | Java 25 | The provider SPI and one module per PSP (`noop`, `paypal`, `stripe`) |
+
 ## Quick Start
 
 The Payment Gateway is installed by the [Quickstart](../../getting-started/quickstart.md) and by the [full local ecosystem](../../getting-started/run-the-full-ecosystem-locally.md). With a token from either guide, list the providers configured for your tenant:
@@ -215,25 +223,6 @@ POST /payments
 POST /payments/{paymentId}/pay          Idempotency-Key: order-1001
 # -> payment.status CLOSED, paymentTransaction.status SUCCESS
 ```
-
-### Using Payment Gateway from an AI agent
-
-Payment Gateway gives an agent a payments API that is safe to call more than once.
-
-- **Machine-readable contract.** The OpenAPI v1 spec is served by the running service; generated clients and tool definitions work against it directly.
-- **Retries are safe.** Always send an `Idempotency-Key` on `POST /payments/{id}/pay`; an agent that times out and retries gets the original transaction, not a second charge.
-- **Least privilege.** Operations require scopes such as `payment:write` and `payment:pay`; give an agent only the scopes its task needs.
-- **Discover what a tenant can use.** `GET /payment-definitions` lists supported providers; `GET /payment-providers` lists the tenant's configured ones.
-
-## Before you take real payments
-
-The Docker path above is for evaluation. A few things matter before real money flows:
-
-- **Put it behind the API Gateway.** The service trusts the `X-Auth-*` headers it receives; without a gateway that authenticates callers, anyone who can reach it can claim any identity.
-- **Protect provider credentials.** They live in each tenant's provider configuration: restrict who can read and write `/payment-providers`, and keep the database encrypted and backed up.
-- **Make webhooks reachable and verified.** Providers must be able to reach `/providers/{provider}/webhooks`, and each provider's signing secret must be configured so signatures are checked.
-- **Test with the provider's sandbox first.** Stripe and PayPal both have test modes; the [Stripe and PayPal demo runbook](https://github.com/Labs64/labs64.io-payment-gateway/blob/master/examples/payment-gateway-stripe-paypal-demo.md) walks through them.
-- **Always send an `Idempotency-Key`** from the code that calls `pay`.
 
 ## Operations
 

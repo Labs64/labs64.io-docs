@@ -32,6 +32,25 @@ After `just clone`, every repository sits next to the workspace. Open them all a
 
 All `just` recipes run from `labs64.io-workspace/`. The other repositories are mounted as modules, so `just helm-charts <recipe>` and `just tests <recipe>` run in those repositories without a `cd`. The workspace's [`docs/reference.md`](https://github.com/Labs64/labs64.io-workspace/blob/master/docs/reference.md) lists every command (versions, releases, dependency updates) and [`docs/justfiles.md`](https://github.com/Labs64/labs64.io-workspace/blob/master/docs/justfiles.md) explains how every justfile is organised.
 
+## How the workspace fits together
+
+```
+  ┌──────────────────────────────────────────────────────────────────┐
+  │ labs64.io-workspace      justfile · dev container · scripts      │
+  └───────┬──────────────────────────────────────────────────────────┘
+          │ just clone                          │ just up
+  ┌───────▼─────────────────────────────┐ ┌─────▼────────────────────────────┐
+  │ ../ every ecosystem repository      │ │ builder container                │
+  │ auditflow · checkout · helm-charts  │ │ builds first-party images        │
+  │ payment-gateway · authproxy · …     │ └─────┬────────────────────────────┘
+  └─────────────────────────────────────┘       │ push
+                                          ┌─────▼────────────┐   ┌────────────┐
+                                          │ k3d + registry   │──►│ platform   │
+                                          │ (Docker)         │   │ gateway.   │
+                                          └──────────────────┘   │ localhost  │
+                                                                 └────────────┘
+```
+
 ## Working across repositories
 
 1. Start in the workspace when you need to run or change the ecosystem as a whole.

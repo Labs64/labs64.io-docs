@@ -179,20 +179,6 @@ POST /purchase-orders/{id}/checkout
 
 The response carries the `transaction` (status `PENDING`) and `nextAction` (`NONE`). Send `consents` and `extra` explicitly: leaving them out currently returns `500`.
 
-### Using Checkout from an AI agent
-
-Checkout turns a basket into a validated, auditable order that an agent can create and finalize with plain REST.
-
-- **Machine-readable contract.** The OpenAPI v1 spec is served by the running API; generate a client or tool definition from it.
-- **Least privilege.** Operations require scopes such as `purchase-order:write` and `purchase-order:checkout`; give an agent only what its task needs.
-- **Send complete bodies.** `consents` and `extra` must be present (use `{}`); omitting them currently returns `500` rather than a validation error.
-
-## Before you go live
-
-- **Put it behind the API Gateway.** The API trusts the `X-Auth-*` headers it receives; without a gateway that authenticates callers, anyone who can reach it can claim any identity.
-- **Know the scope.** Checkout records the transaction as `PENDING` and does not hand it to the Payment Gateway, so no payment is taken by this module alone.
-- **Run the policy engine with matching policies.** Authorization cannot be switched off for this module; regenerate the policies whenever the API contract changes.
-
 ## Operations
 
 Checkout needs PostgreSQL for its state and a reachable Cerbos policy engine whose policies were generated from the same API contract version. Back up the database regularly and monitor connection pool metrics through Actuator.

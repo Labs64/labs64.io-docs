@@ -10,7 +10,7 @@
 
 <p align="center"><img src="docs/assets/docs-hero.svg" alt="Docs: The docs as a metro map: from Start, the Run it, Use it and Change it lines lead to quickstart, install, operate, concepts, module reference, API, architecture, build and contributing, with llms.txt for AI agents." width="880"></p>
 
-[Why Docs?](#why-docs) · [Documentation](https://labs64.io/docs/) · [Build and test](#build-and-test) · [Ecosystem](#the-labs64io-ecosystem) · [labs64.io](https://labs64.io)
+[**Get started**](https://labs64.io/docs/getting-started/) · [Features](#features) · [AI agents](#using-docs-with-ai-agents) · [Ecosystem](#the-labs64io-ecosystem) · [Documentation](https://labs64.io/docs/) · [labs64.io](https://labs64.io)
 
 > [!NOTE]
 > This repository owns technical reference and onboarding, not marketing. Module status and versions come from the website's `_data/modules.yml` and are never restated in pages.
@@ -34,36 +34,58 @@ Good documentation is read by people who are in the middle of something: trying 
 - You are looking for marketing or positioning: that lives on [labs64.io](https://labs64.io).
 - You want internal design records: those are in a private repository.
 
-## Documentation
+## Features
 
-The published site lives at **[labs64.io/docs](https://labs64.io/docs/)**. This repository is its source: technical reference and onboarding for Labs64.IO, not marketing.
+- **Adopter guides**: quickstart, one module, your own cluster, the whole ecosystem from source, troubleshooting.
+- **Module references**: AuditFlow, Auth Gateway, Checkout, Payment Gateway and Customer Portal, each with capabilities, API, configuration and operations.
+- **Contributor handbook**: build and test a module, the OpenAPI-first workflow, workspace layout.
+- **Diagrams as code**: Mermaid in any page.
+- **Machine-readable**: `llms.txt` and full-text exports for agents.
+- **Docker-first**: preview, build and link-check without installing Ruby.
 
-## Build and test
+## Where things live
 
-```bash
-just serve       # preview at http://localhost:4000/docs/ (Docker)
-just build       # one-off production build: run it before committing
-```
+| You want… | Look in |
+|---|---|
+| The five-minute path | [`getting-started/quickstart.md`](getting-started/quickstart.md) |
+| To choose how to run it | [`getting-started/`](getting-started/index.md) |
+| A module's API, configuration and operations | [`modules/<module>/`](modules/index.md) |
+| How it fits together | [`introduction/architecture.md`](introduction/architecture.md) |
+| To change the code | [`development/contributing.md`](development/contributing.md) |
 
-Needs Docker. Pages are Markdown under `modules/<id>/index.md`; cross-link with relative `.md` paths. The page conventions, the link-checking steps and how the site is deployed are in `AGENTS.md`. Working on the code with an AI agent? [`AGENTS.md`](AGENTS.md) and [`CLAUDE.md`](CLAUDE.md) describe the layout, conventions and checks.
+The published site is at [labs64.io/docs](https://labs64.io/docs/).
+
+## Using Docs with AI agents
+
+The documentation is also written to be read by agents.
+
+- **Plain Markdown, stable URLs.** Every page is a Markdown file under a predictable path.
+- **`llms.txt`.** A machine-readable index of the site is published for agent consumers.
+- **Docs follow the code.** Pages describe what ships; an agent changing a module should update its page in the same change.
+- **Working on the docs with an agent?** [`AGENTS.md`](AGENTS.md) and [`CLAUDE.md`](CLAUDE.md) describe conventions and verification.
 
 ## The Labs64.IO Ecosystem
 
-This repository is part of the [Labs64.IO Ecosystem](https://labs64.io): open-source building blocks for secure commerce platforms. Every module is documented at [labs64.io/docs](https://labs64.io/docs/).
+Docs is one module of the [Labs64.IO Ecosystem](https://labs64.io); [every module is documented here](https://labs64.io/docs/).
 
-| Module | What it does |
-|---|---|
-| [**AuditFlow**](https://github.com/Labs64/labs64.io-auditflow) | Publish once, route anywhere, lose nothing |
-| [**Auth Gateway**](https://github.com/Labs64/labs64.io-authproxy) | One authenticated edge for every module |
-| [**Payment Gateway**](https://github.com/Labs64/labs64.io-payment-gateway) | One API across multiple payment providers |
-| [**Checkout**](https://github.com/Labs64/labs64.io-checkout) | Whitelabel checkout and order workflow |
-| [**Customer Portal**](https://github.com/Labs64/labs64.io-customer-portal) | Self-service portal for your customers |
-
-Built on [Commons](https://github.com/Labs64/labs64.io-commons), deployed with [Helm Charts](https://github.com/Labs64/labs64.io-helm-charts), developed in the [Workspace](https://github.com/Labs64/labs64.io-workspace), verified by [Tests](https://github.com/Labs64/labs64.io-tests) and documented in [Docs](https://github.com/Labs64/labs64.io-docs). Also from Labs64: [NetLicensing](https://netlicensing.io) for licensing-as-a-service and [GuideChimp](https://www.labs64.com/guidechimp/) for guided product tours.
+| Module | What it does | Link |
+|---|---|---|
+| **AuditFlow** | Audit-event routing pipeline | [labs64.io-auditflow](https://github.com/Labs64/labs64.io-auditflow) |
+| **API Gateway** | Authenticating, policy-enforcing edge for all modules | [labs64.io-authproxy](https://github.com/Labs64/labs64.io-authproxy) |
+| **Payment Gateway** | One API over multiple payment providers | [labs64.io-payment-gateway](https://github.com/Labs64/labs64.io-payment-gateway) |
+| **Checkout** | Embeddable, brandable checkout | [labs64.io-checkout](https://github.com/Labs64/labs64.io-checkout) |
+| **Customer Portal** | Customer self-service UI | [labs64.io-customer-portal](https://github.com/Labs64/labs64.io-customer-portal) |
+| **Commons** | Shared Java and Python libraries | [labs64.io-commons](https://github.com/Labs64/labs64.io-commons) |
+| **Helm Charts** | Kubernetes deployment for every module | [labs64.io-helm-charts](https://github.com/Labs64/labs64.io-helm-charts) |
+| **Workspace** | Dev container and multi-repo tooling | [labs64.io-workspace](https://github.com/Labs64/labs64.io-workspace) |
+| **Tests** | Cross-module regression suite | [labs64.io-tests](https://github.com/Labs64/labs64.io-tests) |
+| **Docs** | Published documentation | [labs64.io-docs](https://github.com/Labs64/labs64.io-docs) |
+| **NetLicensing** | Licensing-as-a-Service: license and entitlement management | [netlicensing.io](https://netlicensing.io) |
+| **GuideChimp** | Interactive guided product tours | [labs64.com/guidechimp](https://www.labs64.com/guidechimp/) |
 
 ## Contributing
 
-We would love your help. Found a typo, a stale command or a missing explanation? A one-line fix is a real contribution here. Fork the repository, make your change on a branch, run the checks described in [`AGENTS.md`](AGENTS.md) and open a pull request. Not sure whether an idea fits? Open an issue first.
+We would love your help. Found a typo, a stale command or a missing explanation? A one-line fix is a real contribution here. Fork the repository, make your change on a branch, run the checks described in [`AGENTS.md`](AGENTS.md) and open a pull request. Not sure whether an idea fits? Open an issue first and we will talk it through; that is a perfectly good way to start.
 
 ## License
 
