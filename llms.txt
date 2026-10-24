@@ -8,6 +8,7 @@ Labs64.IO is a modular digital commerce platform with independently deployable s
   - What is Labs64.IO?: /docs/introduction/what-is-labs64-io.html
   - Core Concepts: /docs/introduction/core-concepts.html
   - Architecture Overview: /docs/introduction/architecture.html
+  - Using Labs64.IO with AI agents: /docs/introduction/ai-agents.html
 - Get Started: /docs/getting-started/
   - Quickstart (one script, any Kubernetes cluster, about five minutes): /docs/getting-started/quickstart/
   - Run One Module Locally: /docs/getting-started/run-one-module-locally/

@@ -10,7 +10,7 @@
 
 <p align="center"><img src="docs/assets/docs-hero.svg" alt="Docs: The docs as a metro map: from Start, the Run it, Use it and Change it lines lead to quickstart, install, operate, concepts, module reference, API, architecture, build and contributing, with llms.txt for AI agents." width="880"></p>
 
-[**Get started**](https://labs64.io/docs/getting-started/) · [Features](#features) · [AI agents](#using-docs-with-ai-agents) · [Ecosystem](#the-labs64io-ecosystem) · [Documentation](https://labs64.io/docs/) · [labs64.io](https://labs64.io)
+[**Get started**](https://labs64.io/docs/getting-started/) · [Features](#features) · [AI agents](#using-it-with-ai-agents) · [Ecosystem](#the-labs64io-ecosystem) · [Documentation](https://labs64.io/docs/) · [labs64.io](https://labs64.io)
 
 > [!NOTE]
 > This repository owns technical reference and onboarding, not marketing. Module status and versions come from the website's `_data/modules.yml` and are never restated in pages.
@@ -55,14 +55,9 @@ Good documentation is read by people who are in the middle of something: trying 
 
 The published site is at [labs64.io/docs](https://labs64.io/docs/).
 
-## Using Docs with AI agents
+## Using it with AI agents
 
-The documentation is also written to be read by agents.
-
-- **Plain Markdown, stable URLs.** Every page is a Markdown file under a predictable path.
-- **`llms.txt`.** A machine-readable index of the site is published for agent consumers.
-- **Docs follow the code.** Pages describe what ships; an agent changing a module should update its page in the same change.
-- **Working on the docs with an agent?** [`AGENTS.md`](AGENTS.md) and [`CLAUDE.md`](CLAUDE.md) describe conventions and verification.
+The docs are plain Markdown with an `llms.txt` index, so agents can read them too. The [guide for AI agents](https://labs64.io/docs/introduction/ai-agents.html) covers authentication, retries and errors across all modules. Working on this repository with an agent? [`AGENTS.md`](AGENTS.md) and [`CLAUDE.md`](CLAUDE.md) describe conventions and verification.
 
 ## The Labs64.IO Ecosystem
 
