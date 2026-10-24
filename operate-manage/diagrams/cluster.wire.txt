@@ -1,0 +1,48 @@
+[client]  +-- namespace tools --+  +-- namespace labs64io --+  +-- namespace monitoring --+
+          | [traefik]           |  | [apigw]                |  | [otel]                   |
+          |                     |  |                        |  |                          |
+          | [idp]               |  | [pdp]                  |  | [backends]               |
+          |                     |  |                        |  |                          |
+          | [eso]               |  | [docs]                 |  | [grafana]                |
+          |                     |  |                        |  +--------------------------+
+          | [pgsql]             |  | [af]                   |
+          |                     |  |                        |
+          | [redis]             |  | [pg]                   |
+          |                     |  |                        |
+          | [rabbit]            |  | [co]                   |
+          +---------------------+  |                        |
+                                   | [ui]                   |
+                                   +------------------------+
+
+legend:
+client   = Clients {client}
+traefik  = Traefik | Gateway labs64io-gateway {service}
+idp      = Identity provider | mock-oidc or Keycloak {external}
+eso      = External Secrets Operator {service}
+pgsql    = PostgreSQL {store}
+redis    = Valkey {store}
+rabbit   = RabbitMQ {queue}
+apigw    = api-gateway | Auth Gateway and middlewares {service}
+pdp      = authz-pdp | Cerbos {service}
+docs     = api-docs | Swagger UI {service}
+af       = auditflow {service}
+pg       = payment-gateway {service}
+co       = checkout | API and UI {service}
+ui       = customer-portal {service}
+otel     = OpenTelemetry Collector {service}
+backends = Tempo, Loki, Prometheus {store}
+grafana  = Grafana {service}
+
+edges:
+client -> traefik : HTTPS
+traefik -> apigw : ForwardAuth
+apigw -> pdp
+traefik -> docs
+traefik -> af
+traefik -> pg
+traefik -> co
+traefik -> ui
+af ..> otel : OTLP
+otel -> backends
+backends -> grafana
+gap: 100

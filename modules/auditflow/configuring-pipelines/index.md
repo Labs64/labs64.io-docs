@@ -14,13 +14,6 @@ file (local/compose, hot-reloaded) or a labelled ConfigMap (Kubernetes) — and 
 through their own tenant's pipelines. Tenantless events use the reserved `_platform` tenant
 (see `tenants/_platform.yaml`).
 
-Tenant configs come from a pluggable source (`tenants.source.mode`):
-
-| Mode | When | How |
-|------|------|-----|
-| `local-dir` (default) | Local/compose/bare-metal | `<tenantId>.yaml` files in `tenants.source.local-dir.path` (default `/config/tenants`; compose mounts `./tenants`), polled every 5s — drop a file to onboard live |
-| `gitops-configmap` | Kubernetes (set by the Helm chart) | ConfigMaps labelled `auditflow.io/tenant`, watched via the Kubernetes API |
-
 ```yaml
 # tenants/acme.yaml
 tenantId: acme
@@ -45,73 +38,52 @@ pipelines:
     sink:
       name: loki_sink
       properties:
-        url: "http://loki:3100"
-        api-key: "${secretRef:lokiApiKey}"  # resolved from THIS tenant's secret store at delivery
+        service-url: "http://loki:3100"
+        username: "acme"
+        password: "${secretRef:lokiPassword}"  # resolved from THIS tenant's secret store at delivery
       fallback:              # optional — used when primary sink fails with a retryable error
         name: webhook_sink
         properties:
-          url: "https://hooks.example.com/auditflow"
+          webhook-url: "https://hooks.example.com/auditflow"
 ```
 
-**Available condition operators:** `eq`, `neq`, `eqIgnoreCase`, `contains`, `startsWith`, `endsWith`, `in`, `notIn`, `exists`, `notExists`, `regex`, `gt`, `gte`, `lt`, `lte`, `cidr`, `notCidr`, `wildcard`, `notWildcard`. A rule with `match` + `rules` instead of `field`/`operator` is a nested group.
+A tenant id matches `^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$`; only the reserved `_platform` is exempt. A tenant document without `quota` gets 200 events per second with a burst of 400. A pipeline without a `condition` matches every event of its tenant, and a pipeline without a transformer delivers the event unchanged.
 
-Field paths support dot notation (`extra.userId`) and array indices (`items[0].name`).
+## Where tenant documents come from
 
-## Tenant file structure
+The backend reads tenant documents from one of two sources, set by `tenants.source.mode`:
 
-```yaml
-# tenants/<tenantId>.yaml — one file per tenant
-tenantId: acme                    # required; ^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$
-enabled: true                     # false = tenant disabled, ingest returns 403 TENANT_DISABLED
-quota:                            # optional — per-tenant ingest rate limit (token bucket)
-  rateLimitPerSec: 200            # over budget = 429 TENANT_RATE_LIMITED + Retry-After
-  burst: 400
-pipelines:
-  - name: my-pipeline             # required, unique within the tenant
-    enabled: true                 # enable/disable at runtime
-    condition:                    # optional — omit to match every event
-      match: all                  # "all" (AND) or "any" (OR)
-      rules:
-        - field: eventType        # dot notation supported: extra.userId
-          operator: eq            # eq, neq, contains, startsWith, endsWith, in, notIn, exists,
-                                  # notExists, regex, gt, gte, lt, lte, eqIgnoreCase, cidr,
-                                  # notCidr, wildcard, notWildcard (see "Condition operators")
-          value: "api.call"
-    transformer:
-      name: zero                  # optional — omit (or zero) to pass through unchanged, without a call
-    sink:
-      name: logging_sink          # required
-      properties:                 # optional, passed to the sink's process() function
-        log-level: INFO
-        api-key: "${secretRef:apiKey}"  # resolved from THIS tenant's secret store at delivery
-      fallback:                   # optional — used when primary sink fails with retryable error
-        name: webhook_sink
-        properties:
-          url: "https://hooks.example.com"
-```
+| Mode | Source | Used by |
+|---|---|---|
+| `local-dir` (default) | `<tenantId>.yaml` files in `tenants.source.local-dir.path` (default `/config/tenants`), polled every 5 seconds | Docker Compose, bare metal |
+| `gitops-configmap` | ConfigMaps labelled `auditflow.io/tenant` in the release namespace, watched through the Kubernetes API | The Helm chart |
 
-Sink credentials use `${secretRef:<key>}` indirection (`secretRef.resolver`): `env` (default) reads
-`AUDITFLOW_TENANT_<TENANTID>_<KEY>`; `k8s-secret` (Helm) reads the tenant's own Secret
-`auditflow-tenant-<tenantId>-creds`. A missing key fails that delivery as retryable (→ DLQ) —
-never a blank, never another tenant's credential.
+With the Helm chart, `tenants.platform` holds the `_platform` tenant's quota and pipelines, and every entry of `tenants.additional` (a full tenant document) becomes its own labelled ConfigMap. You can also apply such a ConfigMap at any time without a Helm release.
 
-## Condition operators
+AuditFlow picks up a new, changed or removed document without a restart. Removing a document offboards the tenant. Ingest rejects its new events, and the router quarantines events that are already in flight (`TENANT_UNRESOLVED`) instead of delivering them.
 
-| Operator | Description | Example |
-|----------|-------------|---------|
-| `eq`, `neq` | Equals / not equals | `field: eventType, value: api.call` |
-| `eqIgnoreCase` | Case-insensitive equals | `field: eventType, value: API.CALL` |
-| `contains` | String contains | `field: extra.message, value: error` |
-| `startsWith`, `endsWith` | Prefix / suffix match | `field: sourceSystem, value: auth` |
-| `in`, `notIn` | Value in comma-separated list | `value: security.alert,auth.failed` |
-| `exists`, `notExists` | Field exists / doesn't exist | `field: extra.userId` |
-| `regex` | Regular expression | `field: extra.email, value: .*@.*` |
-| `gt`, `gte`, `lt`, `lte` | Numeric comparisons | `field: extra.statusCode, value: 400` |
-| `cidr`, `notCidr` | IP address in one of the comma-separated networks (IPv4 and IPv6; a bare address is one host). Literals only, never resolved; an unparseable address matches neither | `field: extra.ip, value: "10.0.0.0/8, 2001:db8::/32"` |
-| `wildcard`, `notWildcard` | Glob, `*` any run, `?` one character, comma-separated alternatives; case-sensitive, linear time | `field: extra.actionName, value: "admin/*, licensee/delete"` |
+## Ingest checks and quotas
 
-A rule with `match` and `rules` instead of `field`/`operator` is a **nested group**, combined with
-its siblings like any rule (up to 8 levels; deeper groups never match):
+`POST /audit/publish` checks the tenant before it publishes anything:
+
+| Answer | When |
+|---|---|
+| `403 TENANT_NOT_PROVISIONED` | No document exists for the tenant. |
+| `403 TENANT_DISABLED` | The document has `enabled: false`. |
+| `429 TENANT_RATE_LIMITED` | The tenant used up its `quota`. The answer carries `Retry-After`. |
+
+The quota is a token bucket. `tenants.ratelimit.backend` decides where the buckets live:
+
+| Backend | Use it for |
+|---|---|
+| `in-memory` (application default) | One replica. Each replica would enforce its own quota. |
+| `redis` (Helm chart default) | Several replicas sharing one quota per tenant. If Redis does not answer within `tenants.ratelimit.redis.timeout` (0.5 s), each pod falls back to a local bucket and tries Redis again after `fallback-cooldown` (5 s). |
+
+A second limit applies at delivery. `tenants.consumer.max-in-flight-per-tenant` (default 32) caps how many deliveries of one tenant a pod runs at once. A delivery over the cap waits up to 2 seconds and is then deferred without spending a retry attempt, so a busy tenant cannot hold up the others.
+
+## Conditions
+
+A condition is a group of rules joined by `match: all` (AND, the default) or `match: any` (OR). A rule with `match` and `rules` instead of `field` and `operator` is a nested group, up to 8 levels deep, so you can write "A and (B or C)":
 
 ```yaml
 condition:
@@ -124,20 +96,58 @@ condition:
         - {field: extra.actionStatus, operator: eq, value: FAILURE}
 ```
 
-An unknown operator never matches; the dry run reports it as a warning.
+| Operators | Meaning |
+|---|---|
+| `eq`, `neq`, `eqIgnoreCase` | Equal, not equal, equal ignoring case |
+| `contains`, `startsWith`, `endsWith` | String matching |
+| `in`, `notIn` | Value in a comma-separated list |
+| `exists`, `notExists` | The field is present or absent |
+| `regex` | Regular expression |
+| `gt`, `gte`, `lt`, `lte` | Numeric comparison |
+| `cidr`, `notCidr` | IP address in one of the comma-separated networks, IPv4 or IPv6. Only literal addresses count; AuditFlow never resolves a host name, and an address it cannot parse matches neither operator. |
+| `wildcard`, `notWildcard` | Glob with `*` and `?` and comma-separated alternatives, case-sensitive and evaluated in linear time |
 
-## Pipeline steps and the step context
+An unknown operator never matches, and the dry run reports it as a warning.
 
-A pipeline can run several sinks in order for the same event, each step after the previous one succeeded, and a
-later step can use what an earlier sink returned. The typical use is an archive and an index of it: write the
-event to object storage, then write a row that points to the object.
+
+Field paths support dot notation (`extra.userId`) and array indices (`items[0].name`).
+
+## Delivery settings
+
+Each matching pipeline gets its own delivery, which AuditFlow retries and dead-letters separately. These keys of a pipeline control it:
 
 ```yaml
 pipelines:
   - name: archive
-    enabled: true
-    condition: { … }                       # condition, batch and retry stay on the pipeline
-    batch: { enabled: true, maxSize: 50 }
+    transformers:            # optional: applied in order, instead of the single `transformer`
+      - name: audit_opensearch
+    sink:
+      name: opensearch_sink
+    retry:
+      maxAttempts: 20        # default 20
+      maxAge: 24h            # default 24h; also PT24H, 30m, 2d
+    batch:
+      enabled: true          # off by default
+      maxSize: 100           # 1 to 1000, default 100
+```
+
+| Setting | Effect |
+|---|---|
+| `retry.maxAttempts`, `retry.maxAge` | A failed delivery comes back after 5 s, 30 s, 2 min, 10 min, 30 min, 1 h, then every 3 h. It goes to the tenant's DLQ once it has failed `maxAttempts` times or `maxAge` has passed since routing. Throttling defers a delivery without spending an attempt. |
+| `batch.enabled`, `batch.maxSize` | The worker hands the sink several events of this pipeline in one call. A batch closes when it is full or after 1 second without new messages. It never holds more than `AUDITFLOW_DELIVERY_BATCH_SIZE` (50) events; `GET /actuator/pipelines/<tenantId>` shows the size reached as `batch.effectiveMaxSize`. Each event still gets its own outcome. |
+| `sink.fallback` | A second sink that gets the event in the same attempt when the primary fails with a retryable error. If the fallback fails too, the delivery is retried. |
+| `transformers` | Several transformers applied in order, each to the previous one's output. It takes precedence over `transformer`. |
+
+A poison delivery skips the retries and goes to the DLQ at once. Poison means a 4xx answer from the transformer or sink service (an unknown module name included), a response larger than `auditflow.http.max-response-size`, or transformer output that is not valid JSON.
+
+### Steps: one event, several sinks in order
+
+A pipeline can run several sinks in order for the same event, each after the previous one succeeded, and a later step can use what an earlier sink returned. The typical use is an archive and an index of it: write the event to object storage, then write a row that names the stored object.
+
+```yaml
+pipelines:
+  - name: archive
+    batch: { enabled: true, maxSize: 50 }   # condition, retry and batch stay on the pipeline
     steps:
       - name: original
         transformer: { name: zero }
@@ -147,48 +157,38 @@ pipelines:
         sink: { name: clickhouse_sink, properties: { … } }
 ```
 
-- **One shape per pipeline.** A pipeline has either `transformer(s)` + `sink` (one step, as before) or `steps`. A
-  tenant file that mixes them, has a step without a sink, or two steps with one name is refused when it loads.
-  Step names follow the sink and transformer id rule `^[a-zA-Z0-9_]+$`. A step can have `transformers` and a sink
-  `fallback`, like a pipeline.
-- **The context.** A sink may return `context: {…}` in its result: `process` in the dict it returns,
-  `process_batch` in each event's outcome dict. AuditFlow keeps it under the step's name and gives the next steps'
-  transformers the event with a top-level `context` field, e.g. `{"original": {"bucket": "…", "key": "…"}}`.
-  The event the first step writes never has it. The whole context of an event may take 4 KiB; a larger one, or one
-  that is not a JSON object, is poison (DLQ).
-- **Only sinks write it.** `context` is reserved in the event contract: a publish that sets it (with any key) is
-  refused with 400, so nobody can forge what an earlier step returned. An empty object, as a generated client sends
-  it, is accepted and dropped; the published event carries no `context` key.
-- **Retries continue where they stopped.** A delivery that fails after a finished step is retried, deferred or
-  dead-lettered with two headers, `x-auditflow-steps-done` and `x-auditflow-context`, and the next attempt, or a
-  DLQ replay, starts at the failed step with that context. A finished step is not repeated. One retry budget
-  (`retry`) covers the whole pipeline. If the process dies between a step and storing its outcome, the step can run
-  again (at-least-once, as for any sink).
-- **Batches.** Each step makes one sink call for the events of the batch still in progress; an event that fails a
-  step leaves the batch there and settles on its own. Events at different steps never share a batch.
-- **Coupled on purpose.** The steps of one pipeline depend on each other: while the first sink is down, the second
-  waits under the retry tiers. Separate pipelines stay independent.
-- **Dry run and listing.** `GET /actuator/pipelines/<tenantId>` lists the steps; a dry run with `"transform": true`
-  runs every step's transformers, the later ones without a context (no sink is called, so none was returned:
-  `withoutContext: true` in the report).
+- A pipeline has either `transformer`/`transformers` and `sink`, or `steps`, never both. A tenant document that mixes them, has a step without a sink, or two steps with one name is refused when it loads. Step names follow the rule `^[a-zA-Z0-9_]+$`. A step can have `transformers` and a `sink.fallback`, like a pipeline.
+- A sink may return `context: {…}` in its result. AuditFlow keeps it under the step's name and gives later steps' transformers the event with a top-level `context` field, for example `{"original": {"bucket": "…", "key": "…"}}`. `aws_s3_sink` returns the bucket and key it wrote. An event's whole context may take 4 KiB; a larger one, or one that is not a JSON object, is poison.
+- `context` is reserved: a publish that sets it is refused with `400`, so no publisher can forge what a step returned. An empty object is accepted and dropped.
+- A delivery that fails after a finished step is retried, deferred or dead-lettered with its progress, and the next attempt or a DLQ replay starts at the failed step. A finished step is not repeated, though a step can run again if the process dies between the step and storing its outcome. One `retry` budget covers the whole pipeline.
+- The steps of one pipeline depend on each other: while the first sink is down, the later ones wait. Separate pipelines stay independent.
+- `GET /actuator/pipelines/<tenantId>` lists the steps. A dry run with `"transform": true` runs every step's transformers, the later ones without a context, since no sink is called.
 
-## Pipeline dry run and tenant fixtures
+## Sink credentials
 
-Ask the running backend which of a tenant's pipelines an event would reach, without publishing
-anything (internal admin surface, like the DLQ endpoint; port-forward in Kubernetes):
+Never put a credential in a tenant document. Write it as `${secretRef:<key>}` in `sink.properties`, where the key consists of letters, digits and underscores. AuditFlow resolves it at delivery time from the tenant's own secret store, chosen by `secretRef.resolver`:
+
+| Resolver | Where the value comes from |
+|---|---|
+| `env` (application default) | The environment variable `AUDITFLOW_TENANT_<TENANTID>_<KEY>`, key in upper case |
+| `k8s-secret` (Helm chart default) | The key in the Kubernetes Secret `auditflow-tenant-<tenantId>-creds` |
+
+A missing key fails the delivery as retryable, so it ends in the DLQ if nobody adds the key in time. AuditFlow never sends a blank value or another tenant's credential instead.
+
+## Dry run and fixtures
+
+The backend can show which of a tenant's pipelines an event would reach, without publishing anything. The endpoints are on the internal `/actuator` interface; on Kubernetes, reach them with `kubectl port-forward`.
 
 ```bash
-# deployed pipelines, effective retry/batch settings, configuration warnings
-curl -s localhost:8080/actuator/pipelines/<tenantId> | python3 -m json.tool
+# deployed pipelines, effective retry and batch settings, configuration warnings
+curl -s localhost:8080/actuator/pipelines/<tenantId>
 
-# sample events: per pipeline matched or not and why; "transform": true also returns transformer output
+# sample events: per pipeline, matched or not and why; "transform": true also returns the transformer output
 curl -s -X POST localhost:8080/actuator/pipelines/<tenantId>/dry-run -H 'Content-Type: application/json' \
      -d '{"events": [{"eventType": "api.call", "extra": {"responseStatus": 500}}], "transform": true}'
 ```
 
-**Fixtures** pin a tenant's routing: a list of cases, each an event plus the exact set of pipelines it
-must reach. Send them as `"cases"` (optionally with `"tenant": {...}` to test a tenant document that
-is not deployed yet); the answer is `status: failed` with a reason per failing case.
+Fixtures pin a tenant's routing. Each case is an event and the exact set of pipelines it must reach. Send them as `"cases"` instead of `"events"`, optionally with `"tenant": {...}` to test a tenant document that is not deployed yet. The answer is `status: failed`, with a reason per failing case, when any case does not match.
 
 ```yaml
 # tenants/fixtures/<tenantId>.yaml
@@ -198,38 +198,7 @@ cases:
     expect: [archive, failed-calls]
 ```
 
-## Tamper-evidence for the S3 archive
-
-`aws_s3_sink` sends an S3-verified SHA-256 checksum with every object (`checksum: none` turns it off
-for stores without checksum support). With `digest: "true"` it also writes, per object, a signed
-digest record under `<prefix>tenant=<id>/_digests/chain=<id>/<sequence>.json`: object key, SHA-256,
-size, event ids, the previous record's hash and an Ed25519 signature. Chains are per tenant and per
-sink process; the sink needs no read access.
-
-```bash
-python3 auditflow-sink/scripts/verify_s3_digests.py --generate-key     # once: seed + public key
-```
-
-Store the seed as the tenant's secret (`k8s-secret` resolver: key `digestSigningKey` in
-`auditflow-tenant-<tenantId>-creds`) and reference it, never as a literal:
-
-```yaml
-sink:
-  name: aws_s3_sink
-  properties: {bucket: ..., prefix: tenants/, digest: "true", digest-signing-key: "${secretRef:digestSigningKey}"}
-```
-
-An auditor verifies with the public key (needs `s3:ListBucket` and `s3:GetObject` on the prefix):
-
-```bash
-python3 auditflow-sink/scripts/verify_s3_digests.py --bucket <bucket> --prefix tenants/tenant=<id> \
-        --public-key <base64> [--unattested]
-```
-
-It checks every signature, sequence and previous-record link, and every attested object's SHA-256,
-and with `--unattested` also fails on objects no record covers. Not covered by the chain alone:
-removing the newest records of a chain; enable S3 Object Lock on the bucket for that. Use it with `batch.enabled`: a digest record per
-object doubles the PUTs of one-object-per-event pipelines.
+Keep fixtures next to your tenant files and run them before each change goes live.
 
 ## PII Redaction
 
@@ -246,7 +215,9 @@ auditflow:
         action: drop         # remove the field entirely
 ```
 
-Redaction runs at ingest, before the event is published to the broker — sensitive values never reach it or any downstream sink.
+Redaction runs at ingest, before the event is published to the broker — sensitive values never reach it or any downstream sink. It fails closed: an enabled rule without a field or an action stops AuditFlow from starting, and a rule that fails at runtime fails the publish instead of letting the raw value through.
+
+The rules are deployment-wide and apply to every tenant's events. `auditflow.redaction.mask` sets the replacement text of `mask` (default `***`). Do not redact a key that a transformer promotes to a reporting column. The column then reads as empty, with no error.
 
 The key of a rule is `action` (`mask`, `hash` or `drop`); a rule without it masks.
 
