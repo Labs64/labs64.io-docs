@@ -21,7 +21,7 @@ Unsure whether an idea fits? Open an issue first and describe it. That is cheape
 
 ## Set up
 
-For a single service you need that repository and its tools, listed in its `README.md`. For example, AuditFlow:
+For a single service you need that repository and its tools, listed in its `AGENTS.md`. For example, AuditFlow:
 
 ```bash
 git clone https://github.com/<your-user>/labs64.io-auditflow.git
@@ -39,7 +39,7 @@ cd labs64.io-workspace
 just doctor && just clone && just up
 ```
 
-[Run the full ecosystem locally](../getting-started/run-the-full-ecosystem-locally.md) walks through these steps, and the [workspace README](https://github.com/Labs64/labs64.io-workspace#readme) is the full command reference. From the workspace you reach the other repositories' recipes without changing folder: `just helm-charts <recipe>` runs in `labs64.io-helm-charts`, `just tests <recipe>` in `labs64.io-tests`. The workspace also ships a dev container with every tool at the pinned version, which is the easiest way to get a working toolchain.
+[Run the full ecosystem locally](../getting-started/run-the-full-ecosystem-locally.md) walks through these steps, and the [workspace reference](https://github.com/Labs64/labs64.io-workspace/blob/master/docs/reference.md) is the full command reference. From the workspace you reach the other repositories' recipes without changing folder: `just helm-charts <recipe>` runs in `labs64.io-helm-charts`, `just tests <recipe>` in `labs64.io-tests`. The workspace also ships a dev container with every tool at the pinned version, which is the easiest way to get a working toolchain.
 
 When you fork, clone your fork in place of the upstream repository, in the same folder and under the same name.
 

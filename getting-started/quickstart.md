@@ -222,6 +222,8 @@ Run these from the directory where you ran the installer, against the same clust
 
 Each command asks you to confirm the cluster first. Add `LABS64_YES=1` in front to accept the defaults without being asked.
 
+**Unattended and CI use.** `LABS64_PROFILE=quickstart bash install.sh` (or `byo`) skips the menu and every prompt, and `status` and `smoke` exit non-zero on failure, so the same script works as a gate in CI. `bash install.sh --dry-run` shows what would change before anything is applied. The installer records what it created, so `uninstall` never touches resources it did not create.
+
 The installer keeps its working files in `./labs64.io-install/`: the Helm values it generated (`values-overrides.yaml`), the passwords (`secrets.yaml`, readable only by you) and a full transcript of the last run (`install.log`). `bash install.sh --help` lists every setting.
 
 ## Clean up

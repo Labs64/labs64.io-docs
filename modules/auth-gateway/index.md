@@ -40,6 +40,16 @@ sequenceDiagram
     T->>M: Forwarded Request
 ```
 
+### What a request goes through
+
+1. **Traefik** receives the request and asks the gateway to decide (ForwardAuth, `GET /auth`).
+2. The gateway **verifies the token**: signature (RS256, keys from your provider's JWKS), issuer, audience and expiry.
+3. It **finds the route** in the manifests generated from each module's OpenAPI contract. No policy for the route means the request is denied.
+4. It asks **Cerbos** whether this caller may perform this action on this resource.
+5. If allowed, it returns the identity as headers (`X-Auth-User`, `X-Auth-Scopes`, `X-Auth-Tenant`, `X-Request-ID`) and Traefik forwards the request.
+
+The modules behind the gateway trust those headers, which is exactly why they must never be reachable around it.
+
 ## Quick Start
 
 The Auth Gateway is part of every Kubernetes install; you do not start it separately. The [Quickstart](../../getting-started/quickstart.md) installs it in about five minutes and walks through the three answers it gives.
@@ -51,6 +61,47 @@ curl -i -X POST http://localhost:8000/auditflow/api/v1/audit/publish \
 ```
 
 A request with a valid token that lacks the required scope is refused with `403`, and one with the right scope is forwarded to the service with a trusted tenant and user context.
+
+### Install with Helm
+
+With a cluster and an OIDC identity provider, install the gateway chart in front of your modules:
+
+```bash
+helm repo add labs64io https://labs64.github.io/labs64.io-helm-charts
+helm repo update
+
+helm install api-gateway labs64io/api-gateway -n labs64io --create-namespace
+```
+
+Then point it at your provider's discovery endpoint (`OIDC_DISCOVERY_URL`), install the policy engine (the `authz-pdp` chart) and mount the route manifests generated from each module's OpenAPI contract. The umbrella chart and `install.sh` wire all of that for you, which is why the [installer](../../getting-started/deploy-to-kubernetes.md) is the easier first step. The chart is on [Artifact Hub](https://artifacthub.io/packages/helm/labs64io-helm-charts/api-gateway).
+
+### Try the decision logic with Docker
+
+Only Docker is needed. Run the published auth proxy on its own and ask it to decide on a request:
+
+```bash
+docker run -d --rm --name authproxy -p 8081:8081 labs64/traefik-authproxy:latest
+
+curl -s localhost:8081/health
+curl -i localhost:8081/auth \
+  -H "X-Forwarded-Method: GET" \
+  -H "X-Forwarded-Uri: /payment-gateway/api/v1/payments"
+```
+
+No routes are loaded, so the request is **denied** (see [Failing closed](#failing-closed)): the gateway never guesses. Clean up with `docker rm -f authproxy`. This standalone run shows the decision logic only; a complete flow needs an identity provider, the policy engine and route manifests, which the installer sets up for you.
+
+### Build from source
+
+Needs Python 3.14 and Docker:
+
+```bash
+git clone https://github.com/Labs64/labs64.io-authproxy.git && cd labs64.io-authproxy/traefik-authproxy
+docker build -t traefik-authproxy .          # build the image
+pip install -r requirements.txt pytest       # or work in a virtualenv
+pytest tests/                                # run the tests
+```
+
+The repository's `AGENTS.md` describes the layout, the environment variables and where to change JWT verification, scope extraction and policy matching.
 
 ## Configuration
 
@@ -106,6 +157,21 @@ curl -i localhost:8081/auth -H "X-Forwarded-Method: GET" -H "X-Forwarded-Uri: /p
 # HTTP/1.1 403 Forbidden
 # {"code":"FORBIDDEN","message":"No auth policy configured for: /payment-gateway/api/v1/payments", ...}
 ```
+
+### Using the gateway with AI agents
+
+The gateway is what makes it safe to let an agent call the platform: the agent gets a token with only the scopes it needs, and the gateway enforces them.
+
+- **Give an agent its own client.** Use a service principal (client credentials) with a minimal scope set; the gateway turns the token into `X-Auth-User: svc:<client>` and `X-Auth-Scopes` for the module.
+- **Predictable refusals.** `401` means no or invalid token; `403` means a valid token without the required scope, or no policy for the route. An agent can tell which and stop retrying.
+- **Discover the surface.** The aggregated Swagger UI lists every installed module's OpenAPI contract.
+
+## Before you go live
+
+- **Use your own identity provider.** The demo provider in the Quickstart issues a valid token to anyone who asks.
+- **Do not expose modules around the gateway.** Network policies should allow module traffic only from the gateway.
+- **Check that every route has a policy.** The gateway denies unknown routes, so a missing manifest shows up as `403`, not as an open door.
+- **Review scopes against your provider's claims.** `TOKEN_SCOPES_CLAIM_PATHS` must match where your provider puts scopes or roles.
 
 ## Operations
 
