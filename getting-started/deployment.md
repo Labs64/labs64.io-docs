@@ -14,7 +14,7 @@ Used by developers and evaluators. The entire ecosystem is deployed to a lightwe
 - **Tooling:** `k3d`, `helmfile`, `just`
 - **Use Case:** Validating API contracts, debugging module interactions.
 
-### 2. AWS QA / Staging / Production
+### 2. AWS Staging / Production
 The recommended path for production workloads.
 - **Tooling:** EKS, RDS (PostgreSQL), Amazon SQS (AuditFlow's message broker; Amazon MQ for RabbitMQ also works), Terraform and the `labs64io-ecosystem` umbrella Helm chart.
 - **Use Case:** High availability, secure, and scalable deployments.
