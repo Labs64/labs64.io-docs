@@ -43,6 +43,35 @@ docker run -d --rm --name portal -p 8080:8080 labs64/customer-portal-ui:edge
 
 Open <http://localhost:8080> and clean up with `docker rm -f portal`.
 
+### Install with Helm
+
+The portal chart has no backend dependency, so this is the shortest install of any module:
+
+```bash
+helm repo add labs64io https://labs64.github.io/labs64.io-helm-charts
+helm repo update
+
+helm install my-portal labs64io/customer-portal -n labs64io --create-namespace
+```
+
+Put it behind your gateway route at `/customer-portal`. See [Deploy to your Kubernetes cluster](../../getting-started/deploy-to-kubernetes.md) and the [chart on Artifact Hub](https://artifacthub.io/packages/helm/labs64io-helm-charts/customer-portal).
+
+### Build from source
+
+Needs Node and npm (Docker for the image):
+
+```bash
+git clone https://github.com/Labs64/labs64.io-customer-portal.git && cd labs64.io-customer-portal/customer-portal-fe
+npm install
+npm run dev          # hot-reload dev server on http://localhost:8080
+npm run test:unit    # Vitest
+npm run test:e2e     # Playwright
+npm run lint         # ESLint
+docker build -t customer-portal-ui .
+```
+
+The repository's `AGENTS.md` describes the layout, commands and tests; the [Contributing guide](../../development/contributing.md) covers the workflow.
+
 ## Configuration
 
 The chart has no backend dependency; enable the UI with `ui.enabled`. The nginx image listens on port `8080` as an unprivileged user.

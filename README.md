@@ -10,7 +10,7 @@
 
 <p align="center"><img src="docs/assets/docs-hero.svg" alt="Docs: The docs as a metro map: from Start, the Run it, Use it and Change it lines lead to quickstart, install, operate, concepts, module reference, API, architecture, build and contributing, with llms.txt for AI agents." width="880"></p>
 
-[**Get started**](#get-started) · [Features](#features) · [Architecture](#architecture) · [AI agents](#using-docs-with-ai-agents) · [Ecosystem](#the-labs64io-ecosystem) · [Documentation](https://labs64.io/docs/) · [labs64.io](https://labs64.io)
+[**Get started**](https://labs64.io/docs/getting-started/) · [Features](#features) · [AI agents](#using-docs-with-ai-agents) · [Ecosystem](#the-labs64io-ecosystem) · [Documentation](https://labs64.io/docs/) · [labs64.io](https://labs64.io)
 
 > [!NOTE]
 > This repository owns technical reference and onboarding, not marketing. Module status and versions come from the website's `_data/modules.yml` and are never restated in pages.
@@ -34,90 +34,6 @@ Good documentation is read by people who are in the middle of something: trying 
 - You are looking for marketing or positioning: that lives on [labs64.io](https://labs64.io).
 - You want internal design records: those are in a private repository.
 
-## Get started
-
-Four ways in. Pick the one that matches what you have; each is complete on its own.
-
-```
- 1  install.sh             2  Kubernetes             3  Docker                 4  Source
-┌───────────────────────┐ ┌───────────────────────┐ ┌───────────────────────┐ ┌───────────────────────┐
-│ Follow the Quickstart │ │ Read the deployment   │ │ Preview the site on   │ │ Change a page,        │
-│ the docs describe:    │ │ guides for your       │ │ your machine while    │ │ follow the page       │
-│ one script, five      │ │ own cluster and       │ │ you edit a page       │ │ conventions, check    │
-│ minutes               │ │ identity provider     │ │                       │ │ the links             │
-├───────────────────────┤ ├───────────────────────┤ ├───────────────────────┤ ├───────────────────────┤
-│ needs  a cluster,     │ │ needs  a browser      │ │ needs  Docker         │ │ needs  Docker, Git    │
-│        kubectl, helm  │ │                       │ │                       │ │                       │
-│ time   ~5 minutes     │ │ time   ~20 minutes    │ │ time   ~2 minutes     │ │ time   a few minutes  │
-└───────────────────────┘ └───────────────────────┘ └───────────────────────┘ └───────────────────────┘
- try what is documented    plan a real install       write docs                contribute back
-```
-
-Not sure? Open the [published site](https://labs64.io/docs/) first; come back here to fix or extend a page.
-
-### 1. `install.sh`: the quick ecosystem start
-
-The Quickstart is the first page of this site: one script installs the gateway, AuditFlow and Payment Gateway on any Kubernetes cluster, then proves it with a real request.
-
-```bash
-# No cluster yet? A throwaway one needs only Docker and k3d:
-k3d cluster create labs64io-demo -p "8000:80@loadbalancer" --k3s-arg "--disable=traefik@server:0"
-
-curl -fsSL https://raw.githubusercontent.com/Labs64/labs64.io-helm-charts/master/install.sh -o install.sh
-bash install.sh
-```
-
-Press Enter three times to take the defaults. A few minutes later you should see:
-
-```text
-  PASS  Obtained a demo access token from mock-oidc
-  PASS  Published a demo audit event (HTTP 200) — first good request succeeded
-
- Labs64.IO is ready.
-   Base URL:  http://localhost:8000
-   API docs:  http://localhost:8000/swagger-ui/
-```
-
-Every command on that page is kept in step with `install.sh` in `labs64.io-helm-charts`. The same script later runs `status`, `stop`, `start` and `uninstall`. This is an evaluation install with a demo identity provider: keep it on a local or private cluster. Details: [Quickstart](https://labs64.io/docs/getting-started/quickstart.html) · [`install.sh`](https://github.com/Labs64/labs64.io-helm-charts/blob/master/install.sh).
-
-### 2. Kubernetes: on your own cluster
-
-The adopter guides cover running on your own cluster: choosing a path, deploying to Kubernetes, configuring identity and troubleshooting. Start at [Get Started](https://labs64.io/docs/getting-started/) and [Deploy to your Kubernetes cluster](https://labs64.io/docs/getting-started/deploy-to-kubernetes.html).
-
-### 3. Docker: on your machine
-
-Only Docker is needed. The site is built with Jekyll and the just-the-docs theme inside a container:
-
-```bash
-git clone https://github.com/Labs64/labs64.io-docs.git && cd labs64.io-docs
-docker compose up --build
-```
-
-Open <http://localhost:4000/docs/>. Edits are picked up while the container runs. Stop it with `docker compose down`.
-
-### 4. Source: build and change it
-
-Pages are Markdown, organised by module under `modules/<id>/index.md`; child pages live in `modules/<id>/<topic>/index.md`. Cross-link with relative `.md` paths, and verify the built output:
-
-```bash
-docker compose run --rm labs64io-docs bundle exec jekyll build --config _config.yml
-```
-
-[`AGENTS.md`](AGENTS.md) has the page conventions, the link-checking steps and how the site is deployed.
-
-### Where next?
-
-Everything below is in the [Docs documentation](https://labs64.io/docs/):
-
-| I want to… | Read |
-|---|---|
-| Run Labs64.IO in five minutes | [Quickstart](https://labs64.io/docs/getting-started/quickstart.html) |
-| Choose how to run it | [Choose a deployment path](https://labs64.io/docs/getting-started/choose-a-deployment-path.html) |
-| Change the code | [Contributing guide](https://labs64.io/docs/development/contributing.html) |
-| Compare all the ways to run Labs64.IO | [Choose a deployment path](https://labs64.io/docs/getting-started/choose-a-deployment-path.html) |
-
-Something not working? [Troubleshooting your first run](https://labs64.io/docs/getting-started/troubleshooting.html) covers the usual suspects, and you are always welcome to [open an issue](https://github.com/Labs64/labs64.io-docs/issues).
-
 ## Features
 
 - **Adopter guides**: quickstart, one module, your own cluster, the whole ecosystem from source, troubleshooting.
@@ -126,23 +42,6 @@ Something not working? [Troubleshooting your first run](https://labs64.io/docs/g
 - **Diagrams as code**: Mermaid in any page.
 - **Machine-readable**: `llms.txt` and full-text exports for agents.
 - **Docker-first**: preview, build and link-check without installing Ruby.
-
-## Architecture
-
-```
-  ┌──────────────────────────────┐   ┌──────────────────────────────────┐
-  │ Markdown in this repository  │   │ _data/modules.yml (labs64.io)    │
-  │ modules/ · getting-started/  │   │ module status and versions       │
-  └──────────────┬───────────────┘   └────────────────┬─────────────────┘
-                 │ Jekyll + just-the-docs             │ referenced, never copied
-  ┌──────────────▼────────────────────────────────────▼─────────────────┐
-  │ GitHub Pages build (Actions)                                        │
-  └──────────────┬──────────────────────────────────────────────────────┘
-                 │ CloudFront path rewrite
-  ┌──────────────▼──────────────────────────────────────────────────────┐
-  │ https://labs64.io/docs                                              │
-  └─────────────────────────────────────────────────────────────────────┘
-```
 
 ## Where things live
 

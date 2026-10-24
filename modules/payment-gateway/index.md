@@ -42,6 +42,14 @@ sequenceDiagram
     PG--)AF: payment.* events (HTTP, as a service principal)
 ```
 
+The repository is split into three Maven modules:
+
+| Module | Stack | Role |
+|---|---|---|
+| `payment-gateway-api` | Java 17, OpenAPI | Canonical contract and validated shared models |
+| `payment-gateway-be` | Java 25, Spring Boot 4 | REST API, idempotency, webhooks, provider registry |
+| `payment-gateway-providers` | Java 25 | The provider SPI and one module per PSP (`noop`, `paypal`, `stripe`) |
+
 ## Quick Start
 
 The Payment Gateway is installed by the [Quickstart](../../getting-started/quickstart.md) and by the [full local ecosystem](../../getting-started/run-the-full-ecosystem-locally.md). With a token from either guide, list the providers configured for your tenant:
@@ -51,15 +59,81 @@ curl -s -H "Authorization: Bearer $TOKEN" \
   http://localhost:8000/payment-gateway/api/v1/payment-providers
 ```
 
-To see a payment end to end without a cluster, run the published image with PostgreSQL and Valkey. Only Docker and Git are needed:
+### Install with Helm
+
+With a cluster, PostgreSQL and a Redis-compatible store, install the chart and point it at them:
 
 ```bash
-git clone https://github.com/Labs64/labs64.io-payment-gateway.git
-cd labs64.io-payment-gateway
+helm repo add labs64io https://labs64.github.io/labs64.io-helm-charts
+helm repo update
+
+helm install my-payments labs64io/payment-gateway -n labs64io --create-namespace \
+  --set global.postgresql.host=postgres.mycompany.internal \
+  --set global.redis.host=redis.mycompany.internal
+```
+
+Database credentials go in a Kubernetes Secret (see the chart's values). The `preflight` chart can check both services from inside your cluster before you install. See [Deploy to your Kubernetes cluster](../../getting-started/deploy-to-kubernetes.md) and the [chart on Artifact Hub](https://artifacthub.io/packages/helm/labs64io-helm-charts/payment-gateway).
+
+### Try a payment with Docker
+
+To see a payment end to end without a cluster, run the published image with PostgreSQL and Valkey next to it. Only Docker and Git are needed, and there is nothing to build:
+
+```bash
+git clone https://github.com/Labs64/labs64.io-payment-gateway.git && cd labs64.io-payment-gateway
 docker compose -f docker-compose.images.yml up -d
 ```
 
-The [README](https://github.com/Labs64/labs64.io-payment-gateway#3-docker-on-your-machine) walks through enabling the NoOp provider, creating a payment and paying it twice with one `Idempotency-Key`. That stack runs without an API gateway and with authorization off: do not expose it.
+Once the stack is healthy (about 30 seconds), pay for an order. The built-in NoOp provider succeeds without a PSP account, and the headers stand in for the ones the API Gateway adds after authenticating a caller:
+
+```bash
+api() { curl -s -H "X-Auth-User: demo-user" -H "X-Auth-Tenant: demo" -H "X-Request-ID: demo" \
+  -H "X-Auth-Scopes: payment-provider:read,payment-provider:write,payment:read,payment:write,payment:pay,payment-transaction:read" \
+  -H "Content-Type: application/json" "$@"; }
+id() { grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4; }
+
+# 1. Enable the NoOp provider for this tenant
+PROVIDER=$(api -X POST localhost:8080/payment-providers -d '{"provider":"noop","active":true}' | id)
+
+# 2. Create a payment for a 30.00 USD order
+PAYMENT=$(api -X POST localhost:8080/payments -d '{
+  "paymentProviderId": "'$PROVIDER'",
+  "purchaseOrder": {"currency":"USD","netAmount":3000,"taxAmount":0,"grossAmount":3000,
+                    "items":[{"name":"Widget Pro","sku":"WIDGET-PRO","price":3000,"quantity":1}]},
+  "billingInfo": {"firstName":"Jane","lastName":"Doe","email":"jane.doe@example.com",
+                  "country":"US","city":"San Francisco","address1":"123 Market St","postalCode":"94105"}
+}' | id)
+
+# 3. Pay it twice with the same Idempotency-Key
+for i in 1 2; do
+  api -X POST localhost:8080/payments/$PAYMENT/pay -H "Idempotency-Key: order-1001" \
+    | grep -o '"status":"[A-Z]*"' | tr '\n' ' '; echo
+done
+
+# 4. How many transactions were created?
+api "localhost:8080/payment-transactions?paymentId=$PAYMENT" | grep -o '"totalItems":[0-9]*'
+```
+
+```text
+"status":"CLOSED" "status":"SUCCESS"
+"status":"CLOSED" "status":"SUCCESS"
+"totalItems":1
+```
+
+You paid **twice** and were charged **once**: the replay returned the original transaction. The payment is `CLOSED`, the transaction `SUCCESS`. Swagger UI is at <http://localhost:8080/swagger-ui/index.html>; clean up with `docker compose -f docker-compose.images.yml down -v`.
+
+That stack runs without an API Gateway and with authorization off: do not expose port 8080.
+
+### Build from source
+
+Needs Docker with Compose v2, JDK 25 and Maven 3.6.3+:
+
+```bash
+mvn -B clean package -DskipTests -pl payment-gateway-be -am   # build the backend and its modules
+cd payment-gateway-be && cp .env.example .env
+docker compose -f docker-compose.yml -f docker-compose.app.yml up -d --build
+```
+
+The repository's `AGENTS.md` describes the layout, commands and tests, and `CONTRIBUTING.md` covers pull requests. To add a payment provider, start from the SPI in `payment-gateway-providers/providers-spi` and use the `noop` module as a template.
 
 ## Configuration
 
