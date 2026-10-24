@@ -101,7 +101,7 @@ Grafana is at <http://localhost:3000> (`admin` / `admin`) with an AuditFlow dash
 
 ## Full ecosystem on a local cluster
 
-From the workspace, `just otel` starts the local cluster with the monitoring stack and tracing switched on, then opens Grafana at `http://gateway.localhost/grafana/` (the command prints the password). It installs:
+From the workspace, `just up-otel` starts the local cluster with the monitoring stack and tracing switched on, then opens Grafana at `http://gateway.localhost/grafana/` (the command prints the password). It installs:
 
 | Component | Role |
 |---|---|
