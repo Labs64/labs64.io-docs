@@ -1,0 +1,31 @@
++-- Module repository --------+
+| [rel]  [wf]  [hub]          |
++-----------------------------+
+
++-- Helm charts repository ---+
+| [pr]  [merge]  [cr]  [repo] |
++-----------------------------+
+
+            +-- Your cluster -+
+            | [up]            |
+            +-----------------+
+
+legend:
+rel   = Publish GitHub Release | tag X.Y.Z, by a maintainer {client}
+wf    = Release workflow | test, build, push {service}
+hub   = Docker Hub | labs64/<image>:X.Y.Z and digest {store}
+pr    = Chart update pull request | pins digests, bumps charts {service}
+merge = Automatic merge | when chart CI passes {service}
+cr    = Chart release | on merge to master {service}
+repo  = Helm repository | new labs64io-ecosystem version {store}
+up    = helm upgrade | to the new chart version {external}
+
+edges:
+rel -> wf
+wf -> hub : push
+wf -> pr : digests
+pr -> merge
+merge -> cr
+cr -> repo : publish
+repo -> up
+gap: 90

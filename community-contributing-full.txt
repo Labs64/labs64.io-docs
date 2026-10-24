@@ -6,4 +6,4 @@ Documentation fixes: use "Edit this page on GitHub" at the bottom of any page. B
 
 Conventions enforced by build or review: APIs are OpenAPI-first and generated code is never edited; no credentials in code; images run as a non-root user; services do not add an OpenTelemetry SDK; each service owns its data; a chart change bumps the chart version (just bump <chart>); versions have one owner each.
 
-Service repositories own service-specific source. Helm charts contain Kubernetes packaging and the installer; Labs64.IO Commons contains shared libraries; the docs repository contains public documentation. Start at /docs/development/ for the contributing guide and repository links.
+Service repositories own service-specific source. Helm charts contain Kubernetes packaging and the installer; Labs64.IO Commons contains shared libraries; the docs repository contains public documentation. Start at /docs/development/ for the contributing guide, the repository list, releases and versions, testing, and the shared libraries.

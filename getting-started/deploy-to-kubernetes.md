@@ -21,6 +21,7 @@ If you have not run the Quickstart yet, do that first on a laptop. It takes five
 | PostgreSQL | Payment Gateway, Checkout | One database per service: `payment_gateway`, `checkout` |
 | A message broker: RabbitMQ (AMQP 0-9-1) or Amazon SQS | AuditFlow | RabbitMQ self-hosted or managed; SQS needs only an IAM role for AuditFlow. See [Choose a message broker](../modules/auditflow/deployment/index.md#choose-a-message-broker) |
 | A Redis-compatible store (Valkey or Redis) | AuditFlow, Payment Gateway | Used for deduplication and rate limiting, not as a system of record |
+| ClickHouse | Reporting | The store AuditFlow's `clickhouse_sink` writes and Reporting reads, with a read-only user for Reporting. See [Reporting](../modules/reporting/index.md#deploying) |
 | A DNS name and a TLS certificate | The gateway | Routes are served at `gateway.<your-domain>` |
 | A place to keep secrets | Everything | Plain Kubernetes Secrets work. Every module chart can read its secrets through External Secrets Operator instead |
 
@@ -43,7 +44,7 @@ You do not have to bring all of it on day one. The chart can run PostgreSQL, Rab
   your identity provider        your infrastructure (or bundled for evaluation)
 ```
 
-Deployment modes, capability requirements and the AWS reference profile are described in [Kubernetes & Helm Setup](../operate-manage/kubernetes-helm-setup.md#deployment-modes).
+Deployment modes, capability requirements and the AWS reference profile are described in the Helm charts repository's [`docs/reference.md`](https://github.com/Labs64/labs64.io-helm-charts/blob/master/docs/reference.md).
 
 ## 1. Add the chart repository
 
@@ -110,6 +111,10 @@ LABS64_PROFILE=byo \
 LABS64_OIDC_DISCOVERY_URL=https://idp.example.com/realms/acme/.well-known/openid-configuration \
 bash install.sh
 ```
+
+To check an install against the cluster without changing the cluster, add `--dry-run` (`bash install.sh install --dry-run`).
+
+The installer publishes gateway routes and sets the policy engine address for AuditFlow and Payment Gateway only. Answering yes to Checkout or Customer Portal installs their charts with no gateway route, and Checkout without the policy engine address, so neither is reachable that way. Install them on their own as the [Checkout](../modules/checkout/index.md#install-with-helm) and [Customer Portal](../modules/customer-portal/index.md#install-with-helm) pages describe.
 
 The installer writes the Helm values it used to `./labs64.io-install/values-overrides.yaml`. That file is a good starting point for Route B when you outgrow the installer. The [Quickstart](./quickstart.md#manage-the-install) lists the commands for checking, stopping and removing the install.
 
@@ -200,7 +205,9 @@ Every module chart installs on its own, so you can adopt a single capability and
 helm upgrade --install auditflow labs64io/auditflow -n labs64io -f auditflow-values.yaml
 ```
 
-Module charts bundle no data stores; you point each at yours. [Kubernetes & Helm Setup](../operate-manage/kubernetes-helm-setup.md#building-box-cherry-pick-your-modules) lists what each module needs, the routes it exposes, and a commented production example per module under `overrides/<module>/values.prod-example.yaml`.
+Module charts bundle no data stores; you point each at yours. `global.postgresql.host`, `global.rabbitmq.host` and `global.redis.host` set the data-store addresses, and the chart's `secrets.data` holds the credentials. AuditFlow also runs on Amazon SQS with the pod's IAM role instead of broker credentials; [AuditFlow on Kubernetes](../modules/auditflow/deployment/index.md#kubernetes) shows both variants. [Kubernetes & Helm Setup](../operate-manage/kubernetes-helm-setup.md#charts) lists what each chart needs and the routes it exposes. The [Helm charts repository](https://github.com/Labs64/labs64.io-helm-charts) has a commented production example per module under `overrides/<module>/values.prod-example.yaml`.
+
+A module's protected routes need the `api-gateway` and `authz-pdp` charts and the Gateway API resource definitions. See [Auth Gateway](../modules/auth-gateway/index.md#install-with-helm).
 
 ## AWS, Azure, Google Cloud and on-premises
 

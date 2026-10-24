@@ -41,7 +41,7 @@ Use a conditional pipeline with `eventType eq security.alert` (or a `regex` on y
 **What to try in a POC:**
 - Define two pipelines: `security-alerts` (condition: `eventType = security.alert`) → Splunk; `audit-archive` (no condition) → S3
 - Send a mix of event types and confirm only security events reach Splunk
-- Take the webhook endpoint offline briefly and confirm events are retried, not lost
+- Take the Splunk endpoint offline briefly and confirm events are retried, not lost
 
 ---
 
