@@ -39,7 +39,7 @@ cd labs64.io-workspace
 just doctor && just clone && just up
 ```
 
-[Run the full ecosystem locally](../getting-started/run-the-full-ecosystem-locally.md) walks through these steps, and the [workspace README](https://github.com/Labs64/labs64.io-workspace#readme) is the full command reference. The workspace also ships a dev container with every tool at the pinned version, which is the easiest way to get a working toolchain.
+[Run the full ecosystem locally](../getting-started/run-the-full-ecosystem-locally.md) walks through these steps, and the [workspace README](https://github.com/Labs64/labs64.io-workspace#readme) is the full command reference. From the workspace you reach the other repositories' recipes without changing folder: `just helm-charts <recipe>` runs in `labs64.io-helm-charts`, `just tests <recipe>` in `labs64.io-tests`. The workspace also ships a dev container with every tool at the pinned version, which is the easiest way to get a working toolchain.
 
 When you fork, clone your fork in place of the upstream repository, in the same folder and under the same name.
 
@@ -71,10 +71,11 @@ A few conventions are enforced by the build or by review. Knowing them up front 
 - **Each service owns its data.** A service never connects to another service's database.
 - **A chart change bumps the chart version.** In `labs64.io-helm-charts`, run `just bump <chart>`; it also bumps every chart that bundles the one you changed.
 - **Versions have one owner each.** Do not write a version number into a `pom.xml` or a `justfile`. The workspace's `just check` verifies this across repositories.
+- **Recipes follow one convention.** The same recipe name means the same thing in every repository, and a new recipe goes in `just/<group>.just` with a one-line description: see [Justfiles: where to run what](https://github.com/Labs64/labs64.io-workspace/blob/master/docs/justfiles.md). `just check` verifies it too.
 
 ## Before you open the pull request
 
-1. Run the tests of the repository you changed. `just --list` shows the test command; in most repositories it is `just test`.
+1. Run `just ci` in the repository you changed: it runs what that repository's pull-request check runs, so it passes locally for the same reasons it passes there. In a repository without a `ci` recipe, `just --list` shows its test command.
 2. If the change crosses service boundaries, run `just smoke` from the workspace against your local cluster.
 3. If behavior changed, update the documentation in the same contribution: the API contract, the chart's values, and the page here that describes it.
 

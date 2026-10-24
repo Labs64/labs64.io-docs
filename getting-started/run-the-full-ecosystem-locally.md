@@ -123,10 +123,12 @@ There are two loops, and most of your time goes into the first.
 | `just test` | Runs the full local regression gate |
 | `just logs` | Shows warnings and errors from every service |
 | `just logs <app>` | Follows one service's log, for example `just logs checkout` |
-| `just otel` | Adds the monitoring stack and opens Grafana |
-| `just status` | Shows `git status` across all repositories |
+| `just up-otel` | Adds the monitoring stack and opens Grafana |
+| `just status` | Shows the pods, services and routes of the local cluster |
+| `just show-repos` | Shows `git status` across all repositories |
 | `just pull` | Pulls every repository |
 | `just down` | Deletes the cluster and its registry |
+| `just helm-charts <recipe>`, `just tests <recipe>` | Any recipe of `labs64.io-helm-charts` or `labs64.io-tests`, run in that repository: `just helm-charts install-app auditflow`, `just tests test-module auditflow` |
 
 The local charts pull an image only when the cluster does not have it yet (`IfNotPresent`), so a rebuilt image does not replace one that is already running. To be sure the cluster runs your code, run `just down` and then `just up`.
 
