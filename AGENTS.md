@@ -13,7 +13,7 @@ The **ultimate documentation reference** for users who want to run, use, and con
 | `modules/<id>/index.md` | Per-module documentation, one page per module (e.g. `modules/checkout/`, `modules/payment-gateway/`, `modules/auditflow/`, `modules/auth-gateway/`, `modules/customer-portal/`). A module with a lot of reference material may add child pages as `modules/<id>/<topic>/index.md` (`parent:` the module title, `grand_parent:` its section), as `modules/auditflow/` does; keep the module's own `index.md` as the entry point with the start-here content |
 | `introduction/architecture.md` | Architecture documentation |
 | `getting-started/` | Adopter guide — `quickstart.md` (the installer, `install.sh` in `labs64.io-helm-charts`; keep its commands and output in step with that script), one module, your own cluster, the whole ecosystem from source, first-run troubleshooting |
-| `development/contributing.md` | Contributor guide — build/test a module, OpenAPI-first workflow |
+| `development/` | Contributor guide: workspace setup, repositories, releases and versions, testing, shared libraries |
 | `introduction/index.md` | Jekyll home page (`permalink: /`; distinct from `README.md`, which is GitHub-only and excluded from the build) |
 | `_config.yml`, `Gemfile` | Site/theme configuration |
 | `_sass/color_schemes/labs64.scss` | Labs64 brand color overrides |
@@ -37,6 +37,7 @@ The **ultimate documentation reference** for users who want to run, use, and con
 - Keep documentation consistent with the actual codebase behavior.
 - **Each module page is `modules/<module>/index.md`.** Naming it `index.md` keeps it rendering when browsing the repo on GitHub and makes it serve at `labs64.io/docs/modules/<module>/` without an explicit `permalink:` — Jekyll's default page URL for a directory's `index.md` already omits the filename.
 - **Cross-link with relative `.md` paths** (`./quickstart.md`, `../getting-started.md`). `jekyll-relative-links` rewrites them to built URLs at publish time, so the same link works both on GitHub and on the site. Hand-written `.html` links work on the site but break on GitHub.
+- **Diagrams.** Structure and flow diagrams are boxdiagram sources: an ASCII `*.wire.txt` in a `diagrams/` folder next to the page, with the generated `*.svg` committed beside it and embedded as `![description](./diagrams/<name>.svg)`. Never edit an SVG by hand. Change the `.wire.txt` and re-render it with the `boxdiagram` skill from `labs64.io-workspace` (`python3 ../labs64.io-workspace/.agents/skills/boxdiagram/scripts/boxdiagram.py <file>.wire.txt`, then `--check --strict` on all of them). Sequence diagrams stay in Mermaid.
 - Module pages follow a consistent shape so readers learn it once: what it does → key capabilities → start here → API contract → configure → extend → operate → next steps.
 
 ## Verifying links

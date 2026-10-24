@@ -9,6 +9,12 @@ nav_order: 4
 
 Sinks deliver events to destinations; transformers reshape or enrich an event before delivery. Both are Python modules discovered at runtime.
 
+The shipped catalogue below covers common formats and destinations. For a proprietary format, an internal system or a destination only your organisation runs, you write a small module and own it (see [Adding your own sink or transformer](#adding-your-own-sink-or-transformer)). The backend still applies tenant isolation, redaction, idempotency, retries and the dead-letter queue to its deliveries. If you are unsure which side a need falls on, or neither fits, [open an issue](https://github.com/Labs64/labs64.io-auditflow/issues) and describe it.
+
+A pipeline passes an event through its transformers, if it has any, and then into one sink. `GET /registry` on the transformer service (port 8081) and on the sink service (port 8082) lists the modules of a deployment with their version and documented properties, and the modules that failed to import.
+
+![AuditFlow components: the backend stores each event on RabbitMQ or Amazon SQS and routes it to one delivery per matching pipeline, and its delivery worker calls the transformer service and then the sink service, which writes to the destinations](../diagrams/auditflow.svg)
+
 ## Sinks
 
 | Sink | Destination | A batch is written as |
@@ -31,6 +37,26 @@ Sinks deliver events to destinations; transformers reshape or enrich an event be
 
 The last column applies to pipelines with `batch.enabled: true`. `GET /registry` on the sink service reports the same per sink as `batch: true|false`.
 
+Sink properties (URLs, buckets, table names) are set per pipeline under `sink.properties`. Write every credential as a `${secretRef:<key>}` reference; see [Sink credentials](../configuring-pipelines/index.md#sink-credentials). `aws_s3_sink`, `aws_cloudwatch_sink` and `gcs_sink` fall back to the cloud SDK's default credentials, such as the pod's IAM role, when you set no keys. `snowflake_sink` needs the `snowflake-connector-python` package, which the sink image does not contain.
+
+### Tamper-evident archive (S3)
+
+`aws_s3_sink` sends an S3-verified SHA-256 checksum with every object (`checksum: none` turns it off for S3-compatible stores without checksum support). With `digest: "true"` it also writes a signed, hash-chained digest record per object under `<prefix>tenant=<id>/_digests/`. Each record holds the object key, its SHA-256, the event ids, the previous record's hash and an Ed25519 signature.
+
+```bash
+python3 auditflow-sink/scripts/verify_s3_digests.py --generate-key     # once: seed and public key
+```
+
+Store the seed in the tenant's secret store and reference it, never as a literal:
+
+```yaml
+sink:
+  name: aws_s3_sink
+  properties: {bucket: my-audit-archive, prefix: tenants/, digest: "true", digest-signing-key: "${secretRef:digestSigningKey}"}
+```
+
+An auditor with the public key, `s3:ListBucket` and `s3:GetObject` checks every signature, sequence and link, and every attested object's SHA-256, with [`verify_s3_digests.py`](https://github.com/Labs64/labs64.io-auditflow/blob/master/auditflow-sink/scripts/verify_s3_digests.py) (`--unattested` also fails on objects no record covers). The chain alone cannot detect removal of a chain's newest records; enable S3 Object Lock on the bucket for that. A digest record per object doubles the writes of a pipeline that stores one object per event, so combine digests with `batch.enabled`.
+
 ### Which time each sink uses
 
 An event has an **event time** (`eventTime`, when the action happened) and a **receipt time** (`timestamp`, when AuditFlow received it); see [Time fields](../index.md#time-fields-event-time-and-receipt-time). Every bundled sink and transformer uses them the same way, and none uses the moment of delivery.
@@ -52,7 +78,7 @@ On Kubernetes with the chart's NetworkPolicy enabled, the pod may only reach HTT
 
 | Transformer | What it does |
 |-------------|-------------|
-| `zero` | Pass-through (no change) |
+| `zero` | Pass-through (no change). The backend applies it itself without calling the transformer service, so a custom module named `zero` is never called. |
 | `audit_loki` | Reshape event for Loki label conventions |
 | `audit_opensearch` | Reshape event for OpenSearch indexing |
 | `audit_clickhouse` | Flatten event into one ClickHouse row; extensible per use case via `make_transform()` |
@@ -62,7 +88,9 @@ A domain layer on top of `audit_clickhouse` is a mounted example, not shipped in
 
 ## Adding your own sink or transformer
 
-Drop a `.py` file into `sinks/` or `transformers/`. It's discovered at runtime — no backend changes, no image rebuild for local development.
+A module is one Python file, referenced from a pipeline by its file name without `.py`. The shipped modules live in `sinks/` and `transformers/` inside the images. Put your own into `sinks_bootstrap/` or `transformers_bootstrap/` next to them (`/home/l64user/` in the images), mounted at runtime as a volume or ConfigMap, so you rebuild no image and change no backend code. A mounted module with the same name as a shipped one replaces it.
+
+Each service builds its list of allowed modules at startup. After mounting a new module, restart the service or call `POST /registry/reload` on it. A module name must match `^[a-zA-Z0-9_]+$`.
 
 ```python
 # sinks/my_sink.py
@@ -72,14 +100,26 @@ def process(event_data: dict, properties: dict) -> dict:
     return {"sent": True}
 ```
 
+A transformer has one function, which returns the reshaped event:
+
+```python
+# transformers_bootstrap/my_transformer.py
+def transform(input_data: dict) -> dict:
+    return input_data
+```
+
 Then reference it by filename (without `.py`) in a pipeline:
 
 ```yaml
 sink:
   name: my_sink
   properties:
-    api-key: "${MY_API_KEY}"
+    api-key: "${secretRef:myApiKey}"
 ```
+
+- An exception in `process` fails the delivery as retryable.
+- For pipelines with `batch.enabled`, a sink can also define `process_batch(events: list, properties: dict) -> list`. It returns one outcome per event, in input order: a result dict, or an exception. A `ValueError` marks that event as poison and sends it to the DLQ; any other exception is retried. Without `process_batch`, the sink service calls `process` for the events, up to 8 at a time.
+- A sink that puts a table, column or database name into SQL text checks it with `auditflow_sdk.sql_identifier`, and passes event data only as bound parameters.
 
 See [DEVELOPERS.md](https://github.com/Labs64/labs64.io-auditflow/blob/master/DEVELOPERS.md) for full details on the plugin API, transformer chaining, and testing.
 
@@ -141,7 +181,7 @@ partition and the wrong retention window relative to when it actually happened.
 `PARTITION BY` and `TTL` to your retention policy — the values above are illustrative.
 
 The table is a `ReplacingMergeTree` keyed on `event_id`, not a plain `MergeTree`: AuditFlow is
-at-least-once, so a DLQ replay after the ~24h idempotency window can re-deliver an event, and
+at-least-once, so a DLQ replay after the idempotency window (`auditflow.idempotency.done-ttl`, 48 hours) can re-deliver an event, and
 `ReplacingMergeTree` collapses the two copies on merge (the later `timestamp` wins as the version
 column). That collapse only happens at merge time, so a query issued between deliveries can still
 see both rows — use `SELECT ... FINAL` (or an aggregating rollup) for any query where
@@ -160,12 +200,13 @@ pipelines:
         database: audit
         table: audit_events
         username: auditflow
-        password: ${secretRef:clickhouse-password}
+        password: ${secretRef:clickhousePassword}
 ```
 
-**Insert batching.** AuditFlow delivers one event per request, and row-at-a-time inserts into
-MergeTree create one part per row. The sink relies on ClickHouse's server-side `async_insert` to
-batch them, with `wait_for_async_insert=1` so a successful delivery means the row is durably
+**Insert batching.** Turn on `batch.enabled` for the pipeline: the sink then writes each batch
+with one `INSERT`. Without it, AuditFlow delivers one event per request, and row-at-a-time inserts into
+MergeTree create one part per row. In both modes the sink relies on ClickHouse's server-side `async_insert` to
+merge inserts, with `wait_for_async_insert=1` so a successful delivery means the row is durably
 written and the retry/DLQ chain stays meaningful. This costs up to `async-insert-busy-timeout-ms`
 of latency per delivery. Never set `wait-for-async-insert: false` to buy that latency back — it
 makes the sink acknowledge events it may still lose.
@@ -190,12 +231,14 @@ that can only flush a batch *earlier*, and neither is the binding constraint her
 ~473 bytes against a 10 MiB default, and ClickHouse only honours the query-number limit when
 `async_insert_deduplicate` is enabled.
 
-**Duplicates.** DLQ replay can re-deliver an event. AuditFlow's `eventId` deduplication (~24h)
+**Duplicates.** DLQ replay can re-deliver an event. AuditFlow's `eventId` deduplication (48 hours)
 absorbs the common case, and the table schema above absorbs the rest: it is a `ReplacingMergeTree`
 keyed on `event_id`, not a plain `MergeTree`, so a re-delivered row is collapsed on merge rather
 than counted twice. Deduplication happens only within a partition and only after merge, so a query
 run between deliveries can still see both rows — use `FINAL` for anything where a duplicate would
 matter, such as revenue.
+
+In the local Docker Compose stack, `just ch-seed` publishes a synthetic event stream, `just ch-events` shows the latest events and `just ch "<SQL>"` runs your own query.
 
 ## Modelling your own domain
 
