@@ -16,15 +16,18 @@ Whether you are evaluating one service, integrating a product team, or operating
 
 | I want to… | Start here |
 |---|---|
-| Understand the platform and its vocabulary | [What is Labs64.IO?](./what-is-labs64-io.md) · [Core concepts](./core-concepts.md) |
+| Understand the platform and its vocabulary | [What is Labs64.IO?](./what-is-labs64-io.md) · [Core concepts](./core-concepts.md) · [Architecture](./architecture.md) |
 | Run it: on a laptop, on my cluster, or from source | [Get started](../getting-started/index.md) |
 | Explore a product capability | [Services & Modules](../modules/index.md) |
 | Run the platform reliably | [Operate & Manage](../operate-manage/index.md) |
 | Find a contract or setting | [Reference](../reference/index.md) |
+| Let an AI agent read the docs, call the APIs or change the code | [Working with AI agents](./ai-agents.md) |
+| See every module and its source repository | [The Labs64.IO ecosystem](../modules/index.md#the-labs64io-ecosystem) |
+| Check the license | [License](../development/contributing.md#license) |
 
 ## The ecosystem at a glance
 
-Every request enters through the Auth Gateway. Modules communicate with each other exclusively through REST calls across the gateway; audit events are delivered to AuditFlow over its HTTP API. No module connects directly to another module's database.
+Every external request enters through the Auth Gateway. Inside the cluster, services call each other's REST APIs directly as service principals. Payment Gateway, for example, sends audit events to AuditFlow over its HTTP API. No service reads another service's database. The [Architecture Overview](./architecture.md) explains the request flow, identity and access, and tenant isolation.
 
 ```mermaid
 flowchart TB
@@ -34,7 +37,6 @@ flowchart TB
   AG --> PG[Payment Gateway]
   AG --> AF[AuditFlow]
 
-  CO -->|"REST: initiate payment"| PG
   PG -->|"Audit events (HTTP)"| AF
   AF -->|"Route per tenant"| SINKS[("Your sinks:<br/>OpenSearch, S3, Splunk")]
 ```

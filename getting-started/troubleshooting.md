@@ -97,7 +97,7 @@ mvn -version
 
 ### A container fails to start because a port is taken
 
-The stack uses ports 8080, 8081, 8082, 8123 and 15673, plus 3000, 3100, 3200 and 9090 with `just up obs`. Find what holds a port and stop it:
+The stack uses ports 3592, 3593, 5673, 6379, 8080, 8081, 8082, 8123, 9000 and 15673, plus 3000, 3100, 3200, 4317, 4318 and 9090 with `just up obs`. Find what holds a port and stop it:
 
 ```bash
 lsof -i :8080
@@ -177,4 +177,4 @@ Module names for the log command: `auditflow`, `payment-gateway`, `checkout`, `c
 
 ## Still stuck?
 
-Open an issue in the repository the problem belongs to: [Helm charts and the installer](https://github.com/Labs64/labs64.io-helm-charts/issues), [AuditFlow](https://github.com/Labs64/labs64.io-auditflow/issues), or the [workspace](https://github.com/Labs64/labs64.io-workspace/issues) for anything about the local ecosystem. Say which path you followed and what you saw. For installer problems, attach `./labs64.io-install/install.log`, and never `secrets.yaml`.
+Open an issue in the repository the problem belongs to: [Helm charts and the installer](https://github.com/Labs64/labs64.io-helm-charts/issues), [AuditFlow](https://github.com/Labs64/labs64.io-auditflow/issues), or the [workspace](https://github.com/Labs64/labs64.io-workspace/issues) for anything about the local ecosystem. For a problem in one module, use that module's repository. [Workspace and source repositories](../development/workspace-repositories.md) lists them all. Say which path you followed and what you saw. For installer problems, attach `./labs64.io-install/install.log`, and never `secrets.yaml`.

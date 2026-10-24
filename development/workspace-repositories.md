@@ -10,12 +10,25 @@ Labs64.IO uses focused repositories so each service can evolve with the tooling 
 
 | Repository area | Purpose |
 |---|---|
-| [Workspace](https://github.com/Labs64/labs64.io-workspace) | Local orchestration, repository coordination, and shared developer workflow |
-| Service repositories | Source for deployable modules such as AuditFlow, Checkout, and Payment Gateway |
-| [Helm charts](https://github.com/Labs64/labs64.io-helm-charts) | Kubernetes packaging and deployment configuration |
-| [Tests](https://github.com/Labs64/labs64.io-tests) | Cross-module regression suite ([guide](./regression-tests.md)) |
-| [Commons](https://github.com/Labs64/labs64.io-commons) | Shared libraries and platform conventions ([guide](./shared-libraries.md)) |
-| This documentation repository | Public onboarding, operating guidance, and reference documentation |
+| [Workspace](https://github.com/Labs64/labs64.io-workspace) | Local orchestration, repository coordination, and shared developer workflow: the workspace `justfile`, the dev container, the reusable CI workflows and actions, the CLI tool versions and the shared Renovate preset |
+| Service repositories | Source for deployable modules such as AuditFlow, Checkout, and Payment Gateway (see the table below) |
+| [Helm charts](https://github.com/Labs64/labs64.io-helm-charts) | Kubernetes packaging and deployment configuration: the [Helm charts](../operate-manage/kubernetes-helm-setup.md), `install.sh`, the local Helmfile stack and the observability setup |
+| [Tests](https://github.com/Labs64/labs64.io-tests) | Cross-module regression suite ([guide](./regression-tests.md)): its shared parts and its CI |
+| [Commons](https://github.com/Labs64/labs64.io-commons) | Shared libraries and platform conventions ([guide](./shared-libraries.md)), and the build parent of every Java service |
+| This documentation repository | Public onboarding, operating guidance, and reference documentation ([labs64.io-docs](https://github.com/Labs64/labs64.io-docs)) |
+| [Website](https://github.com/Labs64/labs64.io) | The [labs64.io](https://labs64.io) website |
+
+The service repositories:
+
+| Repository | Contents |
+|---|---|
+| [labs64.io-authproxy](https://github.com/Labs64/labs64.io-authproxy) | The [Auth Gateway](../modules/auth-gateway/index.md) service `traefik-authproxy` |
+| [labs64.io-auditflow](https://github.com/Labs64/labs64.io-auditflow) | [AuditFlow](../modules/auditflow/index.md): the backend, transformer and sink services, and the `auditflow-api` contract and Java client |
+| [labs64.io-payment-gateway](https://github.com/Labs64/labs64.io-payment-gateway) | [Payment Gateway](../modules/payment-gateway/index.md): the backend, the provider SPI and one module per payment provider, and the `payment-gateway-api` contract |
+| [labs64.io-checkout](https://github.com/Labs64/labs64.io-checkout) | [Checkout](../modules/checkout/index.md): the backend and the UI |
+| [labs64.io-customer-portal](https://github.com/Labs64/labs64.io-customer-portal) | The [Customer Portal](../modules/customer-portal/index.md) UI |
+
+[Releases and versions](./releases.md) lists what each repository publishes.
 
 ## Layout
 
@@ -50,6 +63,22 @@ All `just` recipes run from `labs64.io-workspace/`. The other repositories are m
                                           └──────────────────┘   │ localhost  │
                                                                  └────────────┘
 ```
+
+## Commands across repositories
+
+Every workspace recipe finds the other repositories through `../`. Run these from `labs64.io-workspace`. `just --list` shows all of them with a description.
+
+| Command | What it does |
+|---|---|
+| `just clone` | Clones every repository above that is not there yet |
+| `just pull` | Pulls the current branch of every clone, with rebase and autostash. It skips a branch that has no upstream. |
+| `just show-repos` | Shows `git status` for every clone |
+| `just list-prs` | Lists the open pull requests of every clone, with the GitHub CLI |
+| `just check-deps` | Checks that every Java module resolves its dependencies offline. It first installs `labs64.io-commons` and `auditflow-api` from your checkouts into the local Maven repository. |
+| `just check` | Runs the cross-repository gates. They check that every released image reaches its chart, that a version pin written in two places has the same value in both, that every event that makes a Renovate update due starts the Renovate runner, and that every justfile follows the shared convention. |
+| `just ci` | Runs what the workspace's CI runs: the tests of the gate scripts, the workflow lint and the cross-repository checks. It needs no cluster. |
+
+[Run the full ecosystem locally](../getting-started/run-the-full-ecosystem-locally.md) lists the commands that build, deploy and test the local cluster.
 
 ## Working across repositories
 

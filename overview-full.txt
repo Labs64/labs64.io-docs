@@ -2,6 +2,8 @@
 
 Labs64.IO is a modular platform for digital commerce products. Teams use focused services for identity, authorization, payments, checkout, auditability, and customer experiences. Services integrate through documented APIs and events; they do not share databases.
 
-Core concepts: service, gateway, tenant, policy decision, event, sink, and contract. Incoming traffic crosses the Auth Gateway and policy layer; services own their persistence; event-producing services can send tenant-aware records through RabbitMQ to AuditFlow and configured sinks.
+Core concepts: service, gateway, tenant, policy decision, event, sink, and contract. Incoming traffic crosses the Auth Gateway and policy layer; services own their persistence; services send tenant-aware audit events to AuditFlow over its HTTP API, and AuditFlow buffers them on RabbitMQ or Amazon SQS before delivering them to the configured sinks.
 
 Read the complete human documentation at /docs/, /docs/what-is-labs64-io/, /docs/core-concepts/, and /docs/architecture/.
+
+AI agents that call Labs64.IO or work on its code start at /docs/introduction/ai-agents.html. It covers llms.txt and these bundles, the OpenAPI contract each module serves at /<module>/v3/api-docs, and each repository's AGENTS.md.

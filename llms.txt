@@ -25,6 +25,11 @@ Labs64.IO is a modular digital commerce platform with independently deployable s
 - Reference: /docs/reference/
   - OpenAPI, events, configuration, images, Helm, glossary
 - Community & Contributing: /docs/development/
+  - Contributing: /docs/development/contributing.html
+  - Workspace and Source Repositories: /docs/development/workspace-repositories.html
+  - Releases and versions: /docs/development/releases.html
+  - Regression Tests: /docs/development/regression-tests.html
+  - Shared Libraries (Commons): /docs/development/shared-libraries.html
 
 Planned service pages document an intended design and are not callable API contracts until a release publishes them.
 

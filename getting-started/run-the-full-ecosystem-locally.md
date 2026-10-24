@@ -8,15 +8,22 @@ nav_order: 4
 
 This is the contributor's setup: every repository checked out side by side, every image built from your working copy, and the whole platform deployed to a local Kubernetes cluster. Use it when you want to change code and see the change behave among the other services.
 
-If you only want to see the platform run, the [Quickstart](./quickstart.md) gets you there in minutes with published images and nothing to build.
+If you only want to see the platform run, the [Quickstart](./quickstart.md) gets you there in minutes with published images and nothing to build. To try one service without Kubernetes, use [Run one module locally](./run-one-module-locally.md). To run Labs64.IO for a team, use [Deploy to your Kubernetes cluster](./deploy-to-kubernetes.md).
 
 ## What you need
 
 The workspace gives you two ways to get the tooling. Either is fine.
 
-**A dev container (recommended).** Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) and [VS Code](https://code.visualstudio.com/) with the Dev Containers extension. The container brings every tool at the version the project pins.
+**A dev container (recommended).** Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) and [VS Code](https://code.visualstudio.com/) with the Dev Containers extension. The container brings every tool at the version the project pins: Java with Maven, Node.js, Python, k3d, Helm with its plugins, Helmfile, `kubectl`, `just`, Terraform, the AWS CLI, the GitHub CLI and Claude Code. It uses the Docker engine of your machine, so the cluster and the images it builds live there. The names `gateway.localhost`, `mock-oidc.localhost` and `keycloak.localhost` resolve to your machine from inside the container.
 
-**Your own machine.** Install Docker, [k3d](https://k3d.io/), [Helm](https://helm.sh/) 4 with the helm-diff plugin, [Helmfile](https://helmfile.io/), `kubectl` and [`just`](https://github.com/casey/just). `just doctor` then tells you what is missing or at a different version than the project pins.
+The dev container limits outbound traffic to an allowlist of package registries, container registries and developer services. When a command inside it cannot reach a host it needs, add the host to `/etc/l64-firewall-extra-domains`, one per line, and apply the list again:
+
+```bash
+echo "example.com" | sudo tee -a /etc/l64-firewall-extra-domains
+sudo bash /workspaces/labs64.io-workspace/.devcontainer/init-firewall.sh
+```
+
+**Your own machine.** Install Docker, [k3d](https://k3d.io/), [Helm](https://helm.sh/) 4 with the helm-diff and helm-schema plugins, [Helmfile](https://helmfile.io/), `kubectl`, `curl` and [`just`](https://github.com/casey/just). `just doctor` then tells you what is missing or at a different version than the project pins, and prints the install command for a missing Helm plugin. The pinned versions are in `labs64.io-workspace/tool-versions.env`. `just doctor` also reports optional tools that `just up` never needs: Java and Maven or Node.js to build a module outside the builder container, k9s to browse the cluster, helm-docs to regenerate chart documentation, and Terraform and the AWS CLI to operate the AWS environments.
 
 Either way you do not need Java, Maven or Node on your machine to build: images are built inside a builder container. Give Docker at least 4 CPUs and 8 GB of memory, and keep ports 80, 443 and 5005 free.
 
@@ -113,11 +120,13 @@ There are two loops, and most of your time goes into the first.
 
 **The fast loop, inside one repository.** Each service repository runs on its own with hot reload, without the cluster: `just up` in `labs64.io-auditflow`, `just dev-up` and `just dev-watch` in a backend folder such as `checkout-be/`, `npm run dev` in a frontend folder. Each repository's `AGENTS.md` and `README.md` list its commands and its tests.
 
+**All repositories in one editor.** In VS Code, choose **File > Open Workspace from File** and pick `labs64.io-workspace/labs64.io.code-workspace`. It opens the workspace and every ecosystem repository as separate roots, each with its own Source Control view, and it carries shared editor settings and extension recommendations. A repository you have not cloned yet shows up empty until `just clone` fetches it.
+
 **The full loop, in the cluster.** When the change has to prove itself among the other services, run these from `labs64.io-workspace`:
 
 | Command | What it does |
 |---|---|
-| `just build <module>` | Rebuilds one module's images and pushes them to the local registry, for example `just build auditflow` |
+| `just build <module>` | Rebuilds one module's images and pushes them to the local registry, for example `just build auditflow`. `just build all 0` builds everything and prints a module's build log only when it fails |
 | `just up` | Builds every image and applies the charts from your checkouts |
 | `just smoke` | Runs the fast smoke tests against the cluster |
 | `just test` | Runs the full local regression gate |
@@ -127,10 +136,11 @@ There are two loops, and most of your time goes into the first.
 | `just status` | Shows the pods, services and routes of the local cluster |
 | `just show-repos` | Shows `git status` across all repositories |
 | `just pull` | Pulls every repository |
+| `just list-prs` | Lists the open pull requests of every repository, with the GitHub CLI |
 | `just down` | Deletes the cluster and its registry |
 | `just helm-charts <recipe>`, `just tests <recipe>` | Any recipe of `labs64.io-helm-charts` or `labs64.io-tests`, run in that repository: `just helm-charts install-app auditflow`, `just tests test-module auditflow` |
 
-The local charts pull an image only when the cluster does not have it yet (`IfNotPresent`), so a rebuilt image does not replace one that is already running. To be sure the cluster runs your code, run `just down` and then `just up`.
+A rebuilt image does not replace one that is already running. The local settings of the Auth Gateway, Checkout, Customer Portal and Payment Gateway pull their image every time a pod starts, so `just restart-app <app>` in `labs64.io-helm-charts` picks up a new build, for example `just restart-app payment-gateway`. AuditFlow pulls its images only when the node does not have them yet. To be sure the cluster runs your code, run `just down` and then `just up`.
 
 `just --list` in any repository shows everything it can do. How the local cluster is put together, namespace by namespace, is described in [`DEVELOPERS.md`](https://github.com/Labs64/labs64.io-helm-charts/blob/master/DEVELOPERS.md) in the Helm charts repository.
 
