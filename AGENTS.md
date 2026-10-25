@@ -76,3 +76,9 @@ just down     # stop the background service
 - **Always prefer the theme's built-in customization options** (config keys in `_config.yml`, `_sass/color_schemes/*.scss`, `_sass/custom/setup.scss`/`custom.scss`, the `*_custom.html` include overrides) **over hand-written CSS/HTML.**
 - Only write custom code when the theme has no supported override point for it, and keep it inside those same supported override files — never edit theme internals directly. This keeps upgrading `just-the-docs` a one-line `Gemfile` bump.
 - **Never use `//` line comments inside `<script>` blocks in `.html` includes** (e.g. `_includes/head_custom.html`). This theme's layout collapses rendered HTML onto very few physical lines, so a `//` comment silently swallows everything after it on the line — including the rest of the script — with no build error. Use `/* ... */` block comments instead. (This is what made the Mermaid fullscreen click handler silently no-op the first time it was added — verify any new inline script by checking `_site/<page>.html` renders it as executable code, not swallowed by a comment.)
+
+## Working rules for every change
+
+- Judge the change against the **Quality bar for every change** in `labs64.io-workspace/AGENTS.md` (stability of the ecosystem, no regression, no network surprises, performance, HA and resilience, testability, maintainability), and say in the pull request how each applies, or why it does not.
+- Every pull request is assigned to its author and added to the `Labs64.IO` GitHub Project (`labs64.io-workspace/AGENTS.md`, "Pull requests").
+- Before you push: `just build`, then follow "Verifying links" above.
