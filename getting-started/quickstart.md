@@ -51,7 +51,7 @@ curl -fsSL https://raw.githubusercontent.com/Labs64/labs64.io-helm-charts/master
 bash install.sh
 ```
 
-Downloading the script first, instead of piping it into a shell, lets you read it before it runs. You also use the same file later to check, stop and remove the install.
+Downloading the script first, instead of piping it into a shell, lets you read it before it runs. You can also read it on GitHub: [`install.sh`](https://github.com/Labs64/labs64.io-helm-charts/blob/master/install.sh) in `labs64.io-helm-charts`. You use the same file later to check, stop and remove the install.
 
 The installer shows which cluster it is about to change and asks you to confirm. Then choose **Install or update**, then **Quickstart**. Both are the defaults, so pressing Enter three times is enough.
 
@@ -80,11 +80,34 @@ It ends like this:
 
 Smoke test: 5 passed, 0 failed — the quickstart flow works end to end.
 
+ Try it yourself (DEV ONLY — mock-oidc authenticates nobody):
+   ...
+
+────────────────────────────────────────────────────────────────
  Labs64.IO is ready.
 
    Base URL:  http://localhost:8000
    API docs:  http://localhost:8000/swagger-ui/
+
+ Enabled modules:
+   - api-gateway
+   - authz-pdp
+   - api-docs
+   - auditflow
+   - payment-gateway
+
+ Next steps:
+   bash install.sh smoke       re-run the checks above any time
+   bash install.sh status      what is installed, and is it healthy
+   bash install.sh stop        scale everything to zero (keeps data)
+   bash install.sh start       restore previous replica counts
+   bash install.sh uninstall   remove what this wizard created
+
+   Generated config: ./labs64.io-install/
+────────────────────────────────────────────────────────────────
 ```
+
+The "Try it yourself" block prints the token and publish commands of step 3 with your address filled in.
 
 If the installer cannot work out an address your machine can reach, for example when you run it inside a dev container, tell it:
 
@@ -206,6 +229,31 @@ kubectl -n labs64io get pods
 
 Checkout and Customer Portal are not part of this install. To work with them, [run the full ecosystem from source](./run-the-full-ecosystem-locally.md).
 
+## Install with your own identity provider
+
+The installer has a second profile, **BYO** (bring your own). It leaves the demo identity provider out, so it suits a cluster that other people can reach. Run `bash install.sh`, choose **Install or update**, then **BYO**. The installer then asks:
+
+| Question | Default |
+|---|---|
+| OIDC discovery URL | none, you must answer |
+| Install Traefik and a Gateway? | yes |
+| Enable API Gateway, Authz PDP, API Docs, AuditFlow, Payment Gateway (one question each) | yes |
+| Enable Checkout, Enable Customer Portal (one question each) | no |
+
+To answer every question with its default, set the profile and the discovery URL up front:
+
+```bash
+LABS64_PROFILE=byo \
+LABS64_OIDC_DISCOVERY_URL=https://idp.example.com/realms/acme/.well-known/openid-configuration \
+bash install.sh
+```
+
+The BYO profile still runs PostgreSQL, RabbitMQ and Redis inside the cluster, with generated passwords. Both profiles use a data store that already exists instead: if the `labs64io` namespace already has a Service named `labs64io-postgresql`, `labs64io-rabbitmq` or `labs64io-redis-primary` that the installer did not create, the installer connects to it and never removes it. The same goes for an existing Gateway named `labs64io-gateway` in the `tools` namespace. The BYO smoke test checks the gateway and Swagger UI and skips the token and publish steps, because there is no demo identity provider to ask for a token.
+
+If you answer yes to Checkout or Customer Portal, the installer installs their charts but publishes no gateway route for them, and it does not give Checkout the policy engine address it needs. Neither becomes usable through the gateway this way. To work with them, [run the full ecosystem from source](./run-the-full-ecosystem-locally.md).
+
+[Deploy to your Kubernetes cluster](./deploy-to-kubernetes.md#route-a-the-installer-with-your-identity-provider) explains how to prepare a cluster for the BYO profile and when to move on to your own Helm values.
+
 ## Manage the install
 
 Run these from the directory where you ran the installer, against the same cluster:
@@ -213,16 +261,20 @@ Run these from the directory where you ran the installer, against the same clust
 | Command | What it does |
 |---|---|
 | `bash install.sh status` | Shows what is installed and whether it is healthy. Exits non-zero if not. |
-| `bash install.sh smoke` | Repeats the token and publish check. |
+| `bash install.sh smoke` | Repeats the token and publish check. Exits non-zero if a check fails. |
 | `bash install.sh stop` | Scales everything to zero. Data and secrets stay. |
 | `bash install.sh start` | Brings back the previous replica counts. |
+| `bash install.sh` | Opens a menu with every action below. |
 | `bash install.sh install` | Runs again safely: same chart version, same passwords. |
+| `bash install.sh install --dry-run` | Checks the install against the cluster and writes the generated files, without changing the cluster. |
 | `LABS64_CHART_VERSION=<version> bash install.sh install` | Moves to another chart version. |
 | `bash install.sh uninstall` | Removes what the installer created. It asks about each kind of resource separately and keeps data volumes unless you say otherwise. |
 
+The installer labels what it creates and records it in the ConfigMap `labs64io-installer-state` in the `labs64io` namespace. `uninstall` removes only what that ConfigMap records, and never a data store or Gateway the installer found already there.
+
 Each command asks you to confirm the cluster first. Add `LABS64_YES=1` in front to accept the defaults without being asked.
 
-The installer keeps its working files in `./labs64.io-install/`: the Helm values it generated (`values-overrides.yaml`), the passwords (`secrets.yaml`, readable only by you) and a full transcript of the last run (`install.log`). `bash install.sh --help` lists every setting.
+The installer keeps its working files in `./labs64.io-install/`: the Helm values it generated (`values-overrides.yaml`), the passwords (`secrets.yaml`, readable only by you) and a full transcript of the last run (`install.log`). `bash install.sh --help` lists every setting, and `bash install.sh --version` prints the installer's version.
 
 ## Clean up
 

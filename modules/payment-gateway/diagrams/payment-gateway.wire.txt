@@ -1,0 +1,40 @@
+[app]      +-- Resources ----+      +-- {group} ---------------------+      +-- Provider modules ----+      +-- PSPs ----+
+           | [def]           |      | +-- Payment Gateway ----+      |      | [stripe]               |      | [sapi]     |
+           | [prov]          |      | | [core]                |      |      | [paypal]               |      | [papi]     |
+           | [pay]           |      | | [spi]                 |      |      | [noop]                 |      +------------+
+           | [tx]            |      | +-----------------------+      |      +------------------------+
+           +-----------------+      | [valkey]                       |
+                                    | [af]                           |
+                                    +--------------------------------+
+
+legend:
+app    = Your application {client}
+def    = Payment definitions | deployment configuration {store}
+prov   = Payment providers | per tenant, PSP config {store}
+pay    = Payments | READY or CLOSED {store}
+tx     = Payment transactions | PENDING, SUCCESS, FAILED {store}
+core   = Gateway core | idempotency, row locks {service}
+spi    = Provider SPI {service}
+stripe = stripe | Checkout and webhooks {service}
+paypal = paypal | orders and webhooks {service}
+noop   = noop | test, always succeeds {service}
+sapi   = Stripe {external}
+papi   = PayPal {external}
+valkey = Redis or Valkey | idempotency records {store}
+af     = AuditFlow | payment events {service}
+
+edges:
+app -> pay : REST
+def -> prov : constrains
+prov -> pay
+pay -> tx
+pay.right -> core.left
+core.bottom -> spi.top
+core.left -> valkey.left
+core.left ..> af.left : events
+spi.right -> stripe.left
+spi.right -> paypal.left
+spi.right -> noop.left
+stripe <-> sapi : API, webhook
+paypal <-> papi : API, webhook
+gap: 110

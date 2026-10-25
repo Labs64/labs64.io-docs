@@ -14,7 +14,7 @@ The platform is easier to adopt when these ideas are treated as shared conventio
 | **Gateway** | The trusted edge for incoming traffic | Authentication and authorization happen before traffic reaches a service |
 | **Tenant** | The organization or logical customer context of a request or event | It is the isolation boundary for data, policy, and routing |
 | **Policy decision** | An allow/deny decision evaluated from declared policy | Access control stays explicit and reviewable |
-| **Event** | An immutable record of something that happened | Services can react without direct database access |
+| **Event** | An immutable record of something that happened | Audit sinks receive it without reading the service's database |
 | **Sink** | A destination that receives processed events | Audit and operational data can reach the systems that own it |
 | **Contract** | An OpenAPI or event schema agreement | Integrations can be built and tested independently |
 
@@ -33,7 +33,7 @@ flowchart LR
 
 ## Principles to carry into every integration
 
-1. Send user and tenant context through the trusted gateway rather than inventing a parallel identity path.
+1. Take user and tenant context only from the identity headers the gateway issues. When a service calls another service, it sends the same headers with its own service principal as the caller.
 2. Integrate through documented APIs and events; do not read another service's data store.
 3. Treat secrets and policy as deployment configuration, never source code.
 4. Build observability into the deployment from the first environment.

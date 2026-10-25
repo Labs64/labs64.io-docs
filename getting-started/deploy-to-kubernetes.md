@@ -111,6 +111,10 @@ LABS64_OIDC_DISCOVERY_URL=https://idp.example.com/realms/acme/.well-known/openid
 bash install.sh
 ```
 
+To check an install against the cluster without changing the cluster, add `--dry-run` (`bash install.sh install --dry-run`).
+
+The installer publishes gateway routes and sets the policy engine address for AuditFlow and Payment Gateway only. Answering yes to Checkout or Customer Portal installs their charts with no gateway route, and Checkout without the policy engine address, so neither is reachable that way. Install them on their own as the [Checkout](../modules/checkout/index.md#install-with-helm) and [Customer Portal](../modules/customer-portal/index.md#install-with-helm) pages describe.
+
 The installer writes the Helm values it used to `./labs64.io-install/values-overrides.yaml`. That file is a good starting point for Route B when you outgrow the installer. The [Quickstart](./quickstart.md#manage-the-install) lists the commands for checking, stopping and removing the install.
 
 ### Route B: Helm, with your own values file
@@ -200,7 +204,9 @@ Every module chart installs on its own, so you can adopt a single capability and
 helm upgrade --install auditflow labs64io/auditflow -n labs64io -f auditflow-values.yaml
 ```
 
-Module charts bundle no data stores; you point each at yours. The [Helm charts repository](https://github.com/Labs64/labs64.io-helm-charts#building-box-cherry-pick-your-modules) lists what each module needs, the routes it exposes, and a commented production example per module under `overrides/<module>/values.prod-example.yaml`.
+Module charts bundle no data stores; you point each at yours. `global.postgresql.host`, `global.rabbitmq.host` and `global.redis.host` set the data-store addresses, and the chart's `secrets.data` holds the credentials. AuditFlow also runs on Amazon SQS with the pod's IAM role instead of broker credentials; [AuditFlow on Kubernetes](../modules/auditflow/deployment/index.md#kubernetes) shows both variants. [Kubernetes & Helm Setup](../operate-manage/kubernetes-helm-setup.md#charts) lists what each chart needs and the routes it exposes. The [Helm charts repository](https://github.com/Labs64/labs64.io-helm-charts) has a commented production example per module under `overrides/<module>/values.prod-example.yaml`.
+
+A module's protected routes need the `api-gateway` and `authz-pdp` charts and the Gateway API resource definitions. See [Auth Gateway](../modules/auth-gateway/index.md#install-with-helm).
 
 ## AWS, Azure, Google Cloud and on-premises
 

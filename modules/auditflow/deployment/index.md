@@ -37,21 +37,43 @@ Observability overlay URLs:
 
 ## Kubernetes
 
-AuditFlow supports Kubernetes-native service discovery. Set `discovery.mode: kubernetes` and the backend resolves transformer and sink service IPs via the fabric8 `KubernetesClient` at runtime — no hardcoded URLs in Deployment specs.
+Install the chart from the Labs64.IO Helm repository and point it at your broker:
+
+```bash
+helm repo add labs64io https://labs64.github.io/labs64.io-helm-charts
+helm repo update
+
+helm install my-auditflow labs64io/auditflow -n labs64io --create-namespace \
+  --set global.rabbitmq.host=rabbitmq.mycompany.internal
+
+# or on Amazon SQS, with the pod's IAM role (IRSA) instead of broker credentials
+helm install my-auditflow labs64io/auditflow -n labs64io --create-namespace \
+  --set applicationYaml.auditflow.broker.type=sqs \
+  --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=arn:aws:iam::<account>:role/<auditflow-role>
+```
+
+Put the RabbitMQ credentials into the chart's Secret (see [RabbitMQ](#rabbitmq)). On SQS the role needs the [IAM policy](#amazon-sqs) and AuditFlow needs no broker credentials. Run a Redis-compatible store once you run more than one replica (see [Running without Redis](#running-without-redis)). Before you install, the [`preflight` chart](../../../getting-started/deploy-to-kubernetes.md#2-check-your-infrastructure-before-you-install) can test a TCP connection to RabbitMQ and a Redis `PING` from inside your cluster. It has no check for SQS. The chart's values are listed on [Artifact Hub](https://artifacthub.io/packages/helm/labs64io-helm-charts/auditflow).
+
+The chart runs the transformer and the sink as sidecar containers in the backend's pod, and the backend reaches them on `localhost` (`discovery.mode: local`). It reads tenants from labelled ConfigMaps (`gitops-configmap`), sink credentials from per-tenant Secrets (`k8s-secret`) and keeps idempotency keys and rate limits in Redis. Its `applicationYaml` block holds the backend's Spring properties, and `secrets.data` (or an external secret) holds every credential.
+
+If you run the transformer and sink as separate Deployments instead, set `discovery.mode: kubernetes`. The backend then resolves each Service through the Kubernetes API at runtime:
 
 ```yaml
 # application.yml or JAVA_OPTS in your Deployment
 transformer:
   discovery:
     mode: kubernetes
+  service:
+    name: auditflow-transformer
     namespace: auditflow
-    service-name: auditflow-transformer
 
 sink:
   discovery:
     mode: kubernetes
+  service:
+    name: auditflow-sink
     namespace: auditflow
-    service-name: auditflow-sink
+    port: 8082
 ```
 
 Health probes are ready to use out of the box:
@@ -59,7 +81,7 @@ Health probes are ready to use out of the box:
 ```yaml
 livenessProbe:
   httpGet:
-    path: /live       # Python services; use /actuator/health for the Java backend
+    path: /live       # Python services; /actuator/health/liveness and /readiness for the Java backend
     port: 8081
 readinessProbe:
   httpGet:
@@ -67,7 +89,7 @@ readinessProbe:
     port: 8081
 ```
 
-Custom sinks and transformers can be injected at runtime via a ConfigMap or volume — no image rebuild required:
+Custom sinks and transformers can be added at runtime through a ConfigMap or volume, with no image rebuild. Mount them into the sink or transformer container (`/home/l64user/transformers_bootstrap` for transformers). With the Helm chart, both containers are defined in the `extraContainers` value, so add the mount there:
 
 ```yaml
 volumeMounts:
@@ -79,7 +101,7 @@ volumes:
       name: my-sink-plugins
 ```
 
-> Helm charts are published from [`labs64.io-helm-charts`](https://github.com/Labs64/labs64.io-helm-charts): `helm repo add labs64io https://labs64.github.io/labs64.io-helm-charts`, then `labs64io/auditflow` for AuditFlow alone or `labs64io/labs64io-ecosystem` for the platform. Its `install.sh` puts the whole stack on a cluster and verifies it; see [Deploy to your Kubernetes cluster](https://labs64.io/docs/getting-started/deploy-to-kubernetes/).
+> Helm charts are published from [`labs64.io-helm-charts`](https://github.com/Labs64/labs64.io-helm-charts): `labs64io/auditflow` for AuditFlow alone or `labs64io/labs64io-ecosystem` for the platform. Its `install.sh` puts the whole stack on a cluster and verifies it; see [Deploy to your Kubernetes cluster](../../../getting-started/deploy-to-kubernetes.md).
 
 ## Choose a message broker
 
@@ -218,7 +240,7 @@ Swap any self-hosted component for a managed cloud service — pipeline behaviou
 | Archive storage | Amazon S3, Google Cloud Storage, Azure Blob Storage |
 | Metrics / traces | Grafana Cloud, Datadog, Honeycomb |
 
-The cloud sinks (`aws_s3_sink`, `aws_cloudwatch_sink`, `gcs_sink`, `azure_blob_sink`) read connection details from `sink.properties`, resolved from environment variables — no credentials in configuration files.
+The cloud sinks (`aws_s3_sink`, `aws_cloudwatch_sink`, `gcs_sink`, `azure_blob_sink`) read connection details from `sink.properties`. Credentials there are `${secretRef:<key>}` references to the tenant's own secret store; the AWS and Google Cloud sinks can use the pod's cloud identity instead.
 
 ## Running without Redis
 

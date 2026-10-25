@@ -6,13 +6,13 @@ nav_order: 4
 
 # Using Labs64.IO with AI agents
 
-An AI agent can use Labs64.IO the way any other client does: it gets a token, calls a REST API and reads an OpenAPI contract. It can also work on the platform's code the way a human contributor does. This page covers both, and what to watch for.
+An AI agent can use Labs64.IO the way any other client does: it gets a token, calls a REST API and reads an OpenAPI contract. It sends the token as `Authorization: Bearer <token>`. It can also work on the platform's code the way a human contributor does. This page covers both, and what to watch for.
 
 ## Calling the platform from an agent
 
 ### Give the agent its own identity
 
-Create a service client (OAuth client credentials) for each agent and grant it only the scopes its task needs. A reporting agent does not need `payment:pay`. The [API Gateway](../modules/auth-gateway/) turns the token into trusted headers (`X-Auth-User: svc:<client>`, `X-Auth-Scopes`, `X-Auth-Tenant`) before a module sees the request, so the module never handles the agent's credentials.
+Create a service client (OAuth client credentials) for each agent and grant it only the scopes its task needs. A reporting agent does not need `payment:pay`. The [API Gateway](../modules/auth-gateway/index.md) turns the token into trusted headers (`X-Auth-User: svc:<client>`, `X-Auth-Scopes`, `X-Auth-Tenant`) before a module sees the request, so the module never handles the agent's credentials.
 
 When a call is refused, the status tells the agent what to do next:
 
@@ -24,7 +24,7 @@ When a call is refused, the status tells the agent what to do next:
 
 ### Read the contract instead of guessing
 
-Every module publishes an OpenAPI v1 spec, and the running service serves it. Generate a client or a tool definition from it. Within v1 the specs only grow, so a tool definition you generate today keeps working. The aggregated Swagger UI behind the gateway lists every installed module, which is the quickest way to see what a given environment offers. The [OpenAPI reference](../reference/openapi.md) lists the spec locations.
+Every module publishes an OpenAPI v1 spec, and the running service serves it at `/<module>/v3/api-docs` on the gateway, for example `/auditflow/v3/api-docs`. The same file is in the module's repository. Generate a client or a tool definition from it. Within v1 the specs only grow, so a tool definition you generate today keeps working. The aggregated Swagger UI behind the gateway lists every installed module, which is the quickest way to see what a given environment offers. The [OpenAPI reference](../reference/openapi.md) lists the spec locations.
 
 ### Make retries safe
 
@@ -35,11 +35,11 @@ Agents time out and retry, so build for it:
 
 ### Module notes
 
-**[Payment Gateway](../modules/payment-gateway/).** `GET /payment-definitions` lists the providers the platform supports, and `GET /payment-providers` lists the ones this tenant has configured. Ask the second one before you assume a provider is available.
+**[Payment Gateway](../modules/payment-gateway/index.md).** `GET /payment-definitions` lists the providers the platform supports, and `GET /payment-providers` lists the ones this tenant has configured. Ask the second one before you assume a provider is available.
 
-**[Checkout](../modules/checkout/).** Send `consents` and `extra` in every order body, even if both are `{}`. Today a body without them returns `500` instead of a validation error. Orders need scopes such as `purchase-order:write` and `purchase-order:checkout`.
+**[Checkout](../modules/checkout/index.md).** Send `consents` and `extra` in every order body, even if both are `{}`. Today a body without them returns `500` instead of a validation error. Orders need scopes such as `purchase-order:write` and `purchase-order:checkout`.
 
-**[AuditFlow](../modules/auditflow/).** This is where an agent can record what it did. Call `POST /audit/publish` (or `/audit/publish/batch` for up to 100 events) with an `eventType` such as `agent.tool.called`, the agent's name as `sourceSystem`, and the details in `extra`. Fields named in your redaction rules are removed before the event is stored anywhere. It needs no SDK, one HTTP call per action is enough. Errors you may see:
+**[AuditFlow](../modules/auditflow/index.md).** This is where an agent can record what it did. Call `POST /audit/publish` (or `/audit/publish/batch` for up to 100 events) with an `eventType` such as `agent.tool.called`, the agent's name as `sourceSystem`, and the details in `extra`. Fields named in your redaction rules are removed before the event is stored anywhere. It needs no SDK, one HTTP call per action is enough. Errors you may see:
 
 - `400` for an invalid event
 - `403` with `TENANT_NOT_PROVISIONED` or `TENANT_DISABLED`
@@ -49,7 +49,7 @@ Agents time out and retry, so build for it:
 
 Before you rely on a route, `POST /actuator/pipelines/<tenantId>/dry-run` shows which pipelines a sample event would reach and why.
 
-**[Customer Portal](../modules/customer-portal/).** This is a human-facing app, so agents mostly work on it, not through it.
+**[Customer Portal](../modules/customer-portal/index.md).** This is a human-facing app, so agents mostly work on it, not through it.
 
 ## Getting an environment to test against
 
@@ -60,18 +60,27 @@ The installer is built to run without a person at the keyboard, which suits CI j
 - `bash install.sh status` exits non-zero when something is unhealthy, and `smoke` repeats the token and publish check.
 - The installer labels everything it creates, so `uninstall` never touches a resource it did not create.
 
-See [Quickstart](../getting-started/quickstart/) for the full walkthrough.
+See [Quickstart](../getting-started/quickstart.md) for the full walkthrough.
 
 ## Working on the code with an agent
 
 Each repository has an `AGENTS.md` (and usually a `CLAUDE.md`) that describes its layout, conventions and test commands. Read those first. Some habits apply everywhere:
 
-- **Start in the workspace.** Every build, deploy and test is a `just` recipe run from the workspace repository, and the same recipe name means the same thing in every repository. The workspace also carries a knowledge graph and skills for following a change across repositories. See [Workspace and source repositories](../development/workspace-repositories.md).
+- **Start in the workspace.** Every build, deploy and test is a `just` recipe run from the workspace repository, and the same recipe name means the same thing in every repository. The workspace also carries a knowledge graph and skills for following a change across repositories. See [Workspace and source repositories](../development/workspace-repositories.md), and [Work with an AI agent](../development/contributing.md#work-with-an-ai-agent) for the shared skills and the knowledge graph.
 - **Check before you propose.** `just ci` in the repository you changed runs what its pull-request check runs. `just smoke` checks the running platform.
-- **Use the narrowest test slice.** In the [regression suite](../development/regression-tests.md), `robot --include smoke --exclude not-ga tests/` is the fast gate and `robot tests/<module>/` runs one service. Open `log.html` first when something fails, since it holds the full request and response. New tests go through the gateway.
+- **Use the narrowest test slice.** In the [regression suite](../development/regression-tests.md), `just smoke` is the fast gate and `just test-module <module>` runs one service. Open `log.html` first when something fails, since it holds the full request and response. New tests go through the gateway.
 - **Leave version pins to the parent.** Services get their versions from `labs64io-parent` in [Commons](../development/shared-libraries.md). Change it there, once, and do not re-pin in a service. The trusted-header test vectors in Commons are the spec for both languages, so a parser change has to keep them green.
 - **Update the docs in the same change.** Pages describe what ships.
 
 ## Docs for agents
 
-This site is plain Markdown under stable URLs. [`llms.txt`](/docs/llms.txt) is a short index of it, and each section is also published as one bundled text file (linked from `llms.txt`), so an agent can load a whole section in one request. For module status, read `_data/modules.yml` in the website repository. Do not infer status from prose.
+This site is plain Markdown under stable URLs: every page is a Markdown file in [`labs64.io-docs`](https://github.com/Labs64/labs64.io-docs), under a path that matches its URL. [`llms.txt`](/docs/llms.txt) is a short index of it, and each section is also published as one bundled text file (linked from `llms.txt`), so an agent can load a whole section in one request:
+
+- `/docs/overview-full.txt`
+- `/docs/get-started-full.txt`
+- `/docs/services-modules-full.txt`
+- `/docs/operate-manage-full.txt`
+- `/docs/reference-full.txt`
+- `/docs/community-contributing-full.txt`
+
+The pages describe how to use a module and do not state its status or version. For module status, read [`_data/modules.yml`](https://github.com/Labs64/labs64.io/blob/master/_data/modules.yml) in the website repository. Do not infer status from prose.
