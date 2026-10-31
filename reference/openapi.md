@@ -24,4 +24,5 @@ For deep integration or client generation, you can find the raw OpenAPI YAML fil
 | **Auth Gateway** | N/A (Proxies upstream APIs) |
 | **Checkout** | `checkout-be/src/main/resources/openapi/` |
 | **Payment Gateway**| `payment-gateway-be/src/main/resources/openapi/` |
+| **Reporting** | `src/main/resources/openapi/openapi-reporting-v1.yaml` |
 | **Customer Portal**| N/A (Frontend application) |
