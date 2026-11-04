@@ -6,7 +6,7 @@ nav_order: 1
 
 # API Reference (OpenAPI)
 
-Every Labs64.IO module with an API follows an **OpenAPI-first** approach. The OpenAPI contract is the source of truth: the build generates the server interfaces and models from it. The `x-labs64.auth` block of each operation also generates the gateway's routes manifest and the Cerbos authorization policies, so the [Auth Gateway](../modules/auth-gateway/index.md) enforces exactly what the contract declares.
+Every Labs64.IO module with an API follows an **OpenAPI-first** approach. The OpenAPI contract is the source of truth: the build generates the server interfaces and models from it, and the access rules of each operation become the gateway's authorization policy (see [Policy from the contract](../introduction/architecture.md#policy-from-the-contract)).
 
 ## Accessing the APIs
 
