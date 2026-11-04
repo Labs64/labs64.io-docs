@@ -7,7 +7,7 @@ nav_order: 1
 # Auth Gateway
 
 ## Overview
-The Auth Gateway (`traefik-authproxy`) provides the authenticated edge for the entire Labs64.IO ecosystem. It enforces authentication via OIDC/JWT and delegates authorization decisions to the Cerbos Policy Decision Point (PDP) before requests reach any module. It hands the module a trusted identity context instead of the token, so modules never validate tokens themselves.
+The Auth Gateway (`traefik-authproxy`) provides the authenticated edge for the protected routes of the Labs64.IO modules. It enforces authentication via OIDC/JWT and delegates authorization decisions to the Cerbos Policy Decision Point (PDP) before a request to a protected route reaches a module. It hands the module a trusted identity context instead of the token, so modules never validate tokens themselves.
 
 The `api-gateway` Helm chart deploys the Auth Gateway together with the shared Traefik middlewares. The `authz-pdp` chart deploys the Cerbos PDP.
 
@@ -57,7 +57,7 @@ sequenceDiagram
     end
 ```
 
-**Route matching.** Each module's OpenAPI contract declares, per operation, whether the operation is public and which scopes it needs (`x-labs64.auth`). The build turns this into one routes manifest per module and the matching Cerbos policies, so the gateway's routing and the policy follow the published API. The Auth Gateway loads the manifests from `ROUTES_DIR`. Paths without an OpenAPI contract, such as UI bundles and the AuditFlow dead-letter endpoints, use static prefix rules from `STATIC_ROUTES_FILE`. The Auth Gateway consults those only when no operation matches, and it rejects a request that matches neither with `403`. When two modules declare the same method and path, the Auth Gateway rejects that route with `403` "Conflicting auth policy" and logs the conflict.
+**Route matching.** Each module's OpenAPI contract declares, per operation, whether the operation is public and which scopes it needs, in the `auth` block under its `x-labs64` extension. The build turns this into one routes manifest per module and the matching Cerbos policies, so the gateway's routing and the policy follow the published API. The Auth Gateway loads the manifests from `ROUTES_DIR`. Paths without an OpenAPI contract, such as UI bundles and the AuditFlow dead-letter endpoints, use static prefix rules from `STATIC_ROUTES_FILE`. The Auth Gateway consults those only when no operation matches, and it rejects a request that matches neither with `403`. When two modules declare the same method and path, the Auth Gateway rejects that route with `403` "Conflicting auth policy" and logs the conflict.
 
 The `api-gateway` chart packages the routes manifests of the AuditFlow, Checkout and Payment Gateway contracts, and the `authz-pdp` chart packages the matching Cerbos policies. A chart release therefore carries routes and policies that belong together. The chart's `staticPolicies` value holds the static prefix rules.
 

@@ -8,7 +8,7 @@ nav_order: 3
 
 This page outlines the core architectural principles and flows of the Labs64.IO ecosystem. The platform is a set of independent services deployed behind one authenticated gateway, each with an OpenAPI contract. Each service owns its API, its data and its release cycle. The platform supplies what they share: identity and access control, tenant isolation, audit delivery, observability and deployment packaging. You can adopt one service or all of them.
 
-![Labs64.IO platform: clients reach the services through Traefik and the Auth Gateway, which verifies tokens with the OIDC provider and asks the Cerbos policy decision point; services keep their data in PostgreSQL and Redis, Payment Gateway sends audit events to AuditFlow, AuditFlow buffers them on RabbitMQ or Amazon SQS and delivers them to the audit sinks, and Reporting reads what the sinks stored](./diagrams/platform.svg)
+![Labs64.IO platform: clients reach the services through Traefik and the Auth Gateway, which verifies tokens with the OIDC provider and asks the Cerbos policy decision point; services keep their data in PostgreSQL and Redis, Payment Gateway sends audit events to AuditFlow, AuditFlow buffers them on a message broker and delivers them to audit stores, and Reporting reads what those stores hold](./diagrams/platform.svg)
 
 ## Principles
 
@@ -16,13 +16,13 @@ This page outlines the core architectural principles and flows of the Labs64.IO 
 2. **One policy source.** Each service's OpenAPI contract declares who may call which operation. The build generates authorization policy and gateway routing from it.
 3. **Fail closed.** An invalid token, an unknown route or an unreachable decision point rejects the request.
 4. **Every record has a tenant.** Requests, database rows and audit events carry the tenant they belong to.
-5. **Services own their data.** No service reads another service's database. Services integrate through APIs. A sink's store is not a service's database: [Reporting](../modules/reporting/index.md) reads what AuditFlow's sinks wrote, read-only, with its own credentials and row policies.
+5. **Services own their data.** No service reads another service's database. Services integrate through APIs. The stores AuditFlow delivers to are not a service's database: [Reporting](../modules/reporting/index.md) reads them, read-only, with its own credentials and row policies.
 6. **Contracts first.** APIs are OpenAPI documents, and the build generates server code from them.
 7. **Operations belong to the deployment.** Telemetry, secrets and network policy come from the deployment configuration, not from service code.
 
 ## Request Flow
 
-Every external request crosses the edge before it reaches any application code. Traefik is the ingress controller. It removes any identity headers the client sent, then delegates authentication and authorization to the [Auth Gateway](../modules/auth-gateway/index.md) (`traefik-authproxy`) through ForwardAuth. The Auth Gateway verifies the token and asks the Cerbos policy decision point (PDP).
+Every external request crosses the edge before it reaches any application code. Traefik is the ingress controller. It removes any identity headers the client sent, then, for every protected route, delegates authentication and authorization to the [Auth Gateway](../modules/auth-gateway/index.md) (`traefik-authproxy`) through ForwardAuth. Public routes, such as a module's OpenAPI document or its static UI, skip that check. The Auth Gateway verifies the token and asks the Cerbos policy decision point (PDP).
 
 ```mermaid
 sequenceDiagram
@@ -67,7 +67,17 @@ After a successful edge check, the service receives the caller's identity, scope
 
 ### Policy from the contract
 
-Each operation in a service's OpenAPI document can carry an `x-labs64.auth` block with the required scopes (`scopes`), whether a tenant is required (`tenant: true`) and, for resource-level checks, a `resourceType`. An operation that declares none of these is public. At build time this block generates three things:
+Each operation in a service's OpenAPI document can carry an `auth` block under the `x-labs64` extension, with the required scopes (`scopes`), whether a tenant is required (`tenant: true`) and, for resource-level checks, a `resourceType`:
+
+```yaml
+x-labs64:
+  auth:
+    tenant: true
+    scopes:
+      - payment-provider:read
+```
+
+An operation that declares none of these is public. At build time this block generates three things:
 
 - the domain annotations on the service's generated API interfaces,
 - the Cerbos policies and schemas that the PDP loads,
@@ -118,7 +128,7 @@ flowchart LR
 
 Services and consumers integrate only through APIs and events. No service reads another service's database.
 
-Today, [AuditFlow](../modules/auditflow/index.md) is the module built this way. Services send it audit events over its HTTP API as an authenticated service principal. AuditFlow stores each event on its message broker, RabbitMQ or Amazon SQS depending on its configuration, before it answers, and then routes the event through the pipelines of the event's tenant to the configured sinks. It routes events and does not store them: the sinks are the systems of record, and [Reporting](../modules/reporting/index.md) answers read-only queries over what the ClickHouse and S3 sinks stored, limited to the caller's scope. See [Choose a message broker](../modules/auditflow/deployment/index.md#choose-a-message-broker) for the broker options.
+[AuditFlow](../modules/auditflow/index.md) is an example of a module built this way. Services send it audit events over its HTTP API as an authenticated service principal. AuditFlow stores each event on its message broker before it answers, and then routes the event through the pipelines of the event's tenant to the configured sinks. It routes events and does not store them: the sinks are the systems of record, and [Reporting](../modules/reporting/index.md) answers read-only queries over what the sinks stored, limited to the caller's scope. See [Choose a message broker](../modules/auditflow/deployment/index.md#choose-a-message-broker) for the broker options.
 
 ## Multi-Tenancy
 
@@ -190,11 +200,11 @@ flowchart TB
     subgraph Production
         K8S[AWS EKS or any Kubernetes cluster] -->|Helm umbrella chart| E2[Full Ecosystem]
         E2 --> PG_DB[("Managed PostgreSQL")]
-        E2 --> BROKER[("RabbitMQ or Amazon SQS")]
+        E2 --> BROKER[("Message broker")]
         E2 --> CACHE[("Redis or Valkey")]
     end
 ```
 
-The module charts do not bundle PostgreSQL, Redis or RabbitMQ. The umbrella chart installs in-cluster PostgreSQL, Valkey and RabbitMQ by default, which is enough for evaluation. In production you turn those off and point the services at your own identity provider, data stores and secrets.
+The module charts bundle no data stores. The umbrella chart installs in-cluster ones by default, which is enough for evaluation. In production you turn those off and point the services at your own identity provider, data stores and secrets.
 
 See **[Get Started](../getting-started/index.md)** for deployment instructions and **[Operate & Manage](../operate-manage/index.md)** for the production operating model.

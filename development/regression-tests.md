@@ -9,7 +9,7 @@ nav_order: 4
 [`labs64.io-tests`](https://github.com/Labs64/labs64.io-tests) is a black-box regression suite for the platform, built with [Robot Framework](https://robotframework.org/). A change in one module can break another, and the break shows up at the edge: a wrong scope, a missing route, a payment that never reaches the audit log. The suite checks the platform the way a real client sees it.
 
 - **Edge only.** Every test goes through Traefik and the Auth Gateway, never a backend port, so authentication and authorization are always part of what is tested. Locally the gateway serves a module at `http://gateway.localhost/<module>/api/v1`.
-- **Contract first.** Every test maps to an operation in the module's OpenAPI contract. The operation's `x-labs64.auth` block decides which scopes the authorization cases expect to pass or fail.
+- **Contract first.** Every test maps to an operation in the module's OpenAPI contract. The `auth` block under the operation's `x-labs64` extension decides which scopes the authorization cases expect to pass or fail.
 - **Real tokens.** Tokens are minted with exact scopes from the mock identity provider or Keycloak. Both providers give the same results.
 - **Generated edge coverage.** `scripts/generate_auth_enforcement_suite.py` generates `tests/common/auth_enforcement.robot` from every module's contract. It holds one case per protected operation, and each case checks that the gateway refuses a call without credentials. CI fails when the committed file no longer matches the contracts.
 - **Tagged and filterable.** `smoke`, `regression`, `auth`, `flaky`, `not-ga`, `local-k8s-only` and module tags let you run exactly the slice you need.
@@ -156,7 +156,7 @@ labs64.io-<module>/tests/e2e/
 └── <feature>.robot         # one suite per flow that needs one
 ```
 
-1. Read the operation in the module's OpenAPI contract and its `x-labs64.auth` block.
+1. Read the operation in the module's OpenAPI contract and the `auth` block under its `x-labs64` extension.
 2. Put happy-path checks in `smoke.robot`, scope cases in `authz.robot`, and other flows in a feature suite of the module's `tests/e2e/`.
 3. After a contract change, run `just generate-auth-suite` in the tests repository and commit the regenerated suite.
 4. Run `just dryrun`, then the suite against your local cluster. `just dryrun` resolves every keyword and every `Resource` import, so it catches a call to a keyword that does not exist.
