@@ -29,19 +29,7 @@ Whether you are evaluating one service, integrating a product team, or operating
 
 Every external request enters through the Auth Gateway. Inside the cluster, services call each other's REST APIs directly as service principals. Payment Gateway, for example, sends audit events to AuditFlow over its HTTP API. No service reads another service's database. The [Architecture Overview](./architecture.md) explains the request flow, identity and access, and tenant isolation.
 
-```mermaid
-flowchart TB
-  Client(["Client / Browser"]) --> AG["Auth Gateway<br/>edge: authn + authz"]
-  AG --> CP[Customer Portal]
-  AG --> CO[Checkout]
-  AG --> PG[Payment Gateway]
-  AG --> AF[AuditFlow]
-  AG --> RP[Reporting]
-
-  PG -->|"Audit events (HTTP)"| AF
-  AF -->|"Route per tenant"| SINKS[("Your sinks:<br/>ClickHouse, S3, OpenSearch")]
-  RP -.->|"Read, per customer"| SINKS
-```
+![Labs64.IO in five layers. You: web and mobile apps, customers and operators, your backends, AI agents. One authenticated edge: the Auth Gateway and policy engine, every request authenticated, every operation authorized. Modules, adopt one or all: Core platform with AuditFlow, the audit trail of the modules and your systems; Commerce and billing with Payment Gateway and Checkout; Customer experience with Customer Portal and Reporting. Shared by every module: OpenAPI contracts, tenant isolation, observability, Helm charts. Your infrastructure: Kubernetes, PostgreSQL, Redis and a broker with a database per module, an OIDC provider, your audit and data stores](./diagrams/ecosystem.svg)
 
 ## A practical path to value
 
