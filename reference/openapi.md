@@ -31,4 +31,4 @@ For deep integration or client generation, you can find the raw OpenAPI YAML fil
 
 The AuditFlow, Payment Gateway and Checkout contracts declare the server URL `/api/v1`, and the Reporting contract declares `/`. The gateway serves each module under its prefix and Traefik strips the prefix again before the request reaches the service.
 
-AuditFlow also publishes a Java client: `io.labs64:auditflow-api` contains the validated models and an HTTP client, compiled for Java 17. Every AuditFlow release publishes it to the Labs64 Nexus repository (`https://nexus.labs64.com/repository/labs64.io-releases/`).
+AuditFlow also publishes a Java client: `io.labs64:auditflow-api` contains the validated models and an HTTP client, compiled for Java 17. Maintainers promote selected releases to [Maven Central](https://central.sonatype.com/artifact/io.labs64/auditflow-api).
