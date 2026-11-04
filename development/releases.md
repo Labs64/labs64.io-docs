@@ -22,8 +22,8 @@ One release model applies to every Labs64.IO repository. This page describes wha
 
 | Repository | Artefacts | Published to |
 |---|---|---|
-| `labs64.io-commons` | `io.labs64:labs64io-parent` and the [shared libraries](./shared-libraries.md), all at one version | Labs64 Nexus. Maintainers promote selected releases to Maven Central. |
-| `labs64.io-auditflow` | Images `labs64/auditflow`, `labs64/auditflow-transformer` and `labs64/auditflow-sink`, and the jar `io.labs64:auditflow-api`, all at one version | Images to Docker Hub. The jar to Labs64 Nexus, and selected releases to Maven Central. |
+| `labs64.io-commons` | `io.labs64:labs64io-parent` and the [shared libraries](./shared-libraries.md), all at one version | [Maven Central](https://central.sonatype.com/namespace/io.labs64), for the releases maintainers promote |
+| `labs64.io-auditflow` | Images `labs64/auditflow`, `labs64/auditflow-transformer` and `labs64/auditflow-sink`, and the jar `io.labs64:auditflow-api`, all at one version | Images to Docker Hub. The jar to Maven Central, for the releases maintainers promote. |
 | `labs64.io-payment-gateway` | Image `labs64/payment-gateway` | Docker Hub |
 | `labs64.io-checkout` | Images `labs64/checkout` and `labs64/checkout-ui` | Docker Hub |
 | `labs64.io-reporting` | Image `labs64/reporting` | Docker Hub |
@@ -33,7 +33,7 @@ One release model applies to every Labs64.IO repository. This page describes wha
 
 A release pushes `labs64/<image>:X.Y.Z` and `:latest`, built for `linux/amd64` and `linux/arm64`. Every green build of a main branch also pushes `:edge`. Only the nightly regression run deploys `:edge`.
 
-Every Java release goes to Labs64 Nexus. Maven Central receives a release only when a maintainer runs the manual promotion for it, after the release is on Nexus. If you use a library outside the Labs64.IO repositories, pick a version that is on [Maven Central](https://central.sonatype.com/namespace/io.labs64).
+Not every Java release reaches Maven Central: a maintainer promotes the ones that do. If you use a library outside the Labs64.IO repositories, pick a version that is on [Maven Central](https://central.sonatype.com/namespace/io.labs64).
 
 ## Version numbers
 
@@ -53,7 +53,7 @@ The remaining pins each have one home. The CLI toolchain for the dev container a
 ![Release flow: a maintainer publishes a GitHub Release, the release workflow pushes the images to Docker Hub and sends their digests to the Helm charts repository, where the chart update pull request merges itself once chart CI passes, the chart release publishes a new labs64io-ecosystem version to the Helm repository, and you upgrade your cluster to it](./diagrams/release-flow.svg)
 
 1. A maintainer publishes a GitHub Release `X.Y.Z` on the main branch of the module repository.
-2. The release workflow runs the tests, builds the multi-architecture images with that version, pushes them and checks their labels. AuditFlow also publishes `auditflow-api` to Labs64 Nexus.
+2. The release workflow runs the tests, builds the multi-architecture images with that version, pushes them and checks their labels. AuditFlow also publishes the jar `auditflow-api`.
 3. The workflow sends the digests of all the module's images to the Helm charts repository. There, an automated pull request pins the digests, sets `appVersion`, and bumps the version of the module chart and of the umbrella chart.
 4. The pull request merges itself once both chart workflows, Lint Charts and Published Chart E2E, pass on its current head and `master` has not moved under it. When modules are released together and their pull requests conflict, the Helm charts repository rebuilds them on the next push to `master`. Maintainers can switch the automatic merge off with the repository variable `CHART_UPDATE_AUTOMERGE`.
 5. The chart release publishes every chart whose version is new to the Helm repository.
