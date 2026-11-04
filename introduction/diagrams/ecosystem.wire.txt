@@ -1,0 +1,58 @@
+//@ diagram: Ecosystem at a glance: the high-level diagram on the Overview page (introduction/index.md, section "The ecosystem at a glance").
+//@ diagram: Purpose: show the principle and how the parts are arranged, not how modules call each other. Keep it stable: it must not change when a module adds or drops a call to another module.
+//@ diagram: Layers, top to bottom: You (who calls the platform) / One authenticated edge (Auth Gateway + policy engine) / Modules, grouped as on the Services & Modules pages / Shared by every module / Your infrastructure.
+//@ diagram: Rules: no edges (arrows) at all; connections belong on the Architecture page (introduction/diagrams/platform.wire.txt). Show only modules that ship; planned ones stay out. Never write a status or version into a label (labs64.io/_data/modules.yml owns those).
+//@ diagram: Adding a shipped module: add a [token] to its group's box in the drawing and a legend row "id = Name | short role {service}". A new group is a new box inside "Modules: adopt one or all", next to the others.
+//@ diagram: After any change: render with python3 ../labs64.io-workspace/.agents/skills/boxdiagram/scripts/boxdiagram.py introduction/diagrams/ecosystem.wire.txt, then --check --strict; never edit ecosystem.svg by hand; update the image's alt text in introduction/index.md to list the same boxes.
+
++-- You {fill} --------------------------------------------------------------------+
+| [apps]           [users]           [services]           [agents]                 |
++----------------------------------------------------------------------------------+
+
++-- One authenticated edge {fill} -------------------------------------------------+
+| [edge]                                                                           |
++----------------------------------------------------------------------------------+
+
++-- Modules: adopt one or all {fill} ----------------------------------------------+
+| +-- Core platform -----+  +-- Commerce & billing --+  +-- Customer experience -+ |
+| | [af]                 |  | [pg]                   |  | [cp]                   | |
+| |                      |  | [co]                   |  | [rp]                   | |
+| +----------------------+  +------------------------+  +------------------------+ |
++----------------------------------------------------------------------------------+
+
++-- Shared by every module {fill} -------------------------------------------------+
+| [contract]          [tenant]          [obs]          [charts]                    |
++----------------------------------------------------------------------------------+
+
++-- Your infrastructure {fill} ----------------------------------------------------+
+| [k8s]          [stores]          [idp]          [sinks]                          |
++----------------------------------------------------------------------------------+
+
+legend:
+apps     = Web and mobile apps {client}
+users    = Customers and operators {client}
+services = Your backends {client}
+agents   = AI agents {client}
+//@ edge: One box on purpose: the Auth Gateway and the Cerbos policy engine act as one gate. Do not split it into a box per component.
+edge     = Auth Gateway and policy engine | protected routes authenticated, every protected operation authorized {service}
+//@ af: AuditFlow appears once, as a module; its sub text carries its shared role, including your own systems publishing to it. Do not add it back to the shared layer.
+af       = AuditFlow | audit trail of the modules and your systems {service}
+pg       = Payment Gateway | one API, many providers {service}
+co       = Checkout | orders and checkout {service}
+cp       = Customer Portal | customer-facing UI {service}
+rp       = Reporting | read API over stored events {service}
+contract = OpenAPI contracts | API and access rules {store}
+tenant   = Tenant isolation | every record has a tenant {store}
+obs      = Observability | from the deployment {store}
+charts   = Helm charts | one per module {store}
+k8s      = Kubernetes {external}
+stores   = Data stores and message broker | database per module {external}
+idp      = OIDC provider {external}
+sinks    = Your audit and data stores {external}
+
+edges:
+//@ "You": Who calls the platform. Generic roles only, no product names.
+//@ "Modules: adopt one or all": One box per module group, named as on the Services & Modules pages, except "Customer experience", which is this diagram's name for the Extensions group.
+//@ "Shared by every module": What every module gets from the platform instead of building it. Keep to a handful of principles; nothing module-specific.
+//@ "Your infrastructure": What the adopter runs or rents. Generic categories only, nothing environment- or Labs64-specific.
+gap: 40
