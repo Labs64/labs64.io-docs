@@ -67,7 +67,17 @@ After a successful edge check, the service receives the caller's identity, scope
 
 ### Policy from the contract
 
-Each operation in a service's OpenAPI document can carry an `x-labs64.auth` block with the required scopes (`scopes`), whether a tenant is required (`tenant: true`) and, for resource-level checks, a `resourceType`. An operation that declares none of these is public. At build time this block generates three things:
+Each operation in a service's OpenAPI document can carry an `auth` block under the `x-labs64` extension, with the required scopes (`scopes`), whether a tenant is required (`tenant: true`) and, for resource-level checks, a `resourceType`:
+
+```yaml
+x-labs64:
+  auth:
+    tenant: true
+    scopes:
+      - payment-provider:read
+```
+
+An operation that declares none of these is public. At build time this block generates three things:
 
 - the domain annotations on the service's generated API interfaces,
 - the Cerbos policies and schemas that the PDP loads,
