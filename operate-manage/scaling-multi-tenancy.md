@@ -13,9 +13,9 @@ Scale services according to the work they perform, while preserving tenant isola
 | Layer | Scale signal | Typical action |
 |---|---|---|
 | Stateless gateway services | Request rate, latency, CPU | Add replicas behind the gateway |
-| Event processors | Queue depth, processing time, failure rate | Add consumers and tune broker capacity |
+| Event processors | Queue depth, processing time, failure rate | Add processor replicas and tune broker capacity |
 | Stateful services | Database connections, slow queries, storage | Scale the data tier and optimize service access |
-| Sinks | Ingestion lag, storage growth, query latency | Scale the destination independently |
+| Consumers | Ingestion lag, storage growth, query latency | Scale each consumer independently |
 
 ## Tenant isolation controls
 
@@ -26,7 +26,7 @@ flowchart TB
   P --> S["Service access"]
   S --> D["Service-owned data boundary"]
   S --> E["Tenant-tagged event"]
-  E --> K["Tenant-specific routing and sink"]
+  E --> K["Tenant-specific routing and consumers"]
 ```
 
 | Control | Intent |
