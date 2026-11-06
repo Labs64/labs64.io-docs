@@ -22,7 +22,7 @@ Payment Gateway puts one REST API in front of every payment provider (PSP). A sh
 
 ## Architecture
 
-Payment Gateway sits behind the API Gateway, which authenticates the caller and passes the tenant and scopes as trusted headers. It stores payments in PostgreSQL, uses Redis for idempotency keys and calls the provider through the SPI.
+Payment Gateway sits behind the Auth Gateway, which authenticates the caller and passes the tenant and scopes as trusted headers. It stores payments in PostgreSQL, uses Redis for idempotency keys and calls the provider through the SPI.
 
 ```mermaid
 sequenceDiagram
@@ -83,7 +83,7 @@ git clone https://github.com/Labs64/labs64.io-payment-gateway.git && cd labs64.i
 docker compose -f docker-compose.images.yml up -d
 ```
 
-Once the stack is healthy (about 30 seconds), pay for an order. The built-in NoOp provider succeeds without a PSP account, and the headers stand in for the ones the API Gateway adds after authenticating a caller:
+Once the stack is healthy (about 30 seconds), pay for an order. The built-in NoOp provider succeeds without a PSP account, and the headers stand in for the ones the Auth Gateway adds after authenticating a caller:
 
 ```bash
 api() { curl -s -H "X-Auth-User: demo-user" -H "X-Auth-Tenant: demo" -H "X-Request-ID: demo" \
@@ -121,7 +121,7 @@ api "localhost:8080/payment-transactions?paymentId=$PAYMENT" | grep -o '"totalIt
 
 You paid **twice** and were charged **once**: the replay returned the original transaction. The payment is `CLOSED`, the transaction `SUCCESS`. Swagger UI is at <http://localhost:8080/swagger-ui/index.html>; clean up with `docker compose -f docker-compose.images.yml down -v`.
 
-That stack runs without an API Gateway and with authorization off: do not expose port 8080.
+That stack runs without an Auth Gateway and with authorization off: do not expose port 8080.
 
 ### Build from source
 
@@ -167,7 +167,7 @@ POST /payment-providers
 
 ## REST APIs
 
-All paths are relative to the service; behind the API Gateway they are served under `/payment-gateway/api/v1`.
+All paths are relative to the service; behind the Auth Gateway they are served under `/payment-gateway/api/v1`.
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
@@ -189,7 +189,7 @@ Operations require scopes such as `payment-provider:read`, `payment-provider:wri
 
 ## Events
 
-When `AUDITFLOW_ENABLED` is `true`, Payment Gateway publishes lifecycle events to [AuditFlow](../auditflow/index.md) over its HTTP API, as the `service:payment-gateway` principal. It has no message-broker dependency.
+When `AUDITFLOW_ENABLED` is `true`, Payment Gateway publishes lifecycle events to [AuditFlow](../auditflow/index.md) over its HTTP API, as the `svc:payment-gateway` service principal with the scope `audit-event:write`. It has no message-broker dependency.
 
 | Event Type | Description |
 |------------|-------------|
@@ -232,7 +232,7 @@ Payment Gateway stores payments and transactions in PostgreSQL and idempotency k
 
 | Symptom | Cause | Resolution |
 |---------|-------|------------|
-| `401 Unauthorized` on every call | The trusted `X-Auth-*` headers are missing or invalid | Call through the API Gateway, or send `X-Auth-User`, `X-Auth-Tenant`, `X-Auth-Scopes` (comma-separated) and `X-Request-ID`. |
+| `401 Unauthorized` on every call | The trusted `X-Auth-*` headers are missing or invalid | Call through the Auth Gateway, or send `X-Auth-User`, `X-Auth-Tenant`, `X-Auth-Scopes` (comma-separated) and `X-Request-ID`. |
 | `VALIDATION_ERROR` on `paymentProviderId` | The payment names no provider | Create the provider with `POST /payment-providers` first and pass its `id`. |
 | `404` for `/api/v1/...` on a direct call | The `/api/v1` prefix is added by the gateway | Call `/payments` directly, or `/payment-gateway/api/v1/payments` through the gateway. |
 | Payment fails with the provider | Wrong or missing provider credentials | Check the provider's `config` for the tenant; test with the NoOp provider first. |

@@ -24,13 +24,13 @@ Checkout is a whitelabel order and checkout layer: an API for purchase orders, c
 
 ## Architecture
 
-Checkout sits behind the API Gateway. The API stores orders in PostgreSQL and asks the central policy engine (Cerbos) whether the caller may act on a resource.
+Checkout sits behind the Auth Gateway. The API stores orders in PostgreSQL and asks the central policy engine (Cerbos) whether the caller may act on a resource.
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant B as Buyer / storefront
-    participant GW as API Gateway
+    participant GW as Auth Gateway
     participant CO as Checkout API
     participant DB as PostgreSQL
 
@@ -76,7 +76,7 @@ docker run --rm -v "$PWD":/src -w /src/checkout-be maven:3.9-eclipse-temurin-25 
 docker compose -f docker-compose.images.yml up -d    # PostgreSQL, Cerbos and the Checkout API
 ```
 
-Create an order and check out. The headers stand in for the ones the API Gateway adds after authenticating a caller:
+Create an order and check out. The headers stand in for the ones the Auth Gateway adds after authenticating a caller:
 
 ```bash
 api() { curl -s -H "X-Auth-User: demo-user" -H "X-Auth-Tenant: demo" -H "X-Request-ID: demo" \
@@ -104,7 +104,7 @@ api -X POST localhost:8080/purchase-orders/$ORDER/checkout -d '{
 
 The order is validated and a checkout transaction exists in `PENDING`. Swagger UI is at <http://localhost:8080/swagger-ui.html>. Clean up with `docker compose -f docker-compose.images.yml down -v`.
 
-This is an evaluation setup without an API Gateway: do not expose port 8080. The checkout **page** needs the gateway in front of the API, so it comes with the installer's BYO profile or the full local ecosystem.
+This is an evaluation setup without an Auth Gateway: do not expose port 8080. The checkout **page** needs the gateway in front of the API, so it comes with the installer's BYO profile or the full local ecosystem.
 
 ### Build from source
 
@@ -138,7 +138,7 @@ The checkout page reads `/config/env.json` at runtime. Mount your own to set the
 
 ## REST APIs
 
-All paths are relative to the service; behind the API Gateway they are served under `/checkout/api/v1`.
+All paths are relative to the service; behind the Auth Gateway they are served under `/checkout/api/v1`.
 
 | Endpoint | Method | Scope | Description |
 |----------|--------|-------|-------------|
@@ -188,6 +188,6 @@ Checkout needs PostgreSQL for its state and a reachable Cerbos policy engine who
 | Symptom | Cause | Resolution |
 |---------|-------|------------|
 | The service exits at start with `QueryPlanner` missing | The policy engine is not configured | Set `LABS64_AUTH_AUTHZ_PDPADDRESS` and make Cerbos reachable; authorization cannot be switched off for this module. |
-| `401 Unauthorized` on every call | Trusted `X-Auth-*` headers missing | Call through the API Gateway, or send `X-Auth-User`, `X-Auth-Tenant`, `X-Auth-Scopes` (comma-separated) and `X-Request-ID`. |
+| `401 Unauthorized` on every call | Trusted `X-Auth-*` headers missing | Call through the Auth Gateway, or send `X-Auth-User`, `X-Auth-Tenant`, `X-Auth-Scopes` (comma-separated) and `X-Request-ID`. |
 | `403` from Cerbos on a valid token | Policies do not match the running version | Regenerate the policies from the same checkout of the contract (`mvn package`) and reload the policy engine. |
 | `500` on `/checkout` | `consents` or `extra` omitted | Send both, using `{}` when there is nothing to record. |

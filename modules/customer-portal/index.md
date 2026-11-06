@@ -7,7 +7,7 @@ nav_order: 3
 # Customer Portal
 
 ## Overview
-Customer Portal is the customer-facing single-page app of the platform: a Vue 3 application built into static files and served by unprivileged nginx behind the API Gateway.
+Customer Portal is the customer-facing single-page app of the platform: a Vue 3 application built into static files and served by unprivileged nginx.
 
 > **Current scope.** The repository ships the front-end shell, with a home page and a shopping-cart page. A Java backend (`customer-portal-be`) is planned but not implemented, so the portal does not yet call a Labs64.IO API on its own.
 
@@ -16,19 +16,18 @@ Customer Portal is the customer-facing single-page app of the platform: a Vue 3 
 | Capability | Description |
 |------------|-------------|
 | **Static, one image** | A multi-stage build produces files served by unprivileged nginx; the image runs on any cluster or static host. |
-| **Edge authentication** | Sign-in is handled at the API Gateway (OIDC/JWT); the app itself is static. |
 | **Modern front end** | Vue 3 (Composition API), Vite, Pinia, TypeScript, Bootstrap 5 and Bootstrap Vue Next. |
 | **Composable** | Module federation (`@originjs/vite-plugin-federation`) is available for micro-frontends. |
 | **Tested** | Unit tests with Vitest, end-to-end tests with Playwright, linted with ESLint. |
 
 ## Architecture
 
-The portal is a single-page app served by nginx. The API Gateway authenticates the caller and routes `/customer-portal` to it.
+The portal is a single-page app served by nginx. It does no authentication, so any router or gateway can expose it on a public route that needs no token. In the reference Labs64.IO environment the chart publishes `/customer-portal` on the shared gateway as a public route, which skips the Auth Gateway check and the rate limit.
 
 ```mermaid
 flowchart LR
-    Browser["Browser"] -->|"GET /customer-portal"| GW["API Gateway"]
-    GW -->|"static files"| CP["customer-portal-fe<br/>Vue 3 · nginx (unprivileged)"]
+    Browser["Browser"] -->|"GET /customer-portal"| R["Router or gateway<br/>public route: no token needed"]
+    R -->|"static files"| CP["customer-portal-fe<br/>Vue 3 · nginx (unprivileged)"]
 ```
 
 ## Quick Start
@@ -86,7 +85,7 @@ The Customer Portal does not publish events.
 
 ## Operations
 
-The portal is stateless static content: scale it with replicas and cache it at the edge. Because authentication happens at the gateway, expose it only through the gateway route.
+The portal is stateless static content: scale it with replicas and cache it at the edge. The route is public and the app does not authenticate visitors, so everything in the image is visible to anyone who can reach it. Don't bake customer data into the image. Load it from an API that checks the caller's token.
 
 ## Troubleshooting
 

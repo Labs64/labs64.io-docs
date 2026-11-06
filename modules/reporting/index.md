@@ -29,7 +29,7 @@ Reporting is the read side of the events AuditFlow's sinks stored: metrics, even
 sequenceDiagram
     autonumber
     participant B as Your backend
-    participant G as API Gateway
+    participant G as Auth Gateway
     participant R as Reporting
     participant C as ClickHouse
     participant S as S3

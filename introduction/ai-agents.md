@@ -12,7 +12,7 @@ An AI agent can use Labs64.IO the way any other client does: it gets a token, ca
 
 ### Give the agent its own identity
 
-Create a service client (OAuth client credentials) for each agent and grant it only the scopes its task needs. A reporting agent does not need `payment:pay`. The [API Gateway](../modules/auth-gateway/) turns the token into trusted headers (`X-Auth-User: svc:<client>`, `X-Auth-Scopes`, `X-Auth-Tenant`) before a module sees the request, so the module never handles the agent's credentials.
+Create a service client (OAuth client credentials) for each agent and grant it only the scopes its task needs. A reporting agent does not need `payment:pay`. The [Auth Gateway](../modules/auth-gateway/) turns the token into trusted headers (`X-Auth-User: svc:<client>`, `X-Auth-Scopes`, `X-Auth-Tenant`) before a module sees the request, so the module never handles the agent's credentials.
 
 When a call is refused, the status tells the agent what to do next:
 

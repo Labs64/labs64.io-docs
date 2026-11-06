@@ -8,7 +8,7 @@ nav_order: 4
 
 [`labs64.io-tests`](https://github.com/Labs64/labs64.io-tests) is a black-box regression suite for the platform, built with [Robot Framework](https://robotframework.org/). A change in one module can break another, and the break shows up at the edge: a wrong scope, a missing route, a payment that never reaches the audit log. The suite checks the platform the way a real client sees it.
 
-- **Edge only.** Every test goes through Traefik and the auth proxy, never a backend port, so authentication and authorization are always part of what is tested.
+- **Edge only.** Every test goes through Traefik and the Auth Gateway, never a backend port, so authentication and authorization are always part of what is tested.
 - **Real tokens.** Tokens are minted with exact scopes from the mock identity provider or Keycloak.
 - **Tagged and filterable.** `smoke`, `regression`, `auth`, `flaky`, `not-ga`, `local-k8s-only` and module tags let you run exactly the slice you need.
 
@@ -31,7 +31,7 @@ Unit tests for a module live in that module's repository. This suite needs a run
   └──────────────┬──────────────┬──────────────┘
                  │ mint token   │ HTTP
         ┌────────▼─────┐   ┌────▼───────────────────────────────┐
-        │ mock OIDC or │   │ Gateway edge: Traefik + auth proxy │
+        │ mock OIDC or │   │ Edge: Traefik + Auth Gateway       │
         │ Keycloak     │   └────┬───────────────────────┬───────┘
         └──────────────┘        │                       │
                        ┌────────▼───────┐      ┌────────▼────────┐

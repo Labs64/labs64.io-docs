@@ -67,7 +67,7 @@ Then point it at your provider's discovery endpoint (`OIDC_DISCOVERY_URL`), inst
 
 ### Try the decision logic with Docker
 
-Only Docker is needed. Run the published auth proxy on its own and ask it to decide on a request:
+Only Docker is needed. Run the published Auth Gateway on its own and ask it to decide on a request:
 
 ```bash
 docker run -d --rm --name authproxy -p 8081:8081 labs64/traefik-authproxy:latest

@@ -17,7 +17,7 @@ sequenceDiagram
     autonumber
     participant C as Client
     participant T as Traefik Ingress
-    participant AP as "Auth Gateway (Authproxy)"
+    participant AP as "Auth Gateway"
     participant PDP as Cerbos PDP
     participant M as "Target Module (e.g. Checkout)"
 
