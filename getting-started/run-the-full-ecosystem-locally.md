@@ -20,6 +20,44 @@ The workspace gives you two ways to get the tooling. Either is fine.
 
 Either way you do not need Java, Maven or Node on your machine to build: images are built inside a builder container. Give Docker at least 4 CPUs and 8 GB of memory, and keep ports 80, 443 and 5005 free.
 
+### 📋 Prerequisites
+
+The DevContainer bundles all of these. Install them yourself only if you work outside it.
+
+| Tool | Version | Purpose |
+|------|---------|---------|
+| [Docker Desktop](https://www.docker.com/products/docker-desktop/) or Docker Engine | latest | Container runtime (`brew install --cask docker`). Give it at least 4 CPUs and 8 GB of memory |
+| [k3d](https://k3d.io/) | v5.x+ | Local k3s (lightweight Kubernetes) cluster used by `just up` (`brew install k3d`) |
+| [Helm](https://helm.sh/) | v4.x | Kubernetes package manager (`brew install helm`) |
+| [helm-diff plugin](https://github.com/databus23/helm-diff) | pinned | Previews chart changes (`helm diff upgrade`) before applying them |
+| [Helmfile](https://github.com/helmfile/helmfile) | v1.x+ | Declarative multi-release orchestration (`brew install helmfile`) |
+| [kubectl](https://kubernetes.io/docs/tasks/tools/) | v1.28+ | Kubernetes CLI (`brew install kubectl`) |
+| [just](https://github.com/casey/just) | latest | Task runner (every repo has a `justfile`) (`brew install just`) |
+| [curl](https://curl.se/) | latest | API testing |
+
+The exact versions the project pins are in [`tool-versions.env`](https://github.com/Labs64/labs64.io-workspace/blob/master/tool-versions.env). `just doctor` compares your machine against that file and, for a missing Helm plugin, prints the install command with the pinned version. To install helm-diff directly:
+
+```bash
+source tool-versions.env
+helm plugin install https://github.com/databus23/helm-diff --version "v${HELM_DIFF_VERSION}" --verify=false
+```
+
+Ports 80, 443 and 5005 must be free: the local gateway and the image registry use them.
+
+Optional tools, reported by `just doctor` but never required by `just up`:
+- Java 25 (Temurin) + Maven 3.6.3+ — to build or test a Java backend on your machine instead of in the builder container
+- Node.js 26+ — the same, for the Vue frontends
+- [k9s](https://k9scli.io/) — Terminal UI to interact with your Kubernetes clusters (`brew install k9s`)
+
+### Universal DevContainer
+Open the folder in VS Code and click **"Reopen in Container"**. You get a consistent development environment with:
+- Java 25 & Maven 3.6.3+
+- Python 3.14
+- Node.js 26.x (Vue 3 ecosystem)
+- Terraform
+- Docker (Docker-in-Docker)
+- All necessary build tools
+
 ## 1. Get the workspace
 
 The workspace repository holds the tooling. The service repositories are cloned next to it, not inside it, so start in an empty folder:
@@ -30,7 +68,7 @@ git clone https://github.com/Labs64/labs64.io-workspace.git
 cd labs64.io-workspace
 ```
 
-Keep the folder name `labs64.io-workspace`; the dev container expects it.
+Keep the folder name `labs64.io-workspace`; the dev container expects it. Prefer SSH? Use `git@github.com:Labs64/labs64.io-workspace.git`.
 
 Using the dev container? Open the `labs64.io-workspace` folder in VS Code now and choose **Reopen in Container**. Run the remaining commands in its terminal.
 
@@ -59,6 +97,8 @@ just up
 ```
 
 This one command creates a k3d cluster named `labs64io` with a local image registry, builds every service image from your checkouts, and deploys the platform with its supporting tools. The first run downloads base images and dependencies and builds everything, so start it and get a coffee. Later runs reuse the caches.
+
+`just up` deploys what `labs64.io-helm-charts/overrides/helmfile/values.local.yaml` describes. That override decides whether mock OIDC, bundled Keycloak, or neither is installed; the Auth Gateway override selects the corresponding issuer.
 
 It finishes with:
 

@@ -43,7 +43,7 @@ You do not have to bring all of it on day one. The chart can run PostgreSQL, Rab
   your identity provider        your infrastructure (or bundled for evaluation)
 ```
 
-Deployment modes, capability requirements and the AWS reference profile are described in the Helm charts repository's [`docs/reference.md`](https://github.com/Labs64/labs64.io-helm-charts/blob/master/docs/reference.md).
+Deployment modes, capability requirements and the AWS reference profile are described in [Kubernetes & Helm Setup](../operate-manage/kubernetes-helm-setup.md#deployment-modes).
 
 ## 1. Add the chart repository
 
@@ -200,7 +200,7 @@ Every module chart installs on its own, so you can adopt a single capability and
 helm upgrade --install auditflow labs64io/auditflow -n labs64io -f auditflow-values.yaml
 ```
 
-Module charts bundle no data stores; you point each at yours. The [Helm charts repository](https://github.com/Labs64/labs64.io-helm-charts#building-box-cherry-pick-your-modules) lists what each module needs, the routes it exposes, and a commented production example per module under `overrides/<module>/values.prod-example.yaml`.
+Module charts bundle no data stores; you point each at yours. [Kubernetes & Helm Setup](../operate-manage/kubernetes-helm-setup.md#building-box-cherry-pick-your-modules) lists what each module needs, the routes it exposes, and a commented production example per module under `overrides/<module>/values.prod-example.yaml`.
 
 ## AWS, Azure, Google Cloud and on-premises
 

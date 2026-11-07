@@ -77,6 +77,51 @@ Pin a **released** version. `0.0.0-SNAPSHOT` is what `master` builds as, and a r
 pip install "auth-context-python @ git+https://github.com/Labs64/labs64.io-commons.git@COMMIT_OR_TAG#subdirectory=auth-context-python"
 ```
 
+## OpenAPI Auth Policy Generation
+
+Java services declare scopes, tenant requirements, and domain-resource metadata
+with `x-labs64.auth`. The preprocessor generates derived artifacts from that
+same source:
+
+- an OpenAPI file enriched with `x-operation-extra-annotation` for OpenAPI Generator templates
+- Cerbos policies for the central PDP (`--cerbos-output`)
+- a routes manifest (`<module>.routes.yaml`) consumed by the Auth Gateway for path matching (`--routes-output`)
+
+Example:
+
+```yaml
+paths:
+  /payments:
+    get:
+      operationId: listPayments
+      x-labs64:
+        auth:
+          tenant: true
+          scopes:
+            - payment:read
+  /health:
+    get:
+      operationId: health
+```
+
+`x-labs64.auth.scopes` generates `@RequireScopes`; `x-labs64.auth.tenant` generates
+`@RequireTenant`; and `x-labs64.auth.resourceType` generates `@Authorize`. An optional
+`x-labs64.auth.resource` supplies its SpEL resource reference, for example
+`#paymentId`. An operation is public when it has no Labs64 auth requirements;
+public operations generate `@PublicEndpoint`. Standard OpenAPI `security` is not
+interpreted by
+this custom header-based authorization pipeline.
+
+CLI:
+
+```bash
+just install-java
+cd auth-context-java/auth-context-spring-boot-starter
+mvn -q exec:java \
+  -Dexec.mainClass=io.labs64.authcontext.openapi.OpenApiAuthPreprocessorCli \
+  -Dexec.args="--input openapi.yaml --openapi-output target/generated/openapi.yaml --cerbos-output target/cerbos --routes-output target/routes.yaml --module commons"
+```
+
 ## Build and test the libraries
 
 Only Docker is needed to build every library inside a Maven container, with no JDK on your machine:
@@ -94,7 +139,7 @@ mvn -B verify                                                   # build and test
 cd auth-context-python && pip install -e . pytest && pytest     # the Python library
 ```
 
-A change to a shared library reaches every service, so tests (and, for the header contract, the shared test vectors) are not optional. The repository's `AGENTS.md` describes the layout and the release rules, and its [`docs/reference.md`](https://github.com/Labs64/labs64.io-commons/blob/master/docs/reference.md) covers the release process and OpenAPI auth-policy generation in full. [Auth context integration](https://github.com/Labs64/labs64.io-commons/blob/master/auth-context-java/INTEGRATION.md) explains how a service adopts the header contract.
+A change to a shared library reaches every service, so tests (and, for the header contract, the shared test vectors) are not optional. The repository's `AGENTS.md` describes the layout and the release rules, and its [`docs/reference.md`](https://github.com/Labs64/labs64.io-commons/blob/master/docs/reference.md) covers the release process. OpenAPI auth-policy generation is described above. [Auth context integration](https://github.com/Labs64/labs64.io-commons/blob/master/auth-context-java/INTEGRATION.md) explains how a service adopts the header contract.
 
 ## Next steps
 
