@@ -250,7 +250,7 @@ More: [Sinks and transformers](./sinks-and-transformers/index.md#adding-your-own
 
 ## Operations
 
-AuditFlow scales horizontally. Increase `replicaCount` in your Helm values to process more events concurrently; the broker distributes deliveries across the replicas. Running more than one replica requires Redis, so that rate limits and deduplication are shared. See [Running without Redis](./deployment/index.md#running-without-redis).
+AuditFlow scales horizontally. Increase `replicaCount` in your Helm values to process more events concurrently; the broker distributes deliveries across the replicas. Running more than one replica requires Redis, so that rate limits and deduplication are shared. See [Running without Redis](./deployment/index.md#running-without-redis). For confirms, retries, backpressure and the dead letter queue, see [Delivery Model](./delivery-model/index.md).
 
 ## Troubleshooting
 
@@ -264,3 +264,5 @@ AuditFlow scales horizontally. Increase `replicaCount` in your Helm values to pr
 | RabbitMQ connection error | Bad credentials or network | Verify `RABBITMQ_USERNAME`, `RABBITMQ_PASSWORD` and the broker host. |
 | SQS `AccessDenied` or `QueueDoesNotExist` | IAM role or queue prefix | The pod's role needs the [SQS policy](./deployment/index.md#amazon-sqs) on `<queue-prefix>*`; with `create-queues: false` every queue must exist. `/actuator/health` reports the `sqs` component. |
 | `413` from `/audit/publish` on SQS | Event above about 1 MiB | Send less (for example trim `extra`); SQS cannot carry larger messages. |
+
+More causes and fixes: [Troubleshooting](./troubleshooting/index.md).
