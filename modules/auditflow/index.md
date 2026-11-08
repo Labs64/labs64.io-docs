@@ -228,6 +228,8 @@ The contract is OpenAPI-first and frozen within v1: changes are additive-only, a
 
 Publish errors an integration should handle: `400` invalid event, `403 TENANT_NOT_PROVISIONED` or `TENANT_DISABLED`, `413` an event larger than the gateway or the broker accepts (about 1 MiB on Amazon SQS; not retryable, in a batch a `VALIDATION_ERROR` for that event), `429 TENANT_RATE_LIMITED` with `Retry-After`, and `503` when the broker did not store the event (retry with the same `eventId`).
 
+To publish from Java, see the [Java Client](./java-client/index.md).
+
 ## Examples
 
 ### Custom transformer plugin
