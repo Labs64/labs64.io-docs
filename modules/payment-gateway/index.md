@@ -2,6 +2,7 @@
 title: Payment Gateway
 parent: Commerce & Billing
 nav_order: 2
+has_children: true
 ---
 
 # Payment Gateway
@@ -164,6 +165,8 @@ POST /payment-providers
 ```
 
 `GET /payment-definitions` lists the supported provider identifiers. Webhook authenticity is verified with the provider's signature, using the secret stored in this configuration.
+
+Step-by-step provider setup, including webhook registration: [PayPal](./paypal/index.md) and [Stripe](./stripe/index.md).
 
 ## REST APIs
 
