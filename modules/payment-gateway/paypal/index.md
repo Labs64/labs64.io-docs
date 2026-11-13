@@ -2,12 +2,12 @@
 title: PayPal
 parent: Payment Gateway
 grand_parent: Commerce & Billing
-nav_order: 1
+nav_order: 2
 ---
 
-# PayPal payment provider
+# PayPal
 
-This module implements PayPal Checkout, order capture, and verified PayPal
+The `paypal` provider implements PayPal Checkout, order capture, and verified PayPal
 webhook handling behind the Payment Gateway provider SPI. PayPal-specific API
 calls, webhook verification, payload parsing, and status mapping stay inside
 this module.
@@ -21,7 +21,7 @@ Every PayPal `PaymentProvider` must contain these configuration fields:
 | `clientId` | yes | Client ID of the PayPal REST application. |
 | `clientSecret` | yes | Client secret of the same PayPal REST application. |
 | `environment` | yes | `sandbox` or `live`. It must match the PayPal application and webhook environment. |
-| `webhookId` | yes | ID of the webhook endpoint registered in that PayPal application. PayPal requires it when verifying a webhook signature. |
+| `webhookId` | yes | ID of the webhook endpoint registered in that PayPal application. PayPal requires it to verify a webhook signature. |
 
 Example configuration:
 
@@ -42,8 +42,9 @@ endpoint, not the ID of an individual delivered event.
 
 ## API endpoint override
 
-By default, the provider lets the PayPal SDK use PayPal's official Sandbox or Live endpoint.
-Isolated integration environments may set the provider-owned Spring property:
+By default, the PayPal SDK calls PayPal's official Sandbox or Live endpoint. An isolated
+integration environment can point it elsewhere with this Spring property, which the PayPal
+provider owns:
 
 ```yaml
 payment-provider:
@@ -51,16 +52,16 @@ payment-provider:
     api-base-url: http://localhost:8090
 ```
 
-Spring's environment-variable equivalent is:
+The equivalent environment variable is:
 
 ```bash
 PAYMENT_PROVIDER_PAYPAL_API_BASE_URL=http://localhost:8090
 ```
 
-This is process-level infrastructure configuration, not tenant `PaymentProvider` config. The
-PayPal provider's auto-configuration applies it while constructing SDK clients and while sending
-webhook verification requests. If absent, the official SDK endpoint is unchanged; Payment
-Gateway does not own PayPal-specific configuration binding.
+This setting applies to the whole process and is not part of the tenant `PaymentProvider`
+config. The PayPal provider's auto-configuration applies it when it builds SDK clients and when
+it sends webhook verification requests. Without the property, the SDK uses its official
+endpoint. The Payment Gateway core has no PayPal-specific configuration binding.
 
 ## Webhook endpoint
 
@@ -80,10 +81,24 @@ http://localhost:8080/providers/paypal/webhooks
 https://gateway.example.com/payment-gateway/api/v1/providers/paypal/webhooks
 ```
 
-The external gateway prefix is deployment-specific. Confirm it before
-registering the endpoint. PayPal must be able to reach the URL over public
-HTTPS; it cannot call `localhost` directly. Use a trusted tunnel for local
-manual testing.
+The external gateway prefix depends on your deployment. Confirm it before you
+register the endpoint. PayPal must reach the URL over public HTTPS, so it
+cannot call `localhost`. Use a trusted tunnel for local manual testing.
+
+## Gateway callback URLs
+
+Payment Gateway builds the browser return and cancel URLs that it hands to PayPal from
+`PAYMENT_GATEWAY_PUBLIC_BASE_URL`, followed by
+`/providers/paypal/checkout-sessions/<sessionId>/return` or `/cancel`. Set this variable to the
+public URL of the gateway API, including the gateway prefix, for example
+`https://gateway.example.com/payment-gateway/api/v1`. The default is `http://localhost:8080`,
+which only works when the browser runs on the same machine as the backend.
+
+After the callback, the gateway redirects the browser to your `checkout.returnUrl` or
+`checkout.cancelUrl` and adds the `sessionId` query parameter. Your page can pass it to the public
+`GET /checkout-sessions/{sessionId}/confirmation` operation to show the outcome. When the provider
+rejects the callback or cannot get a result from PayPal, the gateway redirects to
+`PAYMENT_GATEWAY_CHECKOUT_FALLBACK_REDIRECT_URL` instead, which defaults to `/`.
 
 ## Required webhook events
 
@@ -101,29 +116,29 @@ Configure the PayPal webhook endpoint for at least these events:
 ### Why `CHECKOUT.ORDER.APPROVED` is mandatory
 
 The provider creates PayPal orders with `intent=CAPTURE`, but buyer approval
-does not capture the order by itself. Normally the browser returns to Payment
-Gateway and the return handler calls the PayPal capture API. If the buyer
-closes the browser, that callback never happens.
+does not capture the order by itself. In the usual flow, the browser returns to
+Payment Gateway and the return handler calls the PayPal capture API. If the
+buyer closes the browser, that callback never happens.
 
-`CHECKOUT.ORDER.COMPLETED` and `PAYMENT.CAPTURE.COMPLETED` are therefore not
-enough on their own: they are emitted only after capture. The
-`CHECKOUT.ORDER.APPROVED` webhook is the independent fallback that lets the
-provider perform capture without relying on the browser.
+`CHECKOUT.ORDER.COMPLETED` and `PAYMENT.CAPTURE.COMPLETED` are not enough on
+their own, because PayPal emits them only after capture. The
+`CHECKOUT.ORDER.APPROVED` webhook is the fallback that lets the provider
+capture the order without the browser.
 
 The return handler and approved-order webhook use the gateway transaction UUID
-as the PayPal idempotency key. If they race, PayPal sees the same capture
-attempt, and Payment Gateway also protects the local transaction with a
-database lock and terminal-state guard.
+as the PayPal idempotency key. If both run at once, PayPal treats them as the
+same capture attempt. Payment Gateway also protects the local transaction with
+a database lock and a terminal-state guard.
 
 ## PayPal application setup
 
-1. Open PayPal Developer Dashboard and select **Apps & Credentials**.
+1. Open the PayPal Developer Dashboard and select **Apps & Credentials**.
 2. Select **Sandbox** or **Live**, matching the provider `environment`.
 3. Open the REST application whose `clientId` and `clientSecret` are stored in
    the Payment Gateway provider configuration.
 4. Add a webhook using the public Payment Gateway PayPal webhook URL.
-5. Select all events from the table above. In particular, select
-   **Checkout order approved**.
+5. Select all events from the table above. Make sure **Checkout order approved**
+   is selected.
 6. Save the webhook and copy its webhook ID.
 7. Save that ID as `webhookId` in the corresponding Payment Gateway PayPal
    provider configuration.
@@ -138,50 +153,78 @@ PayPal documentation:
 ## Checkout and webhook flow
 
 1. The client calls `/payments/{paymentId}/pay` and supplies absolute
-   `checkout.returnUrl` and `checkout.cancelUrl` values. These are the final
-   tenant/client destinations.
+   `checkout.returnUrl` and `checkout.cancelUrl` values. The gateway sends the
+   customer to one of these URLs at the end of the flow.
 2. Payment Gateway validates the request, creates the payment transaction and
-   Checkout Session, and builds its own provider return/cancel callback URLs.
+   Checkout Session, and builds its own provider return and cancel callback URLs.
 3. The PayPal provider creates an order and writes the gateway transaction UUID
    to the purchase unit `invoice_id`. It sends only the gateway callback URLs
    to PayPal.
 4. The client follows the approval redirect returned by PayPal.
-5. Browser return and cancel callbacks must carry a PayPal `token` matching the
-   `orderId` stored on the restored transaction. Missing or mismatched tokens
-   redirect the browser to the configured gateway fallback without calling
+5. Browser return and cancel callbacks must carry a PayPal `token` that matches
+   the `orderId` stored on the restored transaction. A missing or mismatched
+   token sends the browser to the configured gateway fallback without calling
    PayPal or changing transaction state.
 6. After buyer approval, either of these paths can finish capture:
    - the browser reaches the gateway return callback; or
    - PayPal sends `CHECKOUT.ORDER.APPROVED` and the verified webhook handler
      captures the order.
-7. Before trusting a webhook, the provider extracts `invoice_id` only to let
-   Payment Gateway restore the transaction and its PayPal provider config.
+7. Before it trusts a webhook, the provider extracts `invoice_id` only so that
+   Payment Gateway can restore the transaction and its PayPal provider config.
 8. The provider sends the PayPal transmission headers, full webhook event, and
    configured `webhookId` to PayPal's `verify-webhook-signature` API.
-9. Only a `SUCCESS` verification result is handled. Invalid or unverifiable
-   requests throw `WebhookRejectedException` and leave the transaction unchanged.
+9. The provider handles a webhook only when the verification result is
+   `SUCCESS`. For an invalid or unverifiable request, it throws
+   `WebhookRejectedException` and leaves the transaction unchanged.
 10. Payment Gateway applies the normalized result under a database lock. A
-   duplicate return or capture webhook cannot overwrite a terminal transaction.
+    duplicate return or capture webhook cannot overwrite a terminal transaction.
 11. For a successful one-time payment, the transaction becomes `SUCCESS`, the
-    payment becomes `CLOSED`, and finalized/closed events are published.
+    payment becomes `CLOSED`, and Payment Gateway publishes the
+    `payment.finalized` and `payment.closed` events.
+
+## Automated PSP integration coverage
+
+The opt-in Robot suite `tests/e2e/paypal_psp_flow.robot` runs the built Payment Gateway through
+the public gateway edge while the real PayPal Java SDK talks to an external WireMock process. It
+covers:
+
+- the OAuth, create-order, capture-order, and webhook-verification HTTP contracts;
+- idempotent replay;
+- upstream and incomplete responses;
+- browser return and cancel;
+- the approved-order capture fallback;
+- completed and denied events;
+- verification rejection and terminal-state protection.
+
+Run it through the shared test orchestrator. [Regression Tests](../../../development/regression-tests.md) describes the suite and its tags.
+
+```bash
+cd labs64.io-tests   # sibling checkout of the workspace
+just enable-psp-stub
+just test-psp
+just disable-psp-stub
+```
+
+The deterministic suite verifies the gateway's integration and state transitions. It does not prove that
+PayPal credentials, account configuration, hosted checkout, or the live PayPal network are healthy.
 
 ## Troubleshooting
 
-- **No delivery attempt in PayPal:** verify that the webhook belongs to the
-  same Sandbox/Live REST application as `clientId`, and that the required event
+- **No delivery attempt in PayPal.** Verify that the webhook belongs to the
+  same Sandbox or Live REST application as `clientId`, and that the required event
   is selected.
-- **Only `Checkout order completed` is selected:** add
-  `Checkout order approved`; completed is emitted after capture and cannot be
-  the browser-independent capture trigger.
-- **Controller breakpoint is not reached:** verify the path is
+- **Only `Checkout order completed` is selected.** Add
+  `Checkout order approved`. PayPal emits the completed event after capture, so
+  it cannot trigger capture when the browser does not return.
+- **The webhook never reaches Payment Gateway.** Verify the path is
   `/providers/paypal/webhooks`, including the deployment's external gateway
   prefix, and confirm that the URL is publicly reachable over HTTPS.
-- **Controller is reached but returns HTTP 400:** check `webhookId`, PayPal
+- **The webhook reaches Payment Gateway but gets HTTP 400.** Check `webhookId`, PayPal
   transmission headers, transaction `invoice_id`, and the application environment.
-- **Verification fails after recreating the endpoint:** update `webhookId` in
-  the Payment Gateway provider config; a newly created endpoint has a new ID.
-- **PayPal webhook simulator is rejected:** simulator payloads may not contain
+- **Verification fails after recreating the endpoint.** Update `webhookId` in
+  the Payment Gateway provider config. A newly created endpoint has a new ID.
+- **PayPal webhook simulator is rejected.** Simulator payloads may not contain
   the transaction UUID written by a real gateway-created order. Use an actual
   Sandbox checkout when testing the complete transaction flow.
-- **Browser return and webhook arrive together:** this is expected and handled
-  idempotently by the PayPal request ID and gateway transaction lock.
+- **Browser return and webhook arrive together.** This is expected. The PayPal
+  request ID and the gateway transaction lock make the processing idempotent.

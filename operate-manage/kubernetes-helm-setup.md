@@ -6,252 +6,90 @@ nav_order: 2
 
 # Kubernetes & Helm Setup
 
-Use Helm charts to declare each selected service and its runtime dependencies. Keep chart values in version control, while sourcing secrets from your approved secret-management system.
+Every Labs64.IO service ships as a Helm chart in the `labs64io` chart repository (`https://labs64.github.io/labs64.io-helm-charts`). You install one service on its own, or all of them with the `labs64io-ecosystem` umbrella chart. No module chart bundles PostgreSQL, RabbitMQ or Redis. You point each service at infrastructure you provide, or you let the umbrella chart run bundled instances for evaluation. Keep chart values in version control and source the secrets from your secret-management system.
+
+This page describes how the charts fit together. For the install steps, see the [Quickstart](../getting-started/quickstart.md) and [Deploy to your Kubernetes cluster](../getting-started/deploy-to-kubernetes.md).
 
 ## Environment shape
 
 | Layer | Responsibility |
 |---|---|
-| Cluster | Schedules workloads, provides network isolation, and runs ingress/gateway components |
-| Namespace | Separates platform services and environment concerns |
-| Helm release | Declares one service's image, replicas, configuration, and references to secrets |
-| Managed dependency | Provides PostgreSQL, RabbitMQ, object storage, or other external state |
-| Observability backend | Receives metrics, logs, and traces |
+| Cluster | Schedules workloads, enforces network policies, and provides the Kubernetes Gateway API resource definitions |
+| Namespace | `tools` holds the gateway and shared infrastructure, `labs64io` holds the Labs64.IO services, `monitoring` holds the observability stack. You can choose other names |
+| Helm release | Declares one service's image, replicas, configuration and secret references |
+| Data stores | PostgreSQL, a Redis-compatible store and the AuditFlow message broker, managed by you or bundled for evaluation |
+| Observability backend | Receives traces, logs and metrics from the OpenTelemetry Collector |
 
-## Install pattern
+The local development stack and the umbrella chart lay out a cluster like this:
 
-1. Create namespaces, image access, and network policies.
-2. Provision dependency endpoints and create secret references.
-3. Install the gateway and policy components.
-4. Install selected services with environment-specific values.
-5. Validate health checks, routing, telemetry, and backup jobs.
+![Cluster layout: Traefik, the identity provider, External Secrets Operator, PostgreSQL, Valkey and RabbitMQ in namespace tools; the api-gateway, authz-pdp, api-docs and module charts in namespace labs64io; the OpenTelemetry Collector, Tempo, Loki, Prometheus and Grafana in namespace monitoring](./diagrams/cluster.svg)
 
-## High-Level Architecture Overview
+Traefik routes each request to a service after the `api-gateway` ForwardAuth check, and the [Auth Gateway](../modules/auth-gateway/index.md) asks the `authz-pdp` policy engine for the decision. The services use the data stores in `tools`. With observability enabled, they send telemetry to the collector in `monitoring`.
 
-The ecosystem separates resources logically into namespaces. Application workloads (the proprietary Labs64 microservices) reside in `labs64io`, while third-party (3PP) platform dependencies reside in `tools` or `monitoring`.
+## Charts
 
-```mermaid
-graph TB
-    %% Definitions
-    classDef config fill:#f9f2f4,stroke:#d3b8c6,stroke-width:2px,color:#333;
-    classDef tools fill:#e6f3ff,stroke:#a6c8ff,stroke-width:2px,color:#333;
-    classDef labs64 fill:#e6ffe6,stroke:#a6ffa6,stroke-width:2px,color:#333;
-    classDef obs fill:#fff3e6,stroke:#ffd8a6,stroke-width:2px,color:#333;
+| Chart | Purpose | Needs | Gateway routes |
+|---|---|---|---|
+| `auditflow` | [AuditFlow](../modules/auditflow/index.md) backend, transformer and sink | RabbitMQ (AMQP 0-9-1) or Amazon SQS; Redis for more than one replica | `/auditflow/api/v1` (protected), `/auditflow/v3/api-docs` (public) |
+| `payment-gateway` | [Payment Gateway](../modules/payment-gateway/index.md) | PostgreSQL (database `payment_gateway`), Redis | `/payment-gateway/api/v1` (protected), `/payment-gateway/v3/api-docs` (public) |
+| `checkout` | [Checkout](../modules/checkout/index.md) API, and the UI with `ui.enabled` | PostgreSQL (database `checkout`) | `/checkout/api/v1` (protected), `/checkout/v3/api-docs` (public), `/checkout` UI (public) |
+| `reporting` | [Reporting](../modules/reporting/index.md) read API | ClickHouse with a reader user and one catalogue file per tenant; optionally S3 read access | `/reporting/api/v1` (protected), `/reporting/v3/api-docs` (public) |
+| `customer-portal` | [Customer Portal](../modules/customer-portal/index.md) UI | None | `/customer-portal` (public) |
+| `api-gateway` | [Auth Gateway](../modules/auth-gateway/index.md) and the shared Traefik middlewares for authentication, rate limiting, request buffering and compression | An OIDC provider that supports the client-credentials grant | None |
+| `authz-pdp` | Cerbos policy decision point, with the policies generated from each service's OpenAPI contract | None | None |
+| `api-docs` | Aggregated Swagger UI | None | `/swagger-ui` (public) |
+| `preflight` | One-shot job that checks your infrastructure before you install | None | None |
+| `mock-oidc` | Demo identity provider. It issues a token to anyone, so never install it in production | None | None |
+| `labs64io-ecosystem` | Umbrella chart: the charts above, plus optional bundled PostgreSQL, RabbitMQ, Valkey, ClickHouse, Traefik and the demo identity provider | None | None |
 
-    %% Kubernetes Cluster
-    subgraph Cluster["Kubernetes Cluster"]
-        
-        subgraph ns_tools["Namespace: tools (Platform Dependencies)"]
-            traefik["Traefik v3 (Ingress Controller)"]:::tools
-            rabbitmq["RabbitMQ"]:::tools
-            postgres["PostgreSQL"]:::tools
-            redis["Redis"]:::tools
-            eso["External Secrets Operator"]:::tools
-        end
+A protected route passes the ForwardAuth check. Public operations inside a protected route, such as the Payment Gateway's provider webhooks, are declared public in the OpenAPI contract, and the Auth Gateway lets them through without a token. Module charts publish their routes only with `gateway.enabled: true`. `chart-libs` is the shared library chart that every chart above depends on; you do not install it yourself.
 
-        subgraph ns_monitoring["Namespace: monitoring (Observability)"]
-            otel["OpenTelemetry Collector"]:::obs
-            tempo["Tempo (Traces)"]:::obs
-            vlogs["Loki (Logs)"]:::obs
-            prom["Prometheus (Metrics)"]:::obs
-            grafana["Grafana"]:::obs
-        end
+`helm show values labs64io/<chart>` prints the documented values of a chart. The [Helm charts reference](../reference/helm-values.md) lists the values all module charts share.
 
-        subgraph ns_labs64io["Namespace: labs64io (Labs64 Modules)"]
-            
-            subgraph Gateway["Gateway & Auth"]
-                authproxy["Auth Gateway"]:::labs64
-                pdp["authz-pdp (Cerbos)"]:::labs64
-            end
-            
-            subgraph AuditFlow["AuditFlow"]
-                audit_be["auditflow-be"]:::labs64
-            end
-            
-            subgraph Checkout["Checkout"]
-                checkout_fe["checkout-ui"]:::labs64
-                checkout_be["checkout-be"]:::labs64
-            end
-            
-            subgraph PaymentGateway["Payment Gateway"]
-                pg_be["payment-gateway-be"]:::labs64
-            end
-        end
-    end
+## Deployment modes
 
-    %% Internal Dependencies
-    traefik -->|"Gateway API Route"| authproxy
-    authproxy -->|"Gateway API Filter"| checkout_be
-    authproxy -->|"Gateway API Filter"| pg_be
-    authproxy -->|"Gateway API Filter"| audit_be
-    
-    checkout_be -.->|"Persist"| postgres
-    pg_be -.->|"Cache/Idempotency"| redis
-    audit_be -.->|"Publish"| rabbitmq
-    
-    ns_labs64io -.->|"OTLP (opt-in)"| otel
-```
-
-## Deployment Modes
-
-The Helm charts adapt seamlessly from local environments to robust GitOps-managed clusters and arbitrary user-provided infrastructure. The configuration is isolated in environment overrides (`overrides/<app>/values.<env>.yaml`).
-
-### 1. Local Development (Helmfile + k3d)
-
-The local environment optimizes for speed and developer convenience.
-
-- **Orchestration**: Managed by [Helmfile](https://github.com/helmfile/helmfile) and `just`.
-- **Infrastructure**: Spun up locally on `k3d`. Helmfile applies Bitnami charts to the `tools` namespace.
-- **Secrets**: `externalSecrets.enabled: false`. Developers populate local `values.secrets.local.yaml` files (git-ignored) which directly render plain Kubernetes `Secret` resources.
-
-```mermaid
-sequenceDiagram
-    participant Dev as Developer (just)
-    participant Helmfile
-    participant LocalConfig as values.local.yaml<br>values.secrets.local.yaml
-    participant K3d as k3d Cluster (Local)
-    
-    Dev->>Helmfile: `just up`
-    Helmfile->>K3d: 1. Deploy `tools` (Traefik, RabbitMQ, Postgres...)
-    Helmfile->>K3d: 2. Deploy `labs64io` apps using local charts
-    LocalConfig-->>K3d: Overrides inject localhost defaults & static secrets
-```
-
-### 2. AWS Staging / Prod Environment (managed data stores + umbrella chart)
-
-The umbrella chart with [`values.aws.yaml`](https://github.com/Labs64/labs64.io-helm-charts/blob/master/charts/labs64io-ecosystem/values.aws.yaml) is a reference profile for EKS with managed data stores (RDS, ElastiCache, Amazon MQ, Secrets Manager). `Helmfile` is **not** used here. You provision the infrastructure with the tool of your choice and pass the resulting coordinates as a second values file; the header of `values.aws.yaml` lists them. Each environment pins the umbrella chart version it runs.
-
-- **Infrastructure**: yours, e.g. Terraform — EKS, RDS PostgreSQL and ElastiCache Valkey per module, Amazon MQ (RabbitMQ, AMQPS only), S3.
-- **Install**: Traefik, Keycloak and the metrics collector first, each as its own release from the publisher's chart with the matching `overrides/<tool>/values*.aws.yaml` file; then `helm upgrade --install labs64io labs64io/labs64io-ecosystem -f values.aws.yaml -f <your-environment-values>.yaml` (bundled infra off, per-module hosts, TLS to the managed services, the AuditFlow route on a `ClusterIP` gateway behind your own load balancer and WAF).
-- **Secrets**: `externalSecrets.enabled: true`; each module's `ExternalSecret` (`external-secrets.io/v1`) reads `<prefix>/<env>/<module>` (the `externalSecrets.secretKey` your environment values set) from AWS Secrets Manager through the `aws-secretsmanager-cluster` `ClusterSecretStore`.
-
-```mermaid
-sequenceDiagram
-    participant TF as Your IaC (e.g. Terraform)
-    participant AWS as AWS (RDS, Valkey, MQ, Secrets Manager)
-    participant Just as helm upgrade --install
-    participant Cluster as AWS EKS Cluster
-
-    TF->>AWS: Provision data stores + per-module secrets
-    TF-->>Just: outputs (hosts, secret keys, IRSA roles) as environment values
-    Just->>Cluster: labs64io-ecosystem -f values.aws.yaml -f your environment values
-    Cluster->>AWS: ESO fetches <prefix>/<env>/<module> from Secrets Manager
-```
-
-### 3. Users' Own Infrastructure (BYO Infra)
-
-Users are expected to deploy to their own clusters (GCP, Azure, on-prem). 
-
-- **Orchestration**: Helm CLI, ArgoCD, Flux, etc.
-- **Infrastructure**: Provided by the user. The charts deliberately do not bundle PostgreSQL or RabbitMQ sub-charts to avoid lock-in.
-- **Configuration**: Example values ship *inside* each chart package (see [Example values](#example-values) below); this git repo additionally carries richer `overrides/<module>/values.prod-example.yaml` starting points.
-- **Secrets**: Users can use `externalSecrets.enabled: false` to inject their own CI-managed secrets, or `externalSecrets.enabled: true` pointing to their own Vault/GCP Secret Manager `ClusterSecretStore`.
-
-| Profile | File | Use case |
+| Mode | How | Configuration |
 |---|---|---|
-| standalone (bundled infra) | `charts/<module>/values.standalone.yaml` (checkout, payment-gateway, auditflow) | install the module alone, pointed at your own PostgreSQL/RabbitMQ/Redis |
-| BYO overrides | `overrides/<module>/values.prod-example.yaml` (**this git repo only — not in the published chart**) | copy & adapt: your infrastructure, credentials via `secrets.data` (ESO recommended) |
+| Evaluation | `install.sh`, or the umbrella chart with `values.demo.yaml` | Bundled data stores, Traefik and the demo identity provider. See the [Quickstart](../getting-started/quickstart.md) |
+| Local development | `just up` with a k3d cluster, Helmfile and locally built images | See [Run the full ecosystem locally](../getting-started/run-the-full-ecosystem-locally.md) |
+| AWS | The umbrella chart with `values.aws.yaml` and a second values file with your environment's coordinates | EKS with RDS, ElastiCache, Amazon SQS or Amazon MQ, and AWS Secrets Manager. See [Deploy to your Kubernetes cluster](../getting-started/deploy-to-kubernetes.md#aws-azure-google-cloud-and-on-premises) |
+| Your own cluster | Helm, Argo CD, Flux or a similar tool, with your PostgreSQL, broker, Redis and identity provider | Start from `overrides/<module>/values.prod-example.yaml` in the [helm-charts repository](https://github.com/Labs64/labs64.io-helm-charts). The published charts do not contain these files |
 
-Network policies also accept `networkPolicy.ingressControllerLabels` (pod-selector labels for a
-non-Traefik ingress controller, e.g. `app.kubernetes.io/name: nginx`) and
-`networkPolicy.observabilityNamespace` (default `monitoring`; namespace of Prometheus and the OTel
-collector — used for both the metrics-scrape ingress and the OTLP egress) when your cluster's naming
-differs from the defaults.
+`values.demo.yaml` and `values.aws.yaml` ship inside the umbrella chart package (`helm pull labs64io/labs64io-ecosystem --untar`). The `auditflow`, `payment-gateway` and `checkout` charts also ship a `values.standalone.yaml` example. In the umbrella chart, `<module>.enabled` turns a service on or off, and `postgresql.enabled`, `rabbitmq.enabled` and `redis.enabled` turn the bundled data stores on or off. `checkout`, `customer-portal` and `reporting` are off by default, and so is the bundled ClickHouse (`clickhouse.enabled`) that `reporting` reads.
 
-### Capability requirements (bring-your-own infrastructure)
+The umbrella chart refuses to render while a bundled data-store password still has its shipped default. Only `demoMode: true`, which `values.demo.yaml` sets, lifts that check and allows the `mock-oidc` chart.
 
-Modules need capabilities, not specific tools:
+To install the evaluation profile with Helm alone, apply the [Gateway API resource definitions](https://gateway-api.sigs.k8s.io/guides/#installing-gateway-api) first. The installer does that for you. The profile also expects the `tools` namespace and the release name `labs64io`:
 
-| Module | Needs |
-|---|---|
-| auditflow | AMQP 0-9-1 broker |
-| checkout | PostgreSQL (db `checkout`, login with CREATE DATABASE for first install) |
-| payment-gateway | PostgreSQL (db `payment_gateway`); Redis; reaches AuditFlow over HTTP |
-| reporting | ClickHouse (a reader user with row policies); optional S3 for bodies; a mounted catalogue per tenant |
-| gateway stack | any OIDC provider supporting client_credentials; scope/role claims are configurable via `TOKEN_SCOPES_CLAIM_PATHS` (default: `scope,realm_access.roles,resource_access.{audience}.roles`) |
-
-### Example values
-
-Example values are shipped inside each chart package, so they are reachable without
-cloning this repo:
-
-```
+```bash
 helm pull labs64io/labs64io-ecosystem --untar
-ls labs64io-ecosystem/values*.yaml   # values.yaml, values.demo.yaml, values.aws.yaml
-```
-
-`values.demo.yaml` is the evaluation profile: AuditFlow and Payment Gateway behind the gateway, plus
-bundled PostgreSQL/RabbitMQ/Redis, Traefik + a `Gateway`, and the dev-only mock IdP. It expects the
-Gateway API CRDs and the `tools` namespace to exist, and the release to be named `labs64io`:
-
-```
 kubectl create namespace tools
 helm install labs64io labs64io/labs64io-ecosystem -n labs64io --create-namespace \
   -f labs64io-ecosystem/values.demo.yaml
 ```
 
-To call a protected route on this profile, request the demo token with the header
-`Host: mock-oidc:8080`: mock-oidc names itself after the Host it is called on, and the gateway
-accepts only the name its discovery URL uses.
+To get a demo token on this profile, send the token request with the header `Host: mock-oidc:8080`. The demo identity provider names itself after the host it is called on, and the Auth Gateway accepts only tokens issued under the name in its discovery URL. A token issued under any other name fails with `401` "Invalid token: Invalid issuer".
 
-`values.aws.yaml`, in the same package, is the AWS reference profile described under
-[Deployment Modes](#deployment-modes). For an evaluation, [`install.sh`](../getting-started/quickstart.md) is the
-shorter way to the same result.
+## Install pattern
 
-`overrides/<module>/values.prod-example.yaml` in this git repo is a richer BYO starting
-point, but it lives outside `charts/` and is therefore **not** part of the published
-chart — clone the repo to read it.
+1. Install the Gateway API resource definitions and a `Gateway` (see [Gateway API](#gateway-api)).
+2. Provision your data stores and create the secrets, or plan to use External Secrets Operator.
+3. Check every dependency from inside the cluster with the [preflight chart](../getting-started/deploy-to-kubernetes.md#2-check-your-infrastructure-before-you-install).
+4. Install the `api-gateway` and `authz-pdp` charts, then the services you need, or the umbrella chart with all of them.
+5. Run `helm test <release>`, then check routing, telemetry and backups.
 
-## Building-Box: cherry-pick your modules
+## Gateway API
 
-Every module chart is standalone - install only what you need. Infrastructure
-(RabbitMQ, PostgreSQL, Redis) is decoupled from every application chart — no chart
-bundles them as a dependency. Point `applicationYaml` at whatever broker/database you
-provide (the shared local toolset installed by `just install-tools`, or your own
-infrastructure in a real environment); see [Capability requirements](#capability-requirements-bring-your-own-infrastructure)
-above for what each module needs.
+Protected routes need the Kubernetes Gateway API, Traefik v3 and the `api-gateway` chart. Only this path removes inbound identity headers and enforces authentication and authorization. The module charts do not create the `Gateway` itself. Each module's `gateway.parentRefs` points at the `Gateway` named `labs64io-gateway` in namespace `tools` by default. Until the Gateway API resource definitions and that `Gateway` exist, the charts render their `HTTPRoute`, and the route stays at `Accepted: False`.
 
-| Module | Purpose | Infra required (BYO) | Gateway routes (opt-in) | Install |
-|---|---|---|---|---|
-| auditflow | Audit logging | RabbitMQ | `/auditflow/api` (protected), `/auditflow/v3/api-docs` (public) | `helm install my-auditflow labs64io/auditflow` |
-| checkout | Checkout API + UI (`ui.enabled`) | PostgreSQL | `/checkout/api` (protected), `/checkout/v3/api-docs` (public), `/checkout` UI (public — static assets, no Bearer token on plain navigation) | `helm install my-checkout labs64io/checkout` |
-| payment-gateway | Payments API | PostgreSQL, Redis | `/payment-gateway/api` (protected), `/payment-gateway/v3/api-docs` (public) | `helm install my-payments labs64io/payment-gateway` |
-| reporting | Reports over stored events | ClickHouse, optional S3 | `/reporting/api` (protected), `/reporting/v3/api-docs` (public) | `helm install my-reporting labs64io/reporting` |
-| customer-portal | Customer portal UI (no backend yet; `ui.enabled`) | - | `/customer-portal` (public — static assets, no Bearer token on plain navigation) | `helm install my-portal labs64io/customer-portal` |
-| api-gateway | ForwardAuth OIDC/JWT verifier + shared Traefik middlewares (auth, rate limit, headers) | - | n/a | `helm install api-gateway labs64io/api-gateway` |
-| authz-pdp | Cerbos PDP — central authorization decision point | - | n/a | `helm install authz-pdp labs64io/authz-pdp` |
-| api-docs | Swagger UI aggregator | - | `/swagger-ui` (public) | `helm install api-docs labs64io/api-docs` |
-
-Prefer Gateway API (`gateway.enabled: true`, Traefik v3 + Gateway API CRDs + the
-`api-gateway` chart for ForwardAuth/shared middlewares) — it's the only path that enforces
-ForwardAuth/Cerbos authorization and strips inbound `X-Auth-*` headers. If the cluster has no
-Gateway API CRDs, every chart falls back to a plain `networking.k8s.io/v1` Ingress
-(`gateway.annotations`, `gateway.ingressClassName` configure it) — but **only for routes marked
-`public: true`**; a protected route (e.g. `/checkout/api`) has no Ingress equivalent for
-ForwardAuth/Cerbos enforcement, so the chart fails the render rather than silently exposing it.
-Install the Gateway API CRDs if you need protected routes on a cluster that lacks them.
-
-### Gateway API setup
-
-None of these charts create the Gateway API `Gateway` resource itself — every module's
-`gateway.parentRefs` just points at one by name (`labs64io-gateway` in namespace `tools` by
-default). That's intentional: the Gateway is infrastructure-owned and shared across every
-module, the same way the database/broker are. The [Gateway API CRDs](https://gateway-api.sigs.k8s.io/guides/#installing-gateway-api)
-and a `GatewayClass`/`Gateway` need to exist before any `gateway.enabled: true` route can
-actually receive traffic — until they do, the HTTPRoute renders fine but sits at
-`Accepted: False`.
-
-The [Traefik chart](https://github.com/traefik/traefik-helm-chart) can provision both directly.
-Minimal values to reproduce the setup every module's defaults expect:
+The umbrella chart installs Traefik and the shared `Gateway` with `traefik.enabled: true`. To provide your own, these minimal values for the Traefik chart create the `Gateway` that the module defaults expect:
 
 ```yaml
 providers:
   kubernetesGateway:
     enabled: true
-
 gatewayClass:
   enabled: true
-
 gateway:
   enabled: true
   name: labs64io-gateway
@@ -261,40 +99,60 @@ gateway:
       port: 8000
       protocol: HTTP
       namespacePolicy:
-        from: All   # modules install into any namespace; the listener must accept routes from all of them
+        from: All
 ```
 
-```
+```bash
 helm install traefik traefik/traefik -n tools --create-namespace -f traefik-values.yaml
 ```
 
-Point your DNS/`/etc/hosts` (or an `Ingress`/`LoadBalancer` in front of Traefik) at that
-Service, and every module's `gateway.parentRefs` will resolve without any further change.
+Routes are served on the host `gateway.<global.domain>`, `gateway.localhost` by default. Set `global.gateway.anyHost: true` when clients reach the gateway by IP address or by a load balancer's DNS name.
 
-Local testing uses the identity provider selected in
-`overrides/helmfile/values.local.yaml` (mock OIDC by default, or the pinned upstream
-`codecentric/keycloakx` chart with the official Keycloak image), then `just install-tools`, `just install-app <module>`, and
-`helm test labs64io-<module> -n labs64io`.
+Every route applies, in order: removal of inbound identity headers, the ForwardAuth check and the rate limit on protected routes, request buffering, security response headers, compression, and the path rewrite.
 
-### One-click full stack (umbrella chart)
+The security response headers are the same on every route, UI routes included:
 
-`labs64io-ecosystem` is an umbrella chart that installs every module plus optional bundled
-PostgreSQL/RabbitMQ/Redis (`postgresql.enabled` / `rabbitmq.enabled` / `redis.enabled`, on by
-default) with credentials pre-wired end-to-end via a shared `Secret`. Cherry-pick within it
-with `--set <module>.enabled=false`:
+| Header | Value |
+|---|---|
+| `X-Frame-Options` | `DENY` |
+| `X-Content-Type-Options` | `nosniff` |
+| `X-XSS-Protection` | `1; mode=block` |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` |
+| `Content-Security-Policy` | `default-src 'self'; script-src 'self'; object-src 'none'` |
+| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` |
 
-```
-helm install labs64io labs64io/labs64io-ecosystem -f my-values.yaml
-```
+On a cluster without the Gateway API resource definitions, the charts fall back to a plain `Ingress` for public routes only (configure it with `gateway.ingressClassName` and `gateway.annotations`). A protected route has no `Ingress` equivalent, so the chart fails to render instead of exposing it unprotected.
 
-The chart refuses to render while a bundled-infra password is still at its shipped default, unless
-`demoMode` is set: pass your own `secrets.*Password` values, or use the `values.demo.yaml` profile
-from [Example values](#example-values) for a throwaway install. [`install.sh`](../getting-started/quickstart.md) does
-all of this for you, generates the passwords, and verifies the result.
+## Secrets
 
-Use the umbrella chart for a full local/demo stack; install individual module charts directly
-(table above) to cherry-pick just what you need against your own infrastructure. Traefik and the
-shared `Gateway` are opt-in (`traefik.enabled`, on in the demo profile and in the installer) — see
-[Gateway API setup](#gateway-api-setup) above to provide your own instead.
+Every chart with secrets supports two modes through `externalSecrets.enabled`:
 
-See [Helm Charts Reference](../reference/helm-values.md) for shared value conventions and [Deploy to your Kubernetes cluster](../getting-started/deploy-to-kubernetes.md) for the first-install checklist.
+| Value | Result |
+|---|---|
+| `false` (default) | The chart renders a plain Kubernetes `Secret` from `secrets.data`. Inject the values from your pipeline or secret tooling, never from a committed values file |
+| `true` | The chart renders an `ExternalSecret` (`external-secrets.io/v1`) that reads `externalSecrets.secretKey` through the `ClusterSecretStore` named in `externalSecrets.storeName`. External Secrets Operator resolves it from your backend, for example Vault, AWS Secrets Manager, Azure Key Vault or Google Secret Manager |
+
+Every key of the secret becomes an environment variable of the service. Charts never put credentials in a ConfigMap.
+
+## Network policies
+
+Each long-running chart can render a NetworkPolicy. It is off by default, so turn it on with `networkPolicy.enabled: true`. The policy admits traffic only from the ingress controller, the chart's own pods and named caller services (`networkPolicy.ingressFrom`). It restricts egress to the service's own dependencies, such as the policy engine and its entries in `networkPolicy.toolsEgress`. If your cluster differs from the defaults, set these values:
+
+| Value | Use it for |
+|---|---|
+| `networkPolicy.gatewayNamespace` | The namespace of the ingress controller, `tools` by default |
+| `networkPolicy.ingressControllerLabels` | The pod labels of a non-Traefik ingress controller |
+| `networkPolicy.observabilityNamespace` | The namespace of Prometheus and the OpenTelemetry Collector, `monitoring` by default |
+| `networkPolicy.extraEgress` | Destinations outside the cluster, such as a managed database's address range or an AuditFlow sink |
+
+The services trust the identity headers they receive. Without these policies, any workload in the cluster that reaches a service directly can forge an identity.
+
+## Image pinning
+
+The published charts pin each Labs64.IO image by digest in `image.digest`, so a deployment cannot follow a tag that someone moved. The digest takes precedence over `image.tag`, and the chart rejects a value that is not `sha256:` followed by 64 hex characters. To run another build, set its digest, or clear `image.digest` and set `image.tag`. The [Docker images](../reference/docker-images.md) page lists the images and their tags.
+
+## Observability
+
+Set `observability.enabled: true` to send traces, logs and metrics to an OpenTelemetry Collector. The image is the same either way. The chart activates the OpenTelemetry Java agent through `JAVA_TOOL_OPTIONS` for Java services, and `opentelemetry-instrument` for Python services, and sets `OTEL_EXPORTER_OTLP_ENDPOINT` to `observability.otlpEndpoint`. That defaults to `http://$(NODE_IP):4318`, the collector running as a DaemonSet on each node. Java services keep serving Prometheus metrics at `/actuator/prometheus`. With `slo.enabled`, the Payment Gateway, Checkout and AuditFlow charts add SLO recording rules and alerts when the `PrometheusRule` resource definition exists. See [Monitoring & Observability](./monitoring-observability.md).
+
+See the [Helm charts reference](../reference/helm-values.md) for shared value conventions and [Security & Compliance](./security-compliance.md) before you go live.

@@ -12,24 +12,28 @@ The **ultimate documentation reference** for users who want to run, use, and con
 |------|---------|
 | `modules/<id>/index.md` | Per-module documentation, one page per module (e.g. `modules/checkout/`, `modules/payment-gateway/`, `modules/auditflow/`, `modules/auth-gateway/`, `modules/customer-portal/`). A module with a lot of reference material may add child pages as `modules/<id>/<topic>/index.md` (`parent:` the module title, `grand_parent:` its section), as `modules/auditflow/` does; keep the module's own `index.md` as the entry point with the start-here content |
 | `introduction/architecture.md` | Architecture documentation |
-| `getting-started/` | Adopter guide — `quickstart.md` (the installer, `install.sh` in `labs64.io-helm-charts`; keep its commands and output in step with that script), one module, your own cluster, the whole ecosystem from source, first-run troubleshooting |
-| `development/contributing.md` | Contributor guide — build/test a module, OpenAPI-first workflow |
+| `getting-started/` | Adopter guide — `quickstart.md` (the installer, `install.sh` in the `Labs64/labs64.io-helm-charts` repository; keep its commands and output in step with that script), one module, your own cluster, the whole ecosystem from source, first-run troubleshooting |
+| `development/` | Contributor guide: workspace setup, repositories, releases and versions, testing, shared libraries |
 | `introduction/index.md` | Jekyll home page (`permalink: /`; distinct from `README.md`, which is GitHub-only and excluded from the build) |
 | `_config.yml`, `Gemfile` | Site/theme configuration |
 | `_sass/color_schemes/labs64.scss` | Labs64 brand color overrides |
-| `Dockerfile`, `docker-compose.yml`, `justfile` | Local preview, same Docker-first workflow as `labs64.io` — `just serve`, then http://localhost:4000/docs/ |
+| `Dockerfile`, `docker-compose.yml`, `justfile` | Local preview, same Docker-first workflow as the website repository `Labs64/labs64.io` — `just serve`, then http://localhost:4000/docs/ |
 
 ## Critical guardrails
 
 1. **Each repo has its own git history** — do not cross-commit between repositories.
-2. **This repo owns technical reference and onboarding — not marketing.** It is the ultimate documentation reference for users who want to run, use, and configure Labs64.IO Ecosystem modules (`getting-started/`) as well as the technical/contributor reference (`development/contributing.md`, module pages, `introduction/architecture.md`). `labs64.io` owns marketing and positioning only — its `/get-started/` page is a teaser that should link here, not a competing source of onboarding steps. If you find onboarding content duplicated on the website, flag it — don't extend the duplication.
-3. **Don't restate module status or version in page content.** The single source of truth is `labs64.io/_data/modules.yml`, published on the website. Pages here describe how to *use* a module; maturity labels drift and belong in one place only.
-4. **Write for someone adopting the module, in the present tense.** Describe what a module does and how to configure it — not what is unfinished, planned, or under review. Two exceptions that must always stay, stated plainly and without apology:
+2. **This repo owns technical reference and onboarding — not marketing.** It is the ultimate documentation reference for users who want to run, use, and configure Labs64.IO Ecosystem modules (`getting-started/`) as well as the technical/contributor reference (`development/contributing.md`, module pages, `introduction/architecture.md`). The website repository `Labs64/labs64.io` owns marketing and positioning only — its `/get-started/` page is a teaser that should link here, not a competing source of onboarding steps. If you find onboarding content duplicated on the website, flag it — don't extend the duplication.
+3. **Don't restate module status or version in page content.** The single source of truth is the file `_data/modules.yml` in the website repository `Labs64/labs64.io` (not in this repository), published on the website. Pages here describe how to *use* a module; maturity labels drift and belong in one place only. A concept page that names a module only as an example restates nothing (rule 8).
+4. **On module pages and other specifications (rule 8), write for someone adopting the module, in the present tense.** Describe what a module does and how to configure it — not what is unfinished, planned, or under review. Two exceptions that must always stay, stated plainly and without apology:
    - **Anything with a security or financial consequence** (for example: an endpoint whose authenticity isn't verified, a default that is unsafe in production). Put it in a "Before you go live" checklist as a deployment responsibility — never delete it to make a page read as more finished.
-   - **Capabilities that do not exist.** Never document an API, endpoint, or component a user cannot actually call; scope the page to what ships instead.
-5. **Module directory names under `modules/` must match the module `id` in `labs64.io/_data/modules.yml`** (`modules/checkout/`, `modules/payment-gateway/`, `modules/auditflow/`, `modules/auth-gateway/`, `modules/customer-portal/`). Before adding docs for a new module, confirm it's already registered there — if it isn't, that's a `labs64.io` change (see its `ecosystem-website-sync` skill), not just a docs addition.
-6. **This site is served at `labs64.io/docs`** (`baseurl: "/docs"` in `_config.yml`), not a standalone domain. Use Jekyll's `relative_url` / root-relative links for internal navigation — don't hardcode absolute `https://labs64.io/...` URLs for pages inside this repo.
+   - **Capabilities that do not exist.** On a specification, never document an API, endpoint, or component a user cannot actually call; scope the page to what ships instead.
+5. **Module directory names under `modules/` must match the module `id` in `_data/modules.yml` of the website repository `Labs64/labs64.io`** (`modules/checkout/`, `modules/payment-gateway/`, `modules/auditflow/`, `modules/auth-gateway/`, `modules/customer-portal/`). Before adding docs for a new module, confirm it's already registered there — if it isn't, that's a change in `Labs64/labs64.io` (see the `ecosystem-website-sync` skill in `Labs64/labs64.io-workspace`, under `.agents/skills/`), not just a docs addition.
+6. **This site is served at `labs64.io/docs`**, the `/docs` path on the website's domain (`baseurl: "/docs"` in `_config.yml`), not a standalone domain. Use Jekyll's `relative_url` / root-relative links for internal navigation — don't hardcode absolute `https://labs64.io/...` URLs for pages inside this repo.
 7. **Documentation should be accurate and up-to-date** with the codebase.
+8. **Two kinds of pages, two levels of strictness.**
+   - **Specifications** — module pages, API and configuration references, install and Helm steps, the event catalogue, image and values references. Rules 3 and 4 apply in full, and every statement is checked against the code of the released module.
+   - **Concept pages** — Overview, Core Concepts, the Architecture principles and the diagrams of the whole platform. They explain how the platform works as a whole, and stay at the conceptual level. They may explain parts a user does not reach directly (for example the messaging behind a module's API), may describe the intended architecture including parts that are planned, and may use examples to make a concept concrete. They still must not contradict the code, must not label a specific module with a status or version (rule 3), must not present a planned part as something a user can use today, and keep security and financial consequences (rule 4).
+   - When a concept page and a specification disagree, the specification wins and the concept page is corrected.
 
 ## Conventions
 
@@ -37,6 +41,7 @@ The **ultimate documentation reference** for users who want to run, use, and con
 - Keep documentation consistent with the actual codebase behavior.
 - **Each module page is `modules/<module>/index.md`.** Naming it `index.md` keeps it rendering when browsing the repo on GitHub and makes it serve at `labs64.io/docs/modules/<module>/` without an explicit `permalink:` — Jekyll's default page URL for a directory's `index.md` already omits the filename.
 - **Cross-link with relative `.md` paths** (`./quickstart.md`, `../getting-started.md`). `jekyll-relative-links` rewrites them to built URLs at publish time, so the same link works both on GitHub and on the site. Hand-written `.html` links work on the site but break on GitHub.
+- **Diagrams.** Structure and flow diagrams are boxdiagram sources: an ASCII `*.wire.txt` in a `diagrams/` folder next to the page, with the generated `*.svg` committed beside it and embedded as `![description](./diagrams/<name>.svg)`. Never edit an SVG by hand. A source's `//@` comments say what the diagram is for and how to change it: read them first, and keep them true when you change the diagram. Change the `.wire.txt` and re-render it with the `boxdiagram` skill from the `Labs64/labs64.io-workspace` repository, checked out next to this one (`python3 ../labs64.io-workspace/.agents/skills/boxdiagram/scripts/boxdiagram.py <file>.wire.txt`, run from the root of this repository, then `--check --strict` on all of them). Sequence diagrams stay in Mermaid.
 - Module pages follow a consistent shape so readers learn it once: what it does → key capabilities → start here → API contract → configure → extend → operate → next steps.
 
 ## Verifying links
@@ -60,7 +65,7 @@ If any of this changes (repo renamed, CloudFront reconfigured, Pages source flip
 
 ## Local development and verification
 
-Docker-first, same workflow as `labs64.io` — never invoke `bundle` directly on this machine.
+Docker-first, same workflow as the website repository `Labs64/labs64.io` — never invoke `bundle` directly on this machine.
 
 ```bash
 just serve    # start the dev server at http://localhost:4000/docs/
@@ -79,6 +84,6 @@ just down     # stop the background service
 
 ## Working rules for every change
 
-- Judge the change against the **Quality bar for every change** in `labs64.io-workspace/AGENTS.md` (stability of the ecosystem, no regression, no network surprises, performance, HA and resilience, testability, maintainability), and say in the pull request how each applies, or why it does not.
-- Every pull request is assigned to its author and added to the `Labs64.IO` GitHub Project (`labs64.io-workspace/AGENTS.md`, "Pull requests").
+- Judge the change against the **Quality bar** in `STANDARDS.md`, section 13, in the `Labs64/labs64.io-workspace` repository (the 11 rows from stability of the ecosystem to cost), and say in the pull request how each row applies, or why it does not.
+- Every pull request is assigned to its author and added to the `Labs64.IO` GitHub Project (`AGENTS.md`, section "Pull requests", in `Labs64/labs64.io-workspace`).
 - Before you push: `just build`, then follow "Verifying links" above.
