@@ -3,10 +3,10 @@
 **The documentation for running, using and configuring Labs64.IO.**
 *Part of the [Labs64.IO Ecosystem](https://labs64.io): the source of the documentation site at labs64.io/docs.*
 
-[![CI](https://github.com/Labs64/labs64.io-docs/actions/workflows/labs64io-ci.yml/badge.svg)](https://github.com/Labs64/labs64.io-docs/actions/workflows/labs64io-ci.yml)
-[![Deploy Pages](https://github.com/Labs64/labs64.io-docs/actions/workflows/labs64io-deploy-pages.yml/badge.svg)](https://github.com/Labs64/labs64.io-docs/actions/workflows/labs64io-deploy-pages.yml)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/Labs64/labs64.io-docs/labs64io-ci.yml?label=CI&logo=github)](https://github.com/Labs64/labs64.io-docs/actions/workflows/labs64io-ci.yml)
+[![Deploy Pages](https://img.shields.io/github/actions/workflow/status/Labs64/labs64.io-docs/labs64io-deploy-pages.yml?label=Deploy%20Pages&logo=github)](https://github.com/Labs64/labs64.io-docs/actions/workflows/labs64io-deploy-pages.yml)
 [![📖 Documentation](https://img.shields.io/badge/📖-Documentation-AB6543.svg)](https://labs64.io/docs/)
+[![Labs64.IO Ecosystem](https://img.shields.io/badge/Labs64.IO-Ecosystem-E14817.svg?logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9Ii01IC01IDE1NSAxNTUiPjxwYXRoIGZpbGw9IiNmZmYiIGQ9Ik0zIDNoMTM5djEzOUgzWk02OSAzdjEzOWg3VjNaTTQzIDQzdjU5aDI2VjQzWk03NiA0M3Y1OWgyNlY0M1oiLz48cGF0aCBmaWxsPSIjYmJiIiBkPSJNNDkgNDloNDd2NDdINDlaIi8%2BPC9zdmc%2B)](https://labs64.io/docs/services/)
 
 <p align="center"><img src="docs/assets/docs-hero.svg" alt="Docs: The docs as a metro map: from Start, the Run it, Use it and Change it lines lead to quickstart, install, operate, concepts, module reference, API, architecture, build and contributing, with llms.txt for AI agents." width="880"></p>
 
