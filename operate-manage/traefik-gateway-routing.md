@@ -24,8 +24,8 @@ sequenceDiagram
     T->>S: Forward request
     S-->>C: Response
   else denied
-    A-->>T: 403 response
-    T-->>C: 403 response
+    A-->>T: 401 (no or invalid token) or 403 (not permitted)
+    T-->>C: 401 or 403 response
   end
 ```
 

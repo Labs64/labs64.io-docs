@@ -32,8 +32,8 @@ sequenceDiagram
         T->>M: Forward Request with X-Auth-*
         M-->>C: HTTP Response
     else Denied
-        AP-->>T: HTTP 403 Forbidden
-        T-->>C: HTTP 403 Forbidden
+        AP-->>T: HTTP 401 (no or invalid token) or 403 (not permitted)
+        T-->>C: HTTP 401 or 403
     end
 ```
 
