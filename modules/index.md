@@ -24,7 +24,7 @@ Each module below has its own source repository. The documentation page of each 
 
 | Module | What it does | Source |
 |---|---|---|
-| [Auth Gateway](./auth-gateway/index.md) | The authenticated edge in front of the modules' protected routes. It verifies the token of each request to them and asks the policy engine whether the operation is allowed. The repository is `labs64.io-authproxy`, the service is `traefik-authproxy` and its Helm chart is `api-gateway`. | [labs64.io-authproxy](https://github.com/Labs64/labs64.io-authproxy) |
+| [Auth Gateway](./auth-gateway/index.md) | The authenticated edge in front of the modules' protected routes. It verifies the token of each request to them and asks the policy engine whether the operation is allowed. The repository is `labs64.io-authgateway`, the image is `labs64/authgateway-traefik` and its Helm chart is `authgateway`. | [labs64.io-authgateway](https://github.com/Labs64/labs64.io-authgateway) |
 | [AuditFlow](./auditflow/index.md) | Takes audit events over one REST call, redacts sensitive fields and routes each event to the destinations of its tenant | [labs64.io-auditflow](https://github.com/Labs64/labs64.io-auditflow) |
 | [Payment Gateway](./payment-gateway/index.md) | One payment API in front of several payment providers | [labs64.io-payment-gateway](https://github.com/Labs64/labs64.io-payment-gateway) |
 | [Checkout](./checkout/index.md) | An API for purchase orders, customers and checkout transactions, and a Vue 3 checkout page | [labs64.io-checkout](https://github.com/Labs64/labs64.io-checkout) |
@@ -35,4 +35,4 @@ Each module below has its own source repository. The documentation page of each 
 
 The repositories that hold no module, such as the shared libraries, the Helm charts, the development workspace, the regression suite and this documentation, are listed in [Workspace and source repositories](../development/workspace-repositories.md).
 
-The five GitHub repositories in this table are open source. For their license, see [License](../development/contributing.md#license).
+The six GitHub repositories in this table are open source. For their license, see [License](../development/contributing.md#license).

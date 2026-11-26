@@ -22,7 +22,7 @@ This page outlines the core architectural principles and flows of the Labs64.IO 
 
 ## Request Flow
 
-Every external request crosses the edge before it reaches any application code. Traefik is the ingress controller. It removes any identity headers the client sent, then, for every protected route, delegates authentication and authorization to the [Auth Gateway](../modules/auth-gateway/index.md) (`traefik-authproxy`) through ForwardAuth. Public routes, such as a module's OpenAPI document or its static UI, skip that check. The Auth Gateway verifies the token and asks the Cerbos policy decision point (PDP).
+Every external request crosses the edge before it reaches any application code. Traefik is the ingress controller. It removes any identity headers the client sent, then, for every protected route, delegates authentication and authorization to the [Auth Gateway](../modules/auth-gateway/index.md) (the `authgateway` chart) through ForwardAuth. Public routes, such as a module's OpenAPI document or its static UI, skip that check. The Auth Gateway verifies the token and asks the Cerbos policy decision point (PDP).
 
 ```mermaid
 sequenceDiagram

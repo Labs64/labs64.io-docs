@@ -20,7 +20,7 @@ This page describes how the charts fit together. For the install steps, see the 
 | Data stores | PostgreSQL, a Redis-compatible store and the AuditFlow message broker, managed by you or bundled for evaluation |
 | Observability backend | Receives traces, logs and metrics from the OpenTelemetry Collector |
 
-The local development stack and the umbrella chart lay out a cluster like this:
+The local development stack lays out a cluster like this. The installer and the umbrella chart put the same components, Traefik and the bundled data stores included, into the one namespace of the release (`labs64io`), and only the shared `Gateway` object goes into `tools`:
 
 ![Cluster layout: Traefik, the identity provider, External Secrets Operator, PostgreSQL, Valkey and RabbitMQ in namespace tools; the authgateway, authz-pdp, api-docs and module charts in namespace labs64io; the OpenTelemetry Collector, Tempo, Loki, Prometheus and Grafana in namespace monitoring](./diagrams/cluster.svg)
 
