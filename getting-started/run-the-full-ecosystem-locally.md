@@ -174,7 +174,7 @@ There are two loops, and most of your time goes into the first.
 
 The local charts pull an image only when the cluster does not have it yet (`IfNotPresent`), so a rebuilt image does not replace one that is already running. To be sure the cluster runs your code, run `just down` and then `just up`.
 
-`just --list` in any repository shows everything it can do. How the local cluster is put together, namespace by namespace, is described in [`DEVELOPERS.md`](https://github.com/Labs64/labs64.io-helm-charts/blob/master/DEVELOPERS.md) in the Helm charts repository.
+`just --list` in any repository shows everything it can do. How the local cluster is put together, namespace by namespace, is described in [Helm Charts Development](../development/helm-charts-development.md) in the Helm charts repository.
 
 ## Next steps
 

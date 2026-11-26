@@ -2,6 +2,7 @@
 title: Databases & Persistence
 parent: Operate & Manage
 nav_order: 4
+has_children: true
 ---
 
 # Databases & Persistence
