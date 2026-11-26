@@ -28,7 +28,7 @@ One release model applies to every Labs64.IO repository. This page describes wha
 | `labs64.io-checkout` | Images `labs64/checkout` and `labs64/checkout-ui` | Docker Hub |
 | `labs64.io-reporting` | Image `labs64/reporting` | Docker Hub |
 | `labs64.io-customer-portal` | Image `labs64/customer-portal-ui` | Docker Hub |
-| `labs64.io-authproxy` | Image `labs64/traefik-authproxy`, deployed by the chart `api-gateway` | Docker Hub |
+| `labs64.io-authgateway` | Image `labs64/authgateway-traefik`, deployed by the chart `authgateway` | Docker Hub |
 | `labs64.io-helm-charts` | The module charts, `chart-libs`, `preflight` and the `labs64io-ecosystem` umbrella chart | The Helm repository `https://labs64.github.io/labs64.io-helm-charts`, with one GitHub Release per chart version |
 
 A release pushes `labs64/<image>:X.Y.Z` and `:latest`, built for `linux/amd64` and `linux/arm64`. Every green build of a main branch also pushes `:edge`. Only the nightly regression run deploys `:edge`.

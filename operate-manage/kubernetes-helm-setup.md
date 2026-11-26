@@ -22,9 +22,9 @@ This page describes how the charts fit together. For the install steps, see the 
 
 The local development stack and the umbrella chart lay out a cluster like this:
 
-![Cluster layout: Traefik, the identity provider, External Secrets Operator, PostgreSQL, Valkey and RabbitMQ in namespace tools; the api-gateway, authz-pdp, api-docs and module charts in namespace labs64io; the OpenTelemetry Collector, Tempo, Loki, Prometheus and Grafana in namespace monitoring](./diagrams/cluster.svg)
+![Cluster layout: Traefik, the identity provider, External Secrets Operator, PostgreSQL, Valkey and RabbitMQ in namespace tools; the authgateway, authz-pdp, api-docs and module charts in namespace labs64io; the OpenTelemetry Collector, Tempo, Loki, Prometheus and Grafana in namespace monitoring](./diagrams/cluster.svg)
 
-Traefik routes each request to a service after the `api-gateway` ForwardAuth check, and the [Auth Gateway](../modules/auth-gateway/index.md) asks the `authz-pdp` policy engine for the decision. The services use the data stores in `tools`. With observability enabled, they send telemetry to the collector in `monitoring`.
+Traefik routes each request to a service after the `authgateway` ForwardAuth check, and the [Auth Gateway](../modules/auth-gateway/index.md) asks the `authz-pdp` policy engine for the decision. The services use the data stores in `tools`. With observability enabled, they send telemetry to the collector in `monitoring`.
 
 ## Charts
 
@@ -35,7 +35,7 @@ Traefik routes each request to a service after the `api-gateway` ForwardAuth che
 | `checkout` | [Checkout](../modules/checkout/index.md) API, and the UI with `ui.enabled` | PostgreSQL (database `checkout`) | `/checkout/api/v1` (protected), `/checkout/v3/api-docs` (public), `/checkout` UI (public) |
 | `reporting` | [Reporting](../modules/reporting/index.md) read API | ClickHouse with a reader user and one catalogue file per tenant; optionally S3 read access | `/reporting/api/v1` (protected), `/reporting/v3/api-docs` (public) |
 | `customer-portal` | [Customer Portal](../modules/customer-portal/index.md) UI | None | `/customer-portal` (public) |
-| `api-gateway` | [Auth Gateway](../modules/auth-gateway/index.md) and the shared Traefik middlewares for authentication, rate limiting, request buffering and compression | An OIDC provider that supports the client-credentials grant | None |
+| `authgateway` | [Auth Gateway](../modules/auth-gateway/index.md) and the shared Traefik middlewares for authentication, rate limiting, request buffering and compression | An OIDC provider that supports the client-credentials grant | None |
 | `authz-pdp` | Cerbos policy decision point, with the policies generated from each service's OpenAPI contract | None | None |
 | `api-docs` | Aggregated Swagger UI | None | `/swagger-ui` (public) |
 | `preflight` | One-shot job that checks your infrastructure before you install | None | None |
@@ -75,12 +75,12 @@ To get a demo token on this profile, send the token request with the header `Hos
 1. Install the Gateway API resource definitions and a `Gateway` (see [Gateway API](#gateway-api)).
 2. Provision your data stores and create the secrets, or plan to use External Secrets Operator.
 3. Check every dependency from inside the cluster with the [preflight chart](../getting-started/deploy-to-kubernetes.md#2-check-your-infrastructure-before-you-install).
-4. Install the `api-gateway` and `authz-pdp` charts, then the services you need, or the umbrella chart with all of them.
+4. Install the `authgateway` and `authz-pdp` charts, then the services you need, or the umbrella chart with all of them.
 5. Run `helm test <release>`, then check routing, telemetry and backups.
 
 ## Gateway API
 
-Protected routes need the Kubernetes Gateway API, Traefik v3 and the `api-gateway` chart. Only this path removes inbound identity headers and enforces authentication and authorization. The module charts do not create the `Gateway` itself. Each module's `gateway.parentRefs` points at the `Gateway` named `labs64io-gateway` in namespace `tools` by default. Until the Gateway API resource definitions and that `Gateway` exist, the charts render their `HTTPRoute`, and the route stays at `Accepted: False`.
+Protected routes need the Kubernetes Gateway API, Traefik v3 and the `authgateway` chart. Only this path removes inbound identity headers and enforces authentication and authorization. The module charts do not create the `Gateway` itself. Each module's `gateway.parentRefs` points at the `Gateway` named `labs64io-gateway` in namespace `tools` by default. Until the Gateway API resource definitions and that `Gateway` exist, the charts render their `HTTPRoute`, and the route stays at `Accepted: False`.
 
 The umbrella chart installs Traefik and the shared `Gateway` with `traefik.enabled: true`. To provide your own, these minimal values for the Traefik chart create the `Gateway` that the module defaults expect:
 

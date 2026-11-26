@@ -140,7 +140,7 @@ rabbitmq:
 redis:
   enabled: false
 
-api-gateway:
+authgateway:
   oidc:
     discoveryUrl: https://idp.example.com/realms/acme/.well-known/openid-configuration
 
@@ -207,7 +207,7 @@ helm upgrade --install auditflow labs64io/auditflow -n labs64io -f auditflow-val
 
 Module charts bundle no data stores; you point each at yours. `global.postgresql.host`, `global.rabbitmq.host` and `global.redis.host` set the data-store addresses, and the chart's `secrets.data` holds the credentials. AuditFlow also runs on Amazon SQS with the pod's IAM role instead of broker credentials; [AuditFlow on Kubernetes](../modules/auditflow/deployment/index.md#kubernetes) shows both variants. [Kubernetes & Helm Setup](../operate-manage/kubernetes-helm-setup.md#charts) lists what each chart needs and the routes it exposes. The [Helm charts repository](https://github.com/Labs64/labs64.io-helm-charts) has a commented production example per module under `overrides/<module>/values.prod-example.yaml`.
 
-A module's protected routes need the `api-gateway` and `authz-pdp` charts and the Gateway API resource definitions. See [Auth Gateway](../modules/auth-gateway/index.md#install-with-helm).
+A module's protected routes need the `authgateway` and `authz-pdp` charts and the Gateway API resource definitions. See [Auth Gateway](../modules/auth-gateway/index.md#install-with-helm).
 
 ## AWS, Azure, Google Cloud and on-premises
 

@@ -22,6 +22,6 @@ All Labs64.IO Docker images are published to Docker Hub under `labs64/`. A GitHu
 | **Checkout (UI)** | `labs64/checkout-ui` | `nginxinc/nginx-unprivileged` (Alpine) |
 | **Reporting** | `labs64/reporting` | `eclipse-temurin:25-jre` |
 | **Customer Portal** | `labs64/customer-portal-ui` | `nginxinc/nginx-unprivileged` (Alpine) |
-| **Auth Gateway** | `labs64/traefik-authproxy` | `python:3.15-slim` |
+| **Auth Gateway** | `labs64/authgateway-traefik` | `python:3.15-slim` |
 
 `labs64/customer-portal-ui` is published as `:edge` only, so set `ui.image.tag` or `ui.image.digest` when you install the `customer-portal` chart. The `authz-pdp` and `api-docs` charts run the upstream images `ghcr.io/cerbos/cerbos` and `swaggerapi/swagger-ui`.

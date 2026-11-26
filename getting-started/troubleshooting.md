@@ -147,7 +147,7 @@ A missing route usually means that module is not installed. From `labs64.io-helm
 ### API calls return 401 or 403
 
 ```bash
-kubectl logs -n labs64io -l app.kubernetes.io/name=api-gateway --tail=50   # the Auth Gateway's decision
+kubectl logs -n labs64io -l app.kubernetes.io/name=authgateway --tail=50   # the Auth Gateway's decision
 kubectl get pods -n labs64io -l app.kubernetes.io/name=authz-pdp           # the policy engine
 ```
 
@@ -173,7 +173,7 @@ kubectl logs <pod> -n labs64io --previous
 | Which routes exist? | `kubectl get httproute -n labs64io` |
 | Is the installer's install healthy? | `bash install.sh status` |
 
-Module names for the log command: `auditflow`, `payment-gateway`, `checkout`, `customer-portal`, `api-gateway`, `authz-pdp`, `api-docs`.
+Module names for the log command: `auditflow`, `payment-gateway`, `checkout`, `customer-portal`, `authgateway`, `authz-pdp`, `api-docs`.
 
 ## Still stuck?
 

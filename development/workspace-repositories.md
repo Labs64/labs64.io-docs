@@ -22,7 +22,7 @@ The service repositories:
 
 | Repository | Contents |
 |---|---|
-| [labs64.io-authproxy](https://github.com/Labs64/labs64.io-authproxy) | The [Auth Gateway](../modules/auth-gateway/index.md) service `traefik-authproxy` |
+| [labs64.io-authgateway](https://github.com/Labs64/labs64.io-authgateway) | The [Auth Gateway](../modules/auth-gateway/index.md) service (`traefik/`) |
 | [labs64.io-auditflow](https://github.com/Labs64/labs64.io-auditflow) | [AuditFlow](../modules/auditflow/index.md): the backend, transformer and sink services, and the `auditflow-api` contract and Java client |
 | [labs64.io-payment-gateway](https://github.com/Labs64/labs64.io-payment-gateway) | [Payment Gateway](../modules/payment-gateway/index.md): the backend, the provider SPI and one module per payment provider, and the `payment-gateway-api` contract |
 | [labs64.io-checkout](https://github.com/Labs64/labs64.io-checkout) | [Checkout](../modules/checkout/index.md): the backend and the UI |
@@ -81,7 +81,7 @@ the same local Maven repository regardless of which module starts the build.
   ┌───────▼─────────────────────────────┐ ┌─────▼────────────────────────────┐
   │ ../ every ecosystem repository      │ │ builder container                │
   │ auditflow · checkout · helm-charts  │ │ builds first-party images        │
-  │ payment-gateway · authproxy · …     │ └─────┬────────────────────────────┘
+  │ payment-gateway · authgateway · …   │ └─────┬────────────────────────────┘
   └─────────────────────────────────────┘       │ push
                                           ┌─────▼────────────┐   ┌────────────┐
                                           │ k3d + registry   │──►│ platform   │

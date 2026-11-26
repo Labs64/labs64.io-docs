@@ -7,9 +7,9 @@ nav_order: 1
 # Auth Gateway
 
 ## Overview
-The Auth Gateway (`traefik-authproxy`) provides the authenticated edge for the protected routes of the Labs64.IO modules. It enforces authentication via OIDC/JWT and delegates authorization decisions to the Cerbos Policy Decision Point (PDP) before a request to a protected route reaches a module. It hands the module a trusted identity context instead of the token, so modules never validate tokens themselves.
+The Auth Gateway (image `labs64/authgateway-traefik`) provides the authenticated edge for the protected routes of the Labs64.IO modules. It enforces authentication via OIDC/JWT and delegates authorization decisions to the Cerbos Policy Decision Point (PDP) before a request to a protected route reaches a module. It hands the module a trusted identity context instead of the token, so modules never validate tokens themselves.
 
-The `api-gateway` Helm chart deploys the Auth Gateway together with the shared Traefik middlewares. The `authz-pdp` chart deploys the Cerbos PDP.
+The `authgateway` Helm chart deploys the Auth Gateway together with the shared Traefik middlewares. The `authz-pdp` chart deploys the Cerbos PDP.
 
 The Auth Gateway decides who may call which operation. It is not a general-purpose ingress controller or CDN. Traefik routes the traffic and asks the Auth Gateway for each decision.
 
@@ -92,7 +92,7 @@ The modules behind it trust those headers, which is exactly why they must never 
 
 **Route matching.** Each module's OpenAPI contract declares, per operation, whether the operation is public and which scopes it needs, in the `auth` block under its `x-labs64` extension. The build turns this into one routes manifest per module and the matching Cerbos policies, so the gateway's routing and the policy follow the published API. The Auth Gateway loads the manifests from `ROUTES_DIR`. Paths without an OpenAPI contract, such as UI bundles and the AuditFlow dead-letter endpoints, use static prefix rules from `STATIC_ROUTES_FILE`. The Auth Gateway consults those only when no operation matches, and it rejects a request that matches neither with `403`. When two modules declare the same method and path, the Auth Gateway rejects that route with `403` "Conflicting auth policy" and logs the conflict.
 
-The `api-gateway` chart packages the routes manifests of the AuditFlow, Checkout and Payment Gateway contracts, and the `authz-pdp` chart packages the matching Cerbos policies. A chart release therefore carries routes and policies that belong together. The chart's `staticPolicies` value holds the static prefix rules.
+The `authgateway` chart packages the routes manifests of the AuditFlow, Checkout, Payment Gateway and Reporting contracts, and the `authz-pdp` chart packages the matching Cerbos policies. A chart release therefore carries routes and policies that belong together. The chart's `staticPolicies` value holds the static prefix rules.
 
 **The decision.** For a matched operation, the Auth Gateway sends Cerbos one check. The resource kind is `<module>_api` (for example `payment_gateway_api`), the action is the operation ID, and the caller's scopes and tenant are attributes. A static rule uses the kind `static_api` and the rule's ID as the action. A public operation, such as a payment provider's webhook, is checked without a token. The Auth Gateway treats a caller whose ID starts with `svc:` as a service principal.
 
@@ -119,18 +119,18 @@ helm repo add labs64io https://labs64.github.io/labs64.io-helm-charts
 helm repo update
 
 helm install labs64io-authz-pdp labs64io/authz-pdp -n labs64io --create-namespace
-helm install api-gateway labs64io/api-gateway -n labs64io \
+helm install authgateway labs64io/authgateway -n labs64io \
   --set oidc.discoveryUrl=https://idp.example.com/realms/acme/.well-known/openid-configuration
 ```
 
-The `api-gateway` chart expects the PDP at `http://labs64io-authz-pdp:3592`, which is the Service that a release named `labs64io-authz-pdp` creates. With another release name, set `cerbos.url` to match. The umbrella chart and `install.sh` wire both charts for you, which is why the [installer](../../getting-started/deploy-to-kubernetes.md#route-a-the-installer-with-your-identity-provider) is the easier first step. The chart is on [Artifact Hub](https://artifacthub.io/packages/helm/labs64io-helm-charts/api-gateway).
+The `authgateway` chart expects the PDP at `http://labs64io-authz-pdp:3592`, which is the Service that a release named `labs64io-authz-pdp` creates. With another release name, set `cerbos.url` to match. The umbrella chart and `install.sh` wire both charts for you, which is why the [installer](../../getting-started/deploy-to-kubernetes.md#route-a-the-installer-with-your-identity-provider) is the easier first step. The chart is on [Artifact Hub](https://artifacthub.io/packages/helm/labs64io-helm-charts/authgateway).
 
 ### Try the decision logic with Docker
 
 Only Docker is needed. Run the published Auth Gateway on its own and ask it to decide on a request:
 
 ```bash
-docker run -d --rm --name authproxy -p 8081:8081 labs64/traefik-authproxy:latest
+docker run -d --rm --name authgateway -p 8081:8081 labs64/authgateway-traefik:latest
 
 curl -s localhost:8081/health
 # {"status":"ok","jwks_cached":false,"ready":false,"modules":0,"routes":0,...}
@@ -139,20 +139,20 @@ curl -i localhost:8081/auth \
   -H "X-Forwarded-Uri: /payment-gateway/api/v1/payments"
 ```
 
-No routes are loaded, so the request is **denied** (see [Failing closed](#failing-closed)): the gateway never guesses. Clean up with `docker rm -f authproxy`. This standalone run shows the decision logic only; a complete flow needs an identity provider, the policy engine and route manifests, which the installer sets up for you.
+No routes are loaded, so the request is **denied** (see [Failing closed](#failing-closed)): the gateway never guesses. Clean up with `docker rm -f authgateway`. This standalone run shows the decision logic only; a complete flow needs an identity provider, the policy engine and route manifests, which the installer sets up for you.
 
 ### Build from source
 
 Needs Python 3.15 and Docker:
 
 ```bash
-git clone https://github.com/Labs64/labs64.io-authproxy.git && cd labs64.io-authproxy/traefik-authproxy
-docker build -t traefik-authproxy .          # build the image
+git clone https://github.com/Labs64/labs64.io-authgateway.git && cd labs64.io-authgateway/traefik
+docker build -t authgateway-traefik .         # build the image
 pip install -r requirements.txt pytest       # or work in a virtualenv
 pytest tests/                                # run the tests
 ```
 
-The repository's [`AGENTS.md`](https://github.com/Labs64/labs64.io-authproxy/blob/master/AGENTS.md) describes the layout, the environment variables and where to change JWT verification, scope extraction and policy matching.
+The repository's [`AGENTS.md`](https://github.com/Labs64/labs64.io-authgateway/blob/master/AGENTS.md) describes the layout, the environment variables and where to change JWT verification, scope extraction and policy matching.
 
 ## Configuration
 
@@ -178,7 +178,7 @@ The repository's [`AGENTS.md`](https://github.com/Labs64/labs64.io-authproxy/blo
 
 Tokens are verified with RS256 only. Routes and scopes come from each module's OpenAPI contract; `POST /reload` re-reads the manifests without a restart.
 
-With the `api-gateway` Helm chart, set the provider under `oidc` (`discoveryUrl`, `issuer`, `audience`, `scopesClaimPaths`, `tenantClaimPath`), the PDP under `cerbos.url` and the log level under `logLevel`. The chart's default discovery URL points at a Keycloak release in the `tools` namespace. Use `env` for any other variable.
+With the `authgateway` Helm chart, set the provider under `oidc` (`discoveryUrl`, `issuer`, `audience`, `scopesClaimPaths`, `tenantClaimPath`), the PDP under `cerbos.url` and the log level under `logLevel`. The chart's default discovery URL points at a Keycloak release in the `tools` namespace. Use `env` for any other variable.
 
 The chart also sets the shared middlewares:
 
@@ -189,7 +189,7 @@ The chart also sets the shared middlewares:
 | `rateLimit.global` | `false` | One bucket per request host instead, a fixed ceiling for all callers. Overrides `perUser`. |
 | `buffering.maxRequestBodyBytes` | `2621440` | Largest request body accepted (2.5 MB). |
 | `compress.enabled` | `true` | Compresses responses of at least `compress.minResponseBodyBytes` (1024 bytes). |
-| `authProxy.trustForwardHeader` | `false` | Keep it `false`. With `true`, a caller could make the Auth Gateway check a different method and path than the one Traefik serves. |
+| `authGateway.trustForwardHeader` | `false` | Keep it `false`. With `true`, a caller could make the Auth Gateway check a different method and path than the one Traefik serves. |
 
 Traefik keeps the rate-limit buckets in memory, so each limit applies per Traefik replica.
 
@@ -248,15 +248,15 @@ curl -i localhost:8081/auth -H "X-Forwarded-Method: GET" -H "X-Forwarded-Uri: /p
 
 Auth Gateway is stateless and scales horizontally. It needs a reachable OIDC provider, the central Cerbos policy engine and the route manifests; until the manifests load it reports not ready.
 
-The `api-gateway` and `authz-pdp` charts both run two replicas by default, and the `api-gateway` chart adds a PodDisruptionBudget. When the PDP is unreachable, the Auth Gateway denies every request it checks.
+The `authgateway` and `authz-pdp` charts both run two replicas by default, and the `authgateway` chart adds a PodDisruptionBudget. When the PDP is unreachable, the Auth Gateway denies every request it checks.
 
-The Auth Gateway logs every decision on the `traefik_authproxy` logger:
+The Auth Gateway logs every decision on the `authgateway` logger:
 
 ```text
 authz outcome=enforced-<allow|deny> engine=cerbos kind=<resourceKind> action=<action> decision=<allow|deny|error> requestId=<id> — <METHOD> <path>
 ```
 
-An allow logs at INFO, a deny or an error at WARN. The line leaves out user, tenant and scopes. To see them, raise only the `traefik_authproxy.authz.detail` logger to DEBUG. It writes an `authz-detail` line with the same `requestId`.
+An allow logs at INFO, a deny or an error at WARN. The line leaves out user, tenant and scopes. To see them, raise only the `authgateway.authz.detail` logger to DEBUG. It writes an `authz-detail` line with the same `requestId`.
 
 ## Before you go live
 

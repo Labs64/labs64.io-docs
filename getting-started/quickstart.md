@@ -90,7 +90,7 @@ Smoke test: 5 passed, 0 failed — the quickstart flow works end to end.
    API docs:  http://localhost:8000/swagger-ui/
 
  Enabled modules:
-   - api-gateway
+   - authgateway
    - authz-pdp
    - api-docs
    - auditflow

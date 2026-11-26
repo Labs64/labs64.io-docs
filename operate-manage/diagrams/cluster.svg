@@ -64,7 +64,7 @@ text{font-family:"DejaVu Sans", Verdana, "Segoe UI", sans-serif}
 <rect class="node" x="260" y="840" width="110" height="40" rx="8" style="fill:var(--queue-f);stroke:var(--queue-s)"/>
 <text class="lbl" x="315.0" y="865.0">RabbitMQ</text>
 <rect class="node" x="640" y="100" width="210" height="60" rx="8" style="fill:var(--service-f);stroke:var(--service-s)"/>
-<text class="lbl" x="745.0" y="127.5">api-gateway</text>
+<text class="lbl" x="745.0" y="127.5">authgateway</text>
 <text class="sub" x="745.0" y="143.0">Auth Gateway and middlewares</text>
 <rect class="node" x="640" y="260" width="110" height="60" rx="8" style="fill:var(--service-f);stroke:var(--service-s)"/>
 <text class="lbl" x="695.0" y="287.5">authz-pdp</text>
