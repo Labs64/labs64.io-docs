@@ -2,6 +2,7 @@
 title: Shared Libraries (Commons)
 parent: Community & Contributing
 nav_order: 3
+has_children: true
 ---
 
 # Shared Libraries (Commons)
@@ -17,9 +18,9 @@ Use this page when you build a service that sits behind the [Auth Gateway](../mo
 | `labs64io-parent` | Maven POM | The build parent: Spring Boot line, security overrides, shared versions and release rules in one version |
 | `auth-context-core` | Java 17+ | The identity model, holder and trusted-header parser, with no dependencies |
 | `auth-context-spring-boot-starter` | Java 17+ / Spring Boot 4 | Fail-closed header enforcement, `@RequireScopes`, outbound propagation and test support |
-| `auth-context-python` | Python 3.13+ | The same contract for ASGI and FastAPI services, with an httpx hook and pytest fixture |
-| `openapi-spring-boot-starter` | Java 17+ / Spring Boot 4 | Shared springdoc servers, bearer security and canonical OpenAPI metadata |
-| `openapi-schema-generator` | Java 17+ | Versioned JSON Schema documents from OpenAPI 3.1 |
+| [`auth-context-python`](./shared-libraries/auth-context-python/index.md) | Python 3.13+ | The same contract for ASGI and FastAPI services, with an httpx hook and pytest fixture |
+| [`openapi-spring-boot-starter`](./shared-libraries/openapi-spring-boot-starter/index.md) | Java 17+ / Spring Boot 4 | Shared springdoc servers, bearer security and canonical OpenAPI metadata |
+| [`openapi-schema-generator`](./shared-libraries/openapi-schema-generator/index.md) | Java 17+ | Versioned JSON Schema documents from OpenAPI 3.1 |
 | `authz-queryplan-jpa` | Java 17+ / Spring Boot 4 | Turns a Cerbos query plan into a Spring Data JPA `Specification` (Data PEP) |
 | `auth-policy-cerbos` | Shell + OpenAPI | The toolkit that derives the central policy engine's policies from your contract |
 
@@ -94,7 +95,7 @@ mvn -B verify                                                   # build and test
 cd auth-context-python && pip install -e . pytest && pytest     # the Python library
 ```
 
-A change to a shared library reaches every service, so tests (and, for the header contract, the shared test vectors) are not optional. The repository's `AGENTS.md` describes the layout and the release rules, and its [`docs/reference.md`](https://github.com/Labs64/labs64.io-commons/blob/master/docs/reference.md) covers the release process and OpenAPI auth-policy generation in full. [Auth context integration](https://github.com/Labs64/labs64.io-commons/blob/master/auth-context-java/INTEGRATION.md) explains how a service adopts the header contract.
+A change to a shared library reaches every service, so tests (and, for the header contract, the shared test vectors) are not optional. The repository's `AGENTS.md` describes the layout and the release rules. [Auth context integration](https://github.com/Labs64/labs64.io-commons/blob/master/auth-context-java/INTEGRATION.md) explains how a service adopts the header contract.
 
 ## Next steps
 
