@@ -52,3 +52,9 @@ code.language-mermaid svg {
   border: none;
   cursor: pointer;
 }
+
+// Edition tag: the `Enterprise` label for enterprise-only features, in the Labs64 brand orange.
+// The value is $labs64-main from _sass/color_schemes/labs64.scss; the theme has no orange label of its own.
+.label-orange {
+  background: #e14817;
+}
