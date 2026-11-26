@@ -77,7 +77,7 @@ To consume a release, upgrade to the new `labs64io-ecosystem` version, or to the
 
   ```text
   # renovate: datasource=github-releases depName=kubernetes-sigs/gateway-api
-  GATEWAY_API_VERSION := "v1.6.2"
+  GATEWAY_API_VERSION := "v1.6.3"
   ```
 
 Each repository's *Dependency Dashboard* issue lists the open, pending and ignored updates.
