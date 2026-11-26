@@ -12,16 +12,30 @@ nav_order: 4
 - **Real tokens.** Tokens are minted with exact scopes from the mock identity provider or Keycloak.
 - **Tagged and filterable.** `smoke`, `regression`, `auth`, `flaky`, `not-ga`, `local-k8s-only` and module tags let you run exactly the slice you need.
 
+**A good fit if**
+
+- You change a Labs64.IO module and want to know whether the platform as a whole still behaves.
+- You deploy the platform and want a regression gate (smoke on every pull request, deeper runs nightly).
+- You want proof that authorization is enforced for every route and scope.
+
+**Probably not what you need if**
+
+- You need unit tests for a module: those live in each module's repository.
+- You have no running stack: the suite exercises a live gateway, so it needs one.
+
 Unit tests for a module live in that module's repository. This suite needs a running stack, reachable through its gateway edge. Get one with the [Quickstart](../getting-started/quickstart.md) (gateway, authentication, AuditFlow and Payment Gateway) or with the [full local ecosystem](../getting-started/run-the-full-ecosystem-locally.md).
 
 ## What it covers
 
 | Area | What is checked |
 |---|---|
-| AuditFlow | Publishing events, validation errors and the authorization matrix |
+| AuditFlow | Publishing (single and batch), validation errors, the authorization and tenant-isolation matrix, pipeline routing and condition operators, DLQ inspect and replay, quota, redaction and secretRef resolution. The suites live in `labs64.io-auditflow/tests/e2e/` and use this repository's shared keywords. |
 | Payment Gateway | Provider lifecycle with the NoOp provider and the authorization matrix |
 | Auth enforcement | A generated matrix across every route: the scopes it should and should not accept |
 | Across modules | A payment appearing in AuditFlow (local cluster only, via correlation-scoped logs) |
+| Gateway contract | What a module receives: the trusted `X-Auth-*` headers, replaced when spoofed, and never the caller's bearer token (local cluster only, via a header-echo backend behind a copy of AuditFlow's route) |
+
+Runs are tagged `smoke`, `regression`, `auth`, `flaky`, `not-ga` and `local-k8s-only`, so you can pick exactly the slice you need.
 
 ## Architecture
 
@@ -66,6 +80,10 @@ robot --include smoke tests/
 ```
 
 Tests that need pod logs are tagged `local-k8s-only` and are skipped or excluded elsewhere. The [reference](https://github.com/Labs64/labs64.io-tests/blob/master/docs/reference.md#targeting-a-different-environment) lists every variable.
+
+## In CI
+
+- **CI-ready**: a nightly workflow and a readiness gate that fails fast on unrecoverable pods.
 
 ## Add a test
 

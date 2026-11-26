@@ -11,6 +11,22 @@ Every Labs64.IO service is built on the same Java and Python libraries and one b
 
 Use this page when you build a service that sits behind the [Auth Gateway](../modules/auth-gateway/index.md) and want it to treat identity exactly as the rest of the platform does. If your services are not behind the Labs64.IO gateway, these libraries are not for you: the auth-context libraries assume its header contract.
 
+## Why Commons?
+
+1. **One trust contract.** Every service parses the same `X-Auth-*` headers the same way, in Java and in Python, pinned to identical behaviour by shared test vectors.
+2. **One build parent.** `labs64io-parent` carries the Spring Boot line, security overrides and release rules for every Java module.
+3. **Authorization that follows the contract.** Policies and routes are generated from OpenAPI; the Data PEP turns a Cerbos query plan into a JPA `Specification`.
+
+**A good fit if**
+
+- You build Java (Spring Boot) or Python services that sit behind the Labs64.IO Auth Gateway.
+- You want your service to parse the trusted identity headers exactly as the rest of the platform does.
+- You generate authorization policies from your OpenAPI contract.
+
+**Probably not what you need if**
+
+- You need a general-purpose utility library: these are purpose-built platform libraries.
+
 ## What is in the box
 
 | Library | Language | What it gives you |

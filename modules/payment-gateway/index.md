@@ -10,6 +10,25 @@ has_children: true
 ## Overview
 Payment Gateway puts one REST API in front of every payment provider (PSP). A shop, app or billing service creates a payment and pays it; Payment Gateway routes it to the tenant's configured provider, normalizes the result and keeps the call safe to retry. Stripe, PayPal and a NoOp test provider ship in the box, and a new provider is a new module behind the provider SPI.
 
+## Why Payment Gateway?
+
+Adding a payment provider is easy. Living with three of them is not: different APIs, different webhook formats, different failure modes, and a double charge is always one network timeout away. Payment Gateway gives your applications one contract and keeps the provider-specific mess behind it.
+
+1. **One REST API.** Create a payment, pay it, read the result: the same calls for Stripe, PayPal or a provider you add yourself.
+2. **Safe to retry.** Pay with an `Idempotency-Key` and a replay returns the original transaction instead of charging again.
+3. **One result shape.** Provider responses and webhooks are normalized into the same payment and transaction states, so your code does not care who processed the money.
+
+**A good fit if**
+
+- You take payments through more than one provider, or expect to switch or add one without touching every application.
+- Several applications or merchants (tenants) need payments, and you want credentials and rules kept per tenant.
+- You want payment lifecycle events in your audit trail without writing the glue.
+
+**Probably not what you need if**
+
+- You have one provider and one application and are happy with its SDK: the abstraction would be overhead.
+- You need a hosted storefront, subscriptions billing UI or invoicing: this is the payment API layer, not a billing suite.
+
 ## Capabilities
 
 | Capability | Description |
@@ -230,6 +249,18 @@ POST /payments/{paymentId}/pay          Idempotency-Key: order-1001
 ## Operations
 
 Payment Gateway stores payments and transactions in PostgreSQL and idempotency keys in Redis; both are required. Because this module handles payment orchestration, restrict network egress to the providers you use (the chart's NetworkPolicy allows HTTPS only) and keep provider credentials in tenant configuration protected by your access controls.
+
+- **Observable**: Actuator health, Micrometer tracing over OTLP and a Prometheus endpoint.
+
+### Before you take real payments
+
+The Docker path above is for evaluation. A few things matter before real money flows:
+
+- **Put it behind the Auth Gateway.** The service trusts the `X-Auth-*` headers it receives; without a gateway that authenticates callers, anyone who can reach it can claim any identity.
+- **Protect provider credentials.** They live in each tenant's provider configuration: restrict who can read and write `/payment-providers`, and keep the database encrypted and backed up.
+- **Make webhooks reachable and verified.** Providers must be able to reach `/providers/{provider}/webhooks`, and each provider's signing secret must be configured so signatures are checked.
+- **Test with the provider's sandbox first.** Stripe and PayPal both have test modes; the [demo runbook](https://github.com/Labs64/labs64.io-payment-gateway/blob/master/examples/payment-gateway-stripe-paypal-demo.md) walks through them.
+- **Always send an `Idempotency-Key`** from the code that calls `pay`.
 
 ## Troubleshooting
 

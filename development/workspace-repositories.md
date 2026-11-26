@@ -32,6 +32,31 @@ After `just clone`, every repository sits next to the workspace. Open them all a
 
 All `just` recipes run from `labs64.io-workspace/`. The other repositories are mounted as modules, so `just helm-charts <recipe>` and `just tests <recipe>` run in those repositories without a `cd`. The workspace's [`docs/reference.md`](https://github.com/Labs64/labs64.io-workspace/blob/master/docs/reference.md) lists every command (versions, releases, dependency updates) and [`docs/justfiles.md`](https://github.com/Labs64/labs64.io-workspace/blob/master/docs/justfiles.md) explains how every justfile is organised.
 
+## Why Workspace?
+
+> **Note:** Labs64.IO is a set of independent Git repositories, not a monorepo. If you only want to **see** it running you do not need the workspace: use `install.sh`.
+
+Changing a platform that spans many repositories means the same toolchain, the same pinned versions and a local cluster that behaves like the real thing. Setting that up by hand is a day you do not get back; Workspace makes it a command.
+
+1. **One checkout command.** `just clone` fetches every ecosystem repository next to the workspace.
+2. **One pinned toolchain.** A dev container carries every tool at the version the repositories expect, with Docker-outside-of-Docker.
+3. **One local platform.** `just up` builds every first-party image and deploys it to a k3d cluster; `just smoke` checks it.
+
+**A good fit if**
+
+- You are about to change code in one or more Labs64.IO repositories and want a working environment fast.
+- You review pull requests that span repositories.
+- You want an AI agent to work across the ecosystem with the same tools you have.
+
+**Probably not what you need if**
+
+- You only want to see Labs64.IO running: `install.sh` is quicker and needs no checkouts.
+- You are using one module in your own project: use that module's Docker or Kubernetes option instead.
+
+The DevContainer mounts `labs64-m2-cache` at `/home/vscode/.m2`, so direct
+`mvn` commands and the shared container builder install and resolve artifacts from
+the same local Maven repository regardless of which module starts the build.
+
 ## How the workspace fits together
 
 ```

@@ -9,6 +9,38 @@ nav_order: 1
 ## Overview
 The Auth Gateway (`traefik-authproxy`) provides the authenticated edge for the entire Labs64.IO ecosystem. It enforces authentication via OIDC/JWT and delegates authorization decisions to the Cerbos Policy Decision Point (PDP) before requests reach any module.
 
+> **Note:** The gateway **fails closed**: a route with no policy is denied, and a request is never forwarded without a verified identity. The Labs64.IO modules trust the `X-Auth-*` headers it sets, so never expose a module without it in front.
+
+## Why Auth Gateway?
+
+When every service checks tokens, scopes and tenants on its own, they drift apart, and one forgotten check is a data leak. The Auth Gateway moves that decision to the edge so it is made once, the same way, for every module.
+
+1. **One place to authenticate.** OIDC/JWT (RS256) tokens are verified against your identity provider's keys, for users and for service-to-service callers.
+2. **Authorization from the contract.** Routes and scopes are derived from each module's OpenAPI spec; the central Cerbos policy engine makes the decision.
+3. **A trusted identity downstream.** Modules receive `X-Auth-User`, `X-Auth-Scopes`, `X-Auth-Tenant` and `X-Request-ID` and never parse a token themselves.
+
+**A good fit if**
+
+- Several services sit behind one entry point and you want authentication and authorization decided in one place.
+- You already have (or will have) an OIDC provider such as Keycloak, Entra ID, Auth0 or Okta.
+- You want authorization derived from the API contract instead of hand-maintained route lists.
+
+**Probably not what you need if**
+
+- You run a single service with its own auth and no plan to add more.
+- You need a general-purpose ingress or CDN: this is the authentication and authorization layer that sits next to one.
+
+## Features
+
+- **OIDC/JWT verification**: RS256 tokens checked against the provider's JWKS, with caching and key rotation handled.
+- **OpenAPI-derived policy**: per-operation routes and scopes come from each module's generated manifest, hot-reloaded without a restart.
+- **Central decision**: every module route is one `is_allowed` check against the Cerbos policy engine.
+- **Trusted headers**: `X-Auth-User`, `X-Auth-Scopes`, `X-Auth-Tenant` and `X-Request-ID` for the modules behind it.
+- **Fail closed**: unknown routes and unverifiable tokens are denied; not-ready is reported until routes load.
+- **Rate limiting and security headers**: per-user limits and standard headers applied at the edge.
+- **Aggregated API docs**: one Swagger UI for every installed module.
+- **Observable**: enforcement decisions are logged with a request id; sensitive detail sits behind a dedicated debug logger.
+
 ## Capabilities
 
 | Capability | Description |
@@ -39,6 +71,16 @@ sequenceDiagram
     AG-->>T: HTTP 200 + X-Auth-* Headers
     T->>M: Forwarded Request
 ```
+
+## What a request goes through
+
+1. **Traefik** receives the request and asks the gateway to decide (ForwardAuth, `GET /auth`).
+2. The gateway **verifies the token**: signature (RS256, keys from your provider's JWKS), issuer, audience and expiry.
+3. It **finds the route** in the manifests generated from each module's OpenAPI contract. No policy for the route means the request is denied.
+4. It asks **Cerbos** whether this caller may perform this action on this resource.
+5. If allowed, it returns the identity as headers (`X-Auth-User`, `X-Auth-Scopes`, `X-Auth-Tenant`, `X-Request-ID`) and Traefik forwards the request.
+
+The modules behind it trust those headers, which is exactly why they must never be reachable around the gateway.
 
 ## Quick Start
 
@@ -151,6 +193,13 @@ curl -i localhost:8081/auth -H "X-Forwarded-Method: GET" -H "X-Forwarded-Uri: /p
 ## Operations
 
 Auth Gateway is stateless and scales horizontally. It needs a reachable OIDC provider, the central Cerbos policy engine and the route manifests; until the manifests load it reports not ready.
+
+## Before you go live
+
+- **Use your own identity provider.** The demo provider in the Quickstart issues a valid token to anyone who asks.
+- **Do not expose modules around the gateway.** Network policies should allow module traffic only from the gateway.
+- **Check that every route has a policy.** The gateway denies unknown routes, so a missing manifest shows up as `403`, not as an open door.
+- **Review scopes against your provider's claims.** `TOKEN_SCOPES_CLAIM_PATHS` must match where your provider puts scopes or roles.
 
 ## Troubleshooting
 

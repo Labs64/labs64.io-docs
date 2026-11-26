@@ -11,14 +11,42 @@ Customer Portal is the customer-facing single-page app of the platform: a Vue 3 
 
 > **Current scope.** The repository ships the front-end shell, with a home page and a shopping-cart page. A Java backend (`customer-portal-be`) is planned but not implemented, so the portal does not yet call a Labs64.IO API on its own.
 
+## Why Customer Portal?
+
+Customers want to manage their account without writing to support, and the page that lets them should be deployed and secured like the rest of your platform. Customer Portal is the front-end shell for that.
+
+1. **One static image.** A multi-stage build produces files served by unprivileged nginx, so it runs on any cluster or static host.
+2. **Fits the edge.** The app is static files served by unprivileged nginx and does no authentication itself. It is meant to be served on a public route that needs no token, so it must not contain secrets or customer data. In the reference Labs64.IO environment the chart exposes it as a public route.
+3. **Built to be composed.** Module federation support lets micro-frontends plug into the portal.
+
+**A good fit if**
+
+- You are on the Labs64.IO platform and want a customer-facing app that deploys the same way as the services.
+- You prefer a static, cache-friendly front end served on a public route, with no authentication in the app.
+- You want a Vue 3 starting point you can extend, with unit and end-to-end tests already wired.
+
+**Probably not what you need if**
+
+- You need a finished self-service product today: this is a shell with a home page and a cart page, and the backend is planned.
+- You need server-side rendering or a CMS.
+
 ## Capabilities
 
 | Capability | Description |
 |------------|-------------|
 | **Static, one image** | A multi-stage build produces files served by unprivileged nginx; the image runs on any cluster or static host. |
 | **Modern front end** | Vue 3 (Composition API), Vite, Pinia, TypeScript, Bootstrap 5 and Bootstrap Vue Next. |
-| **Composable** | Module federation (`@originjs/vite-plugin-federation`) is available for micro-frontends. |
+| **Composable** | Module federation (`@originjs/vite-plugin-federation`) is available for composing micro-frontends, which plug into the portal. |
 | **Tested** | Unit tests with Vitest, end-to-end tests with Playwright, linted with ESLint. |
+
+## What is here today
+
+| In the repository | Planned |
+|---|---|
+| Vue 3 + Vite + TypeScript single-page app with a home page and a shopping-cart page | `customer-portal-be`, a Java backend |
+| Multi-stage Docker build served by unprivileged nginx | Account, subscription and order views backed by the platform APIs |
+| Unit tests (Vitest), end-to-end tests (Playwright), ESLint | Runtime configuration through a mounted file |
+| Helm chart and a published `edge` image | A tagged release image |
 
 ## Architecture
 

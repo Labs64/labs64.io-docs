@@ -11,6 +11,45 @@ Checkout is a whitelabel order and checkout layer: an API for purchase orders, c
 
 > **Current scope.** Checkout records the checkout transaction as `PENDING` and returns `nextAction: NONE`. It does not call the Payment Gateway yet, and it does not publish events yet.
 
+## Why Checkout?
+
+A checkout is more than a payment form. It has to hold the order, the buyer, the tax and currency rules and the consents, and it has to look like your brand rather than someone else's. Checkout gives you that as an API plus a page you can theme.
+
+1. **One order model.** A purchase order carries items, currency, tax, an optional customer and a validity window.
+2. **Rules enforced for you.** Currency, tax rate, time range, extras and required consents are validated before a transaction exists.
+3. **A checkout page that is yours.** A Vue 3 page with i18n and runtime configuration, served from a small static image.
+
+**A good fit if**
+
+- You sell digital or physical goods and want an order and checkout service you can brand and host yourself.
+- Consents (terms, marketing, data processing) must be captured per order and enforced before checkout.
+- You are building on the Labs64.IO platform and want orders, payments and audit to fit together.
+
+**Probably not what you need if**
+
+- You need payments executed end to end today: Checkout currently records the transaction and does not yet hand it to the Payment Gateway.
+- You want a complete shop (catalogue, cart, inventory): Checkout starts at the purchase order.
+
+## Features
+
+- **Consent-aware**: orders can require named consents; checkout is refused until they are accepted.
+- **Whitelabel page**: Vue 3 UI with runtime `env.json` configuration, so one image runs in every environment.
+- **i18n-ready**: translated UI via `vue-i18n`.
+- **OpenAPI-first**: the contract is the source of truth; server interfaces and authorization policies are generated from it.
+
+## What works today, and what does not yet
+
+We would rather you hear it from us than discover it in a demo.
+
+| Works today | Not yet |
+|---|---|
+| Purchase orders, customers and checkout transactions over REST | Handing the transaction to the Payment Gateway, so no `nextAction` redirect yet |
+| Validation of currency, tax, time window, extras and consents | Publishing events to AuditFlow |
+| Tenant isolation and scope-based authorization through the gateway | The checkout page driving the final checkout call (it loads and renders an order) |
+| A themable Vue 3 page with i18n and runtime configuration | |
+
+If your use case needs the missing pieces, the [issue tracker](https://github.com/Labs64/labs64.io-checkout/issues) is where to say so: that is how priorities get set.
+
 ## Capabilities
 
 | Capability | Description |
