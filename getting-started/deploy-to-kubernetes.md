@@ -36,7 +36,7 @@ You do not have to bring all of it on day one. The chart can run PostgreSQL, Rab
                                      │ umbrella chart
         ┌─────────────┬──────────────┼──────────────┬──────────────┐
   ┌─────▼─────┐ ┌─────▼──────┐ ┌─────▼──────┐ ┌─────▼──────┐ ┌─────▼──────┐
-  │ api-      │ │ authz-pdp  │ │ auditflow  │ │ payment-   │ │ checkout · │
+  │ auth-     │ │ authz-pdp  │ │ auditflow  │ │ payment-   │ │ checkout · │
   │ gateway   │ │ (Cerbos)   │ │            │ │ gateway    │ │ portal     │
   └─────┬─────┘ └────────────┘ └─────┬──────┘ └─────┬──────┘ └────────────┘
         │ Traefik + Gateway API      │ RabbitMQ      │ PostgreSQL · Redis
@@ -44,7 +44,7 @@ You do not have to bring all of it on day one. The chart can run PostgreSQL, Rab
   your identity provider        your infrastructure (or bundled for evaluation)
 ```
 
-Deployment modes, capability requirements and the AWS reference profile are described in the Helm charts repository's [`docs/reference.md`](https://github.com/Labs64/labs64.io-helm-charts/blob/master/docs/reference.md).
+The [Kubernetes & Helm Setup](../operate-manage/kubernetes-helm-setup.md#deployment-modes) page lists the deployment modes, and the header of the umbrella chart's `values.aws.yaml` describes the AWS reference profile.
 
 ## 1. Add the chart repository
 

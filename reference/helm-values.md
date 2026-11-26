@@ -36,6 +36,6 @@ All Labs64.IO modules are deployed using Helm. Every module chart builds on the 
 | `global.rabbitmq.host`, `global.rabbitmq.port` | RabbitMQ address for AuditFlow. A module chart on its own defaults to `rabbitmq.tools.svc.cluster.local:5672`. The umbrella chart points it at its bundled store. | string, integer |
 | `global.redis.host`, `global.redis.port` | Redis-compatible store address. A module chart on its own defaults to `redis.tools.svc.cluster.local:6379`. The umbrella chart points it at its bundled store. | string, integer |
 
-The Payment Gateway and Checkout charts have `migrationJob`, a pre-install job that creates the database and runs the schema migrations, and `slo`, which adds SLO recording rules and alerts. AuditFlow has `tenants`, which publishes tenant documents as ConfigMaps, and `slo`. Checkout and the Customer Portal have `ui` for the UI image and its routes.
+The Payment Gateway and Checkout charts have `migrationJob`, a pre-install job that creates the database and runs the schema migrations. The AuditFlow, Payment Gateway, Checkout and Reporting charts have `slo`, which adds SLO recording rules and alerts. AuditFlow has `tenants`, which publishes tenant documents as ConfigMaps. Checkout and the Customer Portal have `ui` for the UI image and its routes.
 
 See [Kubernetes & Helm Setup](../operate-manage/kubernetes-helm-setup.md) for how the charts fit together, and each module's **Configuration** section for module-specific settings (e.g., [Checkout Configuration](../modules/checkout/index.md#configuration)).

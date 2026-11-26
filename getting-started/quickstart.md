@@ -219,7 +219,7 @@ kubectl -n labs64io get pods
 | Workload | What it is |
 |---|---|
 | `labs64io-traefik` | The gateway. Every request enters here. |
-| `gateway-common` | [Auth Gateway](../modules/auth-gateway/index.md): validates tokens and asks the policy engine. |
+| `authgateway` | [Auth Gateway](../modules/auth-gateway/index.md): validates tokens and asks the policy engine. |
 | `labs64io-authz-pdp` | The policy decision point (Cerbos). |
 | `labs64io-auditflow` | [AuditFlow](../modules/auditflow/index.md): backend, transformer and sink in one pod. |
 | `labs64io-payment-gateway` | [Payment Gateway](../modules/payment-gateway/index.md). |
