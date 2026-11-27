@@ -30,25 +30,20 @@ When every service checks tokens, scopes and tenants on its own, they drift apar
 - You run a single service with its own auth and no plan to add more.
 - You need a general-purpose ingress or CDN: this is the authentication and authorization layer that sits next to one.
 
-## Features
-
-- **OIDC/JWT verification**: RS256 tokens checked against the provider's JWKS, with caching and key rotation handled.
-- **OpenAPI-derived policy**: per-operation routes and scopes come from each module's generated manifest, hot-reloaded without a restart.
-- **Central decision**: every module route is one `is_allowed` check against the Cerbos policy engine.
-- **Trusted headers**: `X-Auth-User`, `X-Auth-Scopes`, `X-Auth-Tenant` and `X-Request-ID` for the modules behind it.
-- **Fail closed**: unknown routes and unverifiable tokens are denied; not-ready is reported until routes load.
-- **Rate limiting and security headers**: per-user limits and standard headers applied at the edge.
-- **Aggregated API docs**: one Swagger UI for every installed module.
-- **Observable**: enforcement decisions are logged with a request id; sensitive detail sits behind a dedicated debug logger.
-
 ## Capabilities
 
 | Capability | Description |
 |------------|-------------|
-| **Centralized Authentication** | Validates JWTs from identity providers (e.g., Keycloak, Auth0). |
-| **Centralized Authorization** | Queries Cerbos for policy-as-code evaluation. |
-| **Trusted Header Injection** | Passes validated context (`X-Auth-User`, etc.) to upstream modules. |
-| **Fail Closed** | Rejects unmapped or unauthorized routes explicitly. |
+| **Centralized Authentication** | Validates RS256 JWTs from identity providers (e.g., Keycloak, Auth0). The signing keys come from the provider's discovery document and are cached and refreshed when the provider rotates them. |
+| **Centralized Authorization** | Matches each request to an operation of a module's OpenAPI contract and queries Cerbos for policy-as-code evaluation. |
+| **Trusted Header Injection** | Passes validated context (`X-Auth-User`, `X-Auth-Scopes`, `X-Auth-Tenant`, `X-Request-ID`) to upstream modules. |
+| **Header-smuggling protection** | Traefik removes client-supplied `X-Auth-User`, `X-Auth-Scopes` and `X-Auth-Tenant` on every route, public ones included, before anything else runs. |
+| **Fail Closed** | Rejects unmapped or unauthorized routes explicitly. An invalid token or an unreachable PDP also rejects the request. |
+| **Rate limiting** | A Traefik rate-limit middleware runs on every protected route, per authenticated user by default. |
+| **Security response headers** | Every route sets `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Content-Security-Policy` and `Strict-Transport-Security` on the response. See [Gateway API](../../operate-manage/kubernetes-helm-setup.md#gateway-api). |
+| **Hot reload** | Route manifests reload without a restart. |
+| **Aggregated API docs** | One Swagger UI for every installed module. |
+| **Observability** | Enforcement decisions are logged with a request id; sensitive detail sits behind a dedicated debug logger. |
 
 ## Architecture
 
@@ -196,10 +191,11 @@ Auth Gateway is stateless and scales horizontally. It needs a reachable OIDC pro
 
 ## Before you go live
 
-- **Use your own identity provider.** The demo provider in the Quickstart issues a valid token to anyone who asks.
-- **Do not expose modules around the gateway.** Network policies should allow module traffic only from the gateway.
-- **Check that every route has a policy.** The gateway denies unknown routes, so a missing manifest shows up as `403`, not as an open door.
-- **Review scopes against your provider's claims.** `TOKEN_SCOPES_CLAIM_PATHS` must match where your provider puts scopes or roles.
+- [ ] **Use your production identity provider.** Remove the demo provider, which issues a valid token to anyone. See [Configuration](#configuration).
+- [ ] **Keep modules behind the gateway.** Modules trust the `X-Auth-*` headers, so a caller that reaches one around the gateway can act as any user or tenant. Restrict access with the charts' network policies; see [Kubernetes & Helm setup](../../operate-manage/kubernetes-helm-setup.md).
+- [ ] **Match the scope claims to your provider.** Configure the gateway to read scopes and roles from the claims where your provider puts them; see [Configuration](#configuration).
+- [ ] **Give every route a policy.** The gateway denies a route without one, so a missing manifest shows up as `403` and not as an open route.
+- [ ] **Keep debug logging off.** Leave the dedicated authorization debug logger off in shared environments, because it records user, tenant and scopes.
 
 ## Troubleshooting
 

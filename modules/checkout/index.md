@@ -30,13 +30,6 @@ A checkout is more than a payment form. It has to hold the order, the buyer, the
 - You need payments executed end to end today: Checkout currently records the transaction and does not yet hand it to the Payment Gateway.
 - You want a complete shop (catalogue, cart, inventory): Checkout starts at the purchase order.
 
-## Features
-
-- **Consent-aware**: orders can require named consents; checkout is refused until they are accepted.
-- **Whitelabel page**: Vue 3 UI with runtime `env.json` configuration, so one image runs in every environment.
-- **i18n-ready**: translated UI via `vue-i18n`.
-- **OpenAPI-first**: the contract is the source of truth; server interfaces and authorization policies are generated from it.
-
 ## What works today, and what does not yet
 
 We would rather you hear it from us than discover it in a demo.
@@ -169,7 +162,7 @@ The repository's `AGENTS.md` describes the layout, commands and tests; the [Cont
 | `SPRING_FLYWAY_ENABLED` | Apply database migrations at start. | `true` |
 | `LABS64_AUTH_AUTHZ_PDPADDRESS` | Central Cerbos policy engine (gRPC), required because order access is checked against it. | none |
 
-The checkout page reads `/config/env.json` at runtime. Mount your own to set the API address:
+The checkout page reads `/config/env.json` at runtime, so one image runs in every environment. Mount your own to set the API address:
 
 ```json
 { "VITE_API_URL": "https://gateway.example.com/checkout/api/v1" }
@@ -189,7 +182,7 @@ All paths are relative to the service; behind the Auth Gateway they are served u
 | `/checkout-transactions` | `GET` | `checkout-transaction:read` | List checkout transactions. |
 | `/checkout-transactions/{id}` | `GET` | `checkout-transaction:read` | Read one transaction. |
 
-The OpenAPI contract is the source of truth: [`openapi-checkout-v1.yaml`](https://github.com/Labs64/labs64.io-checkout/blob/master/checkout-be/src/main/resources/openapi/openapi-checkout-v1.yaml).
+The OpenAPI contract is the source of truth; the build generates the server interfaces and the authorization policies from it: [`openapi-checkout-v1.yaml`](https://github.com/Labs64/labs64.io-checkout/blob/master/checkout-be/src/main/resources/openapi/openapi-checkout-v1.yaml).
 
 ## Events
 

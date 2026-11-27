@@ -33,12 +33,12 @@ Use this page when you build a service that sits behind the [Auth Gateway](../mo
 |---|---|---|
 | `labs64io-parent` | Maven POM | The build parent: Spring Boot line, security overrides, shared versions and release rules in one version |
 | `auth-context-core` | Java 17+ | The identity model, holder and trusted-header parser, with no dependencies |
-| `auth-context-spring-boot-starter` | Java 17+ / Spring Boot 4 | Fail-closed header enforcement, `@RequireScopes`, outbound propagation and test support |
+| `auth-context-spring-boot-starter` | Java 17+ / Spring Boot 4 | Fail-closed header enforcement, `@RequireTenant`, `@RequireScopes` and `@Authorize`, outbound propagation and `@WithAuthContext` for tests |
 | [`auth-context-python`](./shared-libraries/auth-context-python/index.md) | Python 3.13+ | The same contract for ASGI and FastAPI services, with an httpx hook and pytest fixture |
 | [`openapi-spring-boot-starter`](./shared-libraries/openapi-spring-boot-starter/index.md) | Java 17+ / Spring Boot 4 | Shared springdoc servers, bearer security and canonical OpenAPI metadata |
 | [`openapi-schema-generator`](./shared-libraries/openapi-schema-generator/index.md) | Java 17+ | Versioned JSON Schema documents from OpenAPI 3.1 |
-| `authz-queryplan-jpa` | Java 17+ / Spring Boot 4 | Turns a Cerbos query plan into a Spring Data JPA `Specification` (Data PEP) |
-| `auth-policy-cerbos` | Shell + OpenAPI | The toolkit that derives the central policy engine's policies from your contract |
+| `authz-queryplan-jpa` | Java 17+ / Spring Boot 4 | Turns a Cerbos query plan into a Spring Data JPA `Specification` (Data PEP), so a list query returns only the rows the policy allows |
+| `auth-policy-cerbos` | Shell + OpenAPI | The toolkit that derives the central policy engine's policies from your contract and checks their decisions |
 
 The Java and Python implementations are pinned to identical behaviour by the shared vectors in `test-vectors/`.
 

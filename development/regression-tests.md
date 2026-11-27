@@ -23,15 +23,15 @@ nav_order: 4
 - You need unit tests for a module: those live in each module's repository.
 - You have no running stack: the suite exercises a live gateway, so it needs one.
 
-Unit tests for a module live in that module's repository. This suite needs a running stack, reachable through its gateway edge. Get one with the [Quickstart](../getting-started/quickstart.md) (gateway, authentication, AuditFlow and Payment Gateway) or with the [full local ecosystem](../getting-started/run-the-full-ecosystem-locally.md).
+This suite needs a running stack, reachable through its gateway edge. Get one with the [Quickstart](../getting-started/quickstart.md) (gateway, authentication, AuditFlow and Payment Gateway) or with the [full local ecosystem](../getting-started/run-the-full-ecosystem-locally.md).
 
 ## What it covers
 
 | Area | What is checked |
 |---|---|
 | AuditFlow | Publishing (single and batch), validation errors, the authorization and tenant-isolation matrix, pipeline routing and condition operators, DLQ inspect and replay, quota, redaction and secretRef resolution. The suites live in `labs64.io-auditflow/tests/e2e/` and use this repository's shared keywords. |
-| Payment Gateway | Provider lifecycle with the NoOp provider and the authorization matrix |
-| Auth enforcement | A generated matrix across every route: the scopes it should and should not accept |
+| Payment Gateway | Provider lifecycle and the payment flow with the NoOp provider, the authorization matrix, and the Stripe and PayPal flows against the PSP stub |
+| Auth enforcement | A generated suite that checks every protected operation of every module refuses a call without credentials |
 | Across modules | A payment appearing in AuditFlow (local cluster only, via correlation-scoped logs) |
 | Gateway contract | What a module receives: the trusted `X-Auth-*` headers, replaced when spoofed, and never the caller's bearer token (local cluster only, via a header-echo backend behind a copy of AuditFlow's route) |
 
@@ -82,6 +82,14 @@ robot --include smoke tests/
 Tests that need pod logs are tagged `local-k8s-only` and are skipped or excluded elsewhere. The [reference](https://github.com/Labs64/labs64.io-tests/blob/master/docs/reference.md#targeting-a-different-environment) lists every variable.
 
 ## In CI
+
+| Job | When | Runs against |
+|---|---|---|
+| Static checks | Every pull request | No cluster. The job checks the generated suite and runs `robot --dryrun`. |
+| Smoke | Every pull request | A new k3d cluster with the published ecosystem chart, installed by `install.sh` |
+| Full regression | Nightly, on a release of the tests repository, and on demand | A k3d cluster from the Helmfile stack, running the modules' latest `:edge` images |
+
+The nightly run mirrors the modules' `:edge` images into the cluster's registry and writes their digests to the job summary, so a failed run names the exact builds it tested. The summary groups failures by cause, so a broken environment shows up as one row instead of many failed tests.
 
 - **CI-ready**: a nightly workflow and a readiness gate that fails fast on unrecoverable pods.
 
