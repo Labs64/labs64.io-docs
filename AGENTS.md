@@ -84,6 +84,6 @@ Docker-first, same workflow as `labs64.io` — never invoke `bundle` directly on
 
 ## Working rules for every change
 
-- Judge the change against the **Quality bar** in `STANDARDS.md`, section 13, in the `labs64.io-workspace` repository (the 11 rows from stability of the ecosystem to cost), and say in the pull request how each row applies, or why it does not.
+- Judge the change against the quality bar in the `standards-quality-bar` skill of the `labs64.io-workspace` repository (`.agents/skills/`), and say in the pull request how each row applies, or why it does not.
 - Every pull request is assigned to its author and added to the `Labs64.IO` GitHub Project (`AGENTS.md`, section "Pull requests", in `labs64.io-workspace`).
 - Before you push: `just build`, then follow "Verifying links" above.

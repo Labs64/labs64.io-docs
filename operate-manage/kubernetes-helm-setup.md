@@ -218,12 +218,12 @@ above for what each module needs.
 | payment-gateway | Payments API | PostgreSQL, Redis | `/payment-gateway/api` (protected), `/payment-gateway/v3/api-docs` (public) | `helm install my-payments labs64io/payment-gateway` |
 | reporting | Reports over stored events | ClickHouse, optional S3 | `/reporting/api` (protected), `/reporting/v3/api-docs` (public) | `helm install my-reporting labs64io/reporting` |
 | customer-portal | Customer portal UI (no backend yet; `ui.enabled`) | - | `/customer-portal` (public — static assets, no Bearer token on plain navigation) | `helm install my-portal labs64io/customer-portal` |
-| api-gateway | ForwardAuth OIDC/JWT verifier + shared Traefik middlewares (auth, rate limit, headers) | - | n/a | `helm install api-gateway labs64io/api-gateway` |
+| authgateway | ForwardAuth OIDC/JWT verifier + shared Traefik middlewares (auth, rate limit, headers) | - | n/a | `helm install authgateway labs64io/authgateway` |
 | authz-pdp | Cerbos PDP — central authorization decision point | - | n/a | `helm install authz-pdp labs64io/authz-pdp` |
 | api-docs | Swagger UI aggregator | - | `/swagger-ui` (public) | `helm install api-docs labs64io/api-docs` |
 
 Prefer Gateway API (`gateway.enabled: true`, Traefik v3 + Gateway API CRDs + the
-`api-gateway` chart for ForwardAuth/shared middlewares) — it's the only path that enforces
+`authgateway` chart for ForwardAuth/shared middlewares) — it's the only path that enforces
 ForwardAuth/Cerbos authorization and strips inbound `X-Auth-*` headers. If the cluster has no
 Gateway API CRDs, every chart falls back to a plain `networking.k8s.io/v1` Ingress
 (`gateway.annotations`, `gateway.ingressClassName` configure it) — but **only for routes marked

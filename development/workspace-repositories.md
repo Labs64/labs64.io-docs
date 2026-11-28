@@ -67,7 +67,7 @@ the same local Maven repository regardless of which module starts the build.
   ┌───────▼─────────────────────────────┐ ┌─────▼────────────────────────────┐
   │ ../ every ecosystem repository      │ │ builder container                │
   │ auditflow · checkout · helm-charts  │ │ builds first-party images        │
-  │ payment-gateway · authproxy · …     │ └─────┬────────────────────────────┘
+  │ payment-gateway · authgateway · …   │ └─────┬────────────────────────────┘
   └─────────────────────────────────────┘       │ push
                                           ┌─────▼────────────┐   ┌────────────┐
                                           │ k3d + registry   │──►│ platform   │

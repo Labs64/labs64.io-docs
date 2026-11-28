@@ -345,14 +345,14 @@ matter, such as revenue.
 
 The ClickHouse transformer and schema are **generic**: they promote the well-known audit-semantics keys into columns and leave everything else in a `Map(String, String)`. A use case that wants its own fields as queryable dimensions adds a layer instead of changing the core: a key map on top of the shipped transformer, an `ALTER TABLE` script and a documented vocabulary.
 
-| Layer | Generic (shipped) | Use-case layer (the repository's worked example) |
+| Layer | Generic (shipped) | Your domain layer |
 |---|---|---|
-| Columns | [`schema.sql`](https://github.com/Labs64/labs64.io-auditflow/blob/master/examples/clickhouse/schema.sql) | an `ALTER TABLE ... ADD COLUMN` script, for example [`schema-netlicensing.sql`](https://github.com/Labs64/labs64.io-auditflow/blob/master/examples/clickhouse/schema-netlicensing.sql) |
-| Promotion | `audit_clickhouse` | a module of about 40 lines of data: `make_transform({...})`, for example [`audit_clickhouse_netlicensing.py`](https://github.com/Labs64/labs64.io-auditflow/blob/master/examples/netlicensing/audit_clickhouse_netlicensing.py) |
-| Vocabulary | `Extra` in the API contract | a field and event reference, for example [`NETLICENSING_EVENTS.md`](https://github.com/Labs64/labs64.io-auditflow/blob/master/examples/clickhouse/NETLICENSING_EVENTS.md) |
+| Columns | [`schema.sql`](https://github.com/Labs64/labs64.io-auditflow/blob/master/examples/clickhouse/schema.sql) | an `ALTER TABLE ... ADD COLUMN` script |
+| Promotion | `audit_clickhouse` | a module of a few lines of data: `make_transform({...})` |
+| Vocabulary | `Extra` in the API contract | a field and event reference for your domain |
 | Pipeline | `tenants/_platform.yaml` | a tenant file that selects the layered transformer |
 
-The example layer is mounted into the transformer's bootstrap directory rather than baked into the image, which is the same extension point you use for your own. Both pipelines write to the same table, so the compose stack shows the two side by side. The worked example models a licensing business (entity lifecycle and validation events plus a payment lifecycle) with the `extra` keys each event emits and the ClickHouse queries built on them. It is deliberately not a full analytics model: no recurring-revenue, retention or cohort machinery. It shows what ClickHouse gives you over a log line, and leaves the reporting model to the deployment.
+Mount your module into the transformer's bootstrap directory rather than baking it into the image, as described in [Adding your own sink or transformer](#adding-your-own-sink-or-transformer). Pipelines that use the generic and the layered transformer can write to the same table.
 
 Rules to preserve when you build a layer:
 

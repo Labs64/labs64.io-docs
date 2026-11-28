@@ -16,7 +16,7 @@ Customer Portal is the customer-facing single-page app of the platform: a Vue 3 
 Customers want to manage their account without writing to support, and the page that lets them should be deployed and secured like the rest of your platform. Customer Portal is the front-end shell for that.
 
 1. **One static image.** A multi-stage build produces files served by unprivileged nginx, so it runs on any cluster or static host.
-2. **Fits the edge.** The app is static files served by unprivileged nginx and does no authentication itself. It is meant to be served on a public route that needs no token, so it must not contain secrets or customer data. In the reference Labs64.IO environment the chart exposes it as a public route.
+2. **Fits the edge.** It is meant to be served on a public route that needs no token (see [Architecture](#architecture)), so it must not contain secrets or customer data.
 3. **Built to be composed.** Module federation support lets micro-frontends plug into the portal.
 
 **A good fit if**

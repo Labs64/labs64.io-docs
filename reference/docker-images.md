@@ -20,5 +20,5 @@ All Labs64.IO Docker images are published to our official container registry. Th
 | **Checkout** | `labs64io/checkout` | `eclipse-temurin:25-jre` |
 | **Payment Gateway** | `labs64io/payment-gateway` | `eclipse-temurin:25-jre` |
 | **Reporting** | `labs64/reporting` | `eclipse-temurin:25-jre` |
-| **Auth Gateway** | `labs64io/authproxy` | `python:3.14-slim` |
+| **Auth Gateway** | `labs64/authgateway-traefik` | `python:3.15-slim` |
 | **Customer Portal** | `labs64io/customer-portal` | `nginx:alpine` |

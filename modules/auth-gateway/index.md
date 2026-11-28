@@ -7,7 +7,7 @@ nav_order: 1
 # Auth Gateway
 
 ## Overview
-The Auth Gateway (`traefik-authproxy`) provides the authenticated edge for the entire Labs64.IO ecosystem. It enforces authentication via OIDC/JWT and delegates authorization decisions to the Cerbos Policy Decision Point (PDP) before requests reach any module.
+The Auth Gateway (image `labs64/authgateway-traefik`) provides the authenticated edge for the entire Labs64.IO ecosystem. It enforces authentication via OIDC/JWT and delegates authorization decisions to the Cerbos Policy Decision Point (PDP) before requests reach any module.
 
 > **Note:** The gateway **fails closed**: a route with no policy is denied, and a request is never forwarded without a verified identity. The Labs64.IO modules trust the `X-Auth-*` headers it sets, so never expose a module without it in front.
 
@@ -40,7 +40,7 @@ When every service checks tokens, scopes and tenants on its own, they drift apar
 | **Header-smuggling protection** | Traefik removes client-supplied `X-Auth-User`, `X-Auth-Scopes` and `X-Auth-Tenant` on every route, public ones included, before anything else runs. |
 | **Fail Closed** | Rejects unmapped or unauthorized routes explicitly. An invalid token or an unreachable PDP also rejects the request. |
 | **Rate limiting** | A Traefik rate-limit middleware runs on every protected route, per authenticated user by default. |
-| **Security response headers** | Every route sets `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Content-Security-Policy` and `Strict-Transport-Security` on the response. See [Gateway API](../../operate-manage/kubernetes-helm-setup.md#gateway-api). |
+| **Security response headers** | Every route sets `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Content-Security-Policy` and `Strict-Transport-Security` on the response. See [Gateway API](../../operate-manage/kubernetes-helm-setup.md#gateway-api-setup). |
 | **Hot reload** | Route manifests reload without a restart. |
 | **Aggregated API docs** | One Swagger UI for every installed module. |
 | **Observability** | Enforcement decisions are logged with a request id; sensitive detail sits behind a dedicated debug logger. |
@@ -67,15 +67,7 @@ sequenceDiagram
     T->>M: Forwarded Request
 ```
 
-## What a request goes through
-
-1. **Traefik** receives the request and asks the gateway to decide (ForwardAuth, `GET /auth`).
-2. The gateway **verifies the token**: signature (RS256, keys from your provider's JWKS), issuer, audience and expiry.
-3. It **finds the route** in the manifests generated from each module's OpenAPI contract. No policy for the route means the request is denied.
-4. It asks **Cerbos** whether this caller may perform this action on this resource.
-5. If allowed, it returns the identity as headers (`X-Auth-User`, `X-Auth-Scopes`, `X-Auth-Tenant`, `X-Request-ID`) and Traefik forwards the request.
-
-The modules behind it trust those headers, which is exactly why they must never be reachable around the gateway.
+The gateway verifies the token's signature (RS256, keys from your provider's JWKS), issuer, audience and expiry, and finds the route in the manifests generated from each module's OpenAPI contract: no policy for the route means the request is denied. If Cerbos allows the action, the gateway returns the identity as `X-Auth-User`, `X-Auth-Scopes`, `X-Auth-Tenant` and `X-Request-ID`, and Traefik forwards the request.
 
 ## Quick Start
 
@@ -97,17 +89,17 @@ With a cluster and an OIDC identity provider, install the gateway chart in front
 helm repo add labs64io https://labs64.github.io/labs64.io-helm-charts
 helm repo update
 
-helm install api-gateway labs64io/api-gateway -n labs64io --create-namespace
+helm install authgateway labs64io/authgateway -n labs64io --create-namespace
 ```
 
-Then point it at your provider's discovery endpoint (`OIDC_DISCOVERY_URL`), install the policy engine (the `authz-pdp` chart) and mount the route manifests generated from each module's OpenAPI contract. The umbrella chart and `install.sh` wire all of that for you, which is why the [installer](../../getting-started/deploy-to-kubernetes.md) is the easier first step. The chart is on [Artifact Hub](https://artifacthub.io/packages/helm/labs64io-helm-charts/api-gateway).
+Then point it at your provider's discovery endpoint (`OIDC_DISCOVERY_URL`), install the policy engine (the `authz-pdp` chart) and mount the route manifests generated from each module's OpenAPI contract. The umbrella chart and `install.sh` wire all of that for you, which is why the [installer](../../getting-started/deploy-to-kubernetes.md) is the easier first step. The chart is on [Artifact Hub](https://artifacthub.io/packages/helm/labs64io-helm-charts/authgateway).
 
 ### Try the decision logic with Docker
 
 Only Docker is needed. Run the published Auth Gateway on its own and ask it to decide on a request:
 
 ```bash
-docker run -d --rm --name authproxy -p 8081:8081 labs64/traefik-authproxy:latest
+docker run -d --rm --name authgateway -p 8081:8081 labs64/authgateway-traefik:latest
 
 curl -s localhost:8081/health
 curl -i localhost:8081/auth \
@@ -115,15 +107,15 @@ curl -i localhost:8081/auth \
   -H "X-Forwarded-Uri: /payment-gateway/api/v1/payments"
 ```
 
-No routes are loaded, so the request is **denied** (see [Failing closed](#failing-closed)): the gateway never guesses. Clean up with `docker rm -f authproxy`. This standalone run shows the decision logic only; a complete flow needs an identity provider, the policy engine and route manifests, which the installer sets up for you.
+No routes are loaded, so the request is **denied** (see [Failing closed](#failing-closed)): the gateway never guesses. Clean up with `docker rm -f authgateway`. This standalone run shows the decision logic only; a complete flow needs an identity provider, the policy engine and route manifests, which the installer sets up for you.
 
 ### Build from source
 
-Needs Python 3.14 and Docker:
+Needs Python 3.15 and Docker:
 
 ```bash
-git clone https://github.com/Labs64/labs64.io-authproxy.git && cd labs64.io-authproxy/traefik-authproxy
-docker build -t traefik-authproxy .          # build the image
+git clone https://github.com/Labs64/labs64.io-authgateway.git && cd labs64.io-authgateway/traefik
+docker build -t authgateway-traefik .         # build the image
 pip install -r requirements.txt pytest       # or work in a virtualenv
 pytest tests/                                # run the tests
 ```

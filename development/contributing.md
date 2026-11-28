@@ -53,7 +53,7 @@ Labs64.IO is many repositories, not one. A change belongs to the repository that
 | Where AuditFlow can deliver events | A new file in `labs64.io-auditflow/auditflow-sink/sinks/` |
 | How AuditFlow reshapes events | A new file in `labs64.io-auditflow/auditflow-transformer/transformers/` |
 | A payment provider integration | `labs64.io-payment-gateway/payment-gateway-providers/` |
-| Authentication at the edge | `labs64.io-authproxy/traefik-authproxy/` |
+| Authentication at the edge | `labs64.io-authgateway/traefik/` |
 | How something is deployed | `labs64.io-helm-charts/charts/<chart>/` |
 | A regression test at the API edge | `labs64.io-tests/` |
 | These pages | `labs64.io-docs/` |

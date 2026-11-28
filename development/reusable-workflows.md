@@ -180,7 +180,7 @@ package manifest, wherever the line above them says what they are:
 
 ```
 # renovate: datasource=github-releases depName=kubernetes-sigs/gateway-api
-GATEWAY_API_VERSION := "v1.6.2"
+GATEWAY_API_VERSION := "v1.6.3"
 ```
 
 Add that annotation whenever a version has to be written in a `justfile.versions`, a shell script, an

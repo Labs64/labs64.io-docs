@@ -135,7 +135,7 @@ rabbitmq:
 redis:
   enabled: false
 
-api-gateway:
+authgateway:
   oidc:
     discoveryUrl: https://idp.example.com/realms/acme/.well-known/openid-configuration
 
