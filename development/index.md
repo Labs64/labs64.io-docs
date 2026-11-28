@@ -13,5 +13,8 @@ Labs64.IO is built in public across focused repositories. Use this section to fi
 |---|---|
 | Contribute a change | [Contributing Guide](./contributing.md) |
 | Find the workspace and source repositories | [Workspace and source repositories](./workspace-repositories.md) |
+| Look up the workspace commands, repositories and version rules | [Workspace reference](./workspace-reference.md) |
+| Add or rename a `just` recipe | [Justfiles](./justfiles.md) |
+| Use or change the shared CI and release workflows | [Reusable workflows](./reusable-workflows.md) |
 | Build a service on the shared libraries | [Shared Libraries (Commons)](./shared-libraries.md) |
 | Run or extend the platform regression suite | [Regression Tests](./regression-tests.md) |

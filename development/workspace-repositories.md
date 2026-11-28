@@ -30,7 +30,7 @@ After `just clone`, every repository sits next to the workspace. Open them all a
 └── ...                      # the remaining ecosystem repositories
 ```
 
-All `just` recipes run from `labs64.io-workspace/`. The other repositories are mounted as modules, so `just helm-charts <recipe>` and `just tests <recipe>` run in those repositories without a `cd`. The workspace's [`docs/reference.md`](https://github.com/Labs64/labs64.io-workspace/blob/master/docs/reference.md) lists every command (versions, releases, dependency updates) and [`docs/justfiles.md`](https://github.com/Labs64/labs64.io-workspace/blob/master/docs/justfiles.md) explains how every justfile is organised.
+All `just` recipes run from `labs64.io-workspace/`. The other repositories are mounted as modules, so `just helm-charts <recipe>` and `just tests <recipe>` run in those repositories without a `cd`. The [Workspace reference](./workspace-reference.md) lists every command (versions, releases, dependency updates) and [Justfiles](./justfiles.md) explains how every justfile is organised.
 
 ## Why Workspace?
 

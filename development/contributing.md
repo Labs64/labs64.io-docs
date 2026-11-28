@@ -39,7 +39,7 @@ cd labs64.io-workspace
 just doctor && just clone && just up
 ```
 
-[Run the full ecosystem locally](../getting-started/run-the-full-ecosystem-locally.md) walks through these steps, and the [workspace reference](https://github.com/Labs64/labs64.io-workspace/blob/master/docs/reference.md) is the full command reference. From the workspace you reach the other repositories' recipes without changing folder: `just helm-charts <recipe>` runs in `labs64.io-helm-charts`, `just tests <recipe>` in `labs64.io-tests`. The workspace also ships a dev container with every tool at the pinned version, which is the easiest way to get a working toolchain.
+[Run the full ecosystem locally](../getting-started/run-the-full-ecosystem-locally.md) walks through these steps, and the [Workspace reference](./workspace-reference.md) is the full command reference. From the workspace you reach the other repositories' recipes without changing folder: `just helm-charts <recipe>` runs in `labs64.io-helm-charts`, `just tests <recipe>` in `labs64.io-tests`. The workspace also ships a dev container with every tool at the pinned version, which is the easiest way to get a working toolchain.
 
 When you fork, clone your fork in place of the upstream repository, in the same folder and under the same name.
 
@@ -71,7 +71,7 @@ A few conventions are enforced by the build or by review. Knowing them up front 
 - **Each service owns its data.** A service never connects to another service's database.
 - **A chart change bumps the chart version.** In `labs64.io-helm-charts`, run `just bump <chart>`; it also bumps every chart that bundles the one you changed.
 - **Versions have one owner each.** Do not write a version number into a `pom.xml` or a `justfile`. The workspace's `just check` verifies this across repositories.
-- **Recipes follow one convention.** The same recipe name means the same thing in every repository, and a new recipe goes in `just/<group>.just` with a one-line description: see [Justfiles: where to run what](https://github.com/Labs64/labs64.io-workspace/blob/master/docs/justfiles.md). `just check` verifies it too.
+- **Recipes follow one convention.** The same recipe name means the same thing in every repository, and a new recipe goes in `just/<group>.just` with a one-line description: see [Justfiles: where to run what](./justfiles.md). `just check` verifies it too.
 
 ## Before you open the pull request
 
