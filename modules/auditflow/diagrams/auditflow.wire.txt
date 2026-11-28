@@ -1,0 +1,39 @@
+[pub]  +-- AuditFlow backend --+  +-- RabbitMQ or Amazon SQS --+  +-- Python plugins --+  +-- Destinations --+
+       | [api]                 |  | [ingest]                   |  | [tr]               |  | [os]             |
+       |                       |  |                            |  |                    |  |                  |
+       | [router]              |  | [delivery]                 |  | [sk]               |  | [s3]             |
+       |                       |  |                            |  +--------------------+  |                  |
+       | [worker]              |  | [dlq]                      |                          | [siem]           |
+       +-----------------------+  +----------------------------+                          +------------------+
+
+       [redis]
+
+legend:
+pub      = Your service | POST /audit/publish {client}
+api      = Ingest | validate, redact, tenant gate {service}
+router   = Router | match tenant pipelines {service}
+worker   = Delivery worker | retry, batch, fallback {service}
+redis    = Redis or Valkey | dedup, shared rate limit {store}
+ingest   = Ingest queue {queue}
+delivery = Delivery queue | one message per pipeline {queue}
+dlq      = Tenant DLQ | one per tenant {queue}
+tr       = Transformer service | POST /transform/<name> {service}
+sk       = Sink service | POST /sink/<name> {service}
+os       = OpenSearch, ClickHouse {external}
+s3       = S3, GCS, Azure Blob {external}
+siem     = Splunk, Datadog, webhook {external}
+
+edges:
+pub -> api : publish
+api -> ingest : confirmed
+ingest -> router
+router -> delivery
+delivery -> worker
+worker ..> redis
+worker -> tr
+worker -> sk
+worker ..> dlq : exhausted
+sk -> os
+sk -> s3
+sk -> siem
+gap: 90

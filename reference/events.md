@@ -6,7 +6,7 @@ nav_order: 2
 
 # Event Catalogue
 
-Modules deliver audit events to [AuditFlow](../modules/auditflow/index.md) over its HTTP API, authenticated as a service principal (`svc:<module>`). AuditFlow buffers them on its own RabbitMQ broker and routes them per tenant. Only AuditFlow depends on a message broker.
+Modules deliver audit events to [AuditFlow](../modules/auditflow/index.md) over its HTTP API, authenticated as a service principal (`svc:<module>`). AuditFlow buffers them on its own message broker, RabbitMQ or Amazon SQS, and routes them per tenant. Only AuditFlow depends on a message broker.
 
 ## Standard Event Envelope
 
